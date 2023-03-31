@@ -1,0 +1,16 @@
+# ignore object files, binaries and caches
+*.out
+.obj/
+.cache/*
+
+# used for enhanced development
+tags
+compile_commands.json
+
+# ignore compiled binary, but not src folder
+slash
+!src/slash
+!include/slash
+
+.idea/*
+idea
