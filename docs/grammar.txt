@@ -1,43 +1,24 @@
-context-free expression grammar:
+//context-free expression grammar
 
 program      -> declaration* EOF ;
 
 declaration  -> varDecl
-             -> varGoDecl
              | statement ;
 
 statement    -> exprStmt
-             |  forStmt
+             |  loopStmt
              |  ifStmt
-             |  printStmt
-             |  returnStmt
-             |  whileStmt
              |  block ;
 
-returnStmt   -> "return" expression? ";" ;
+loopStmt     -> "loop" () block ;
 
-forStmt      -> "for" "(" ( varDecl | exprStmt | ";" ) expression? ";" expression? ")" statement ;
-
-whileStmt    -> "while" "(" expression ")" statement ;
-
-ifStmt       -> "if" "(" expression ")" statement ( "else" statement )? ;
+ifStmt       -> "if" expression block ;
 
 block        -> "{" declaration* "}" ;
 
-declaration  -> funDecl
-             |  varDecl
-             |  varGoDecl
-             |  statement ;
+varDecl      -> "var" IDENTIFIER "=" expression "\n" ;
 
-funDecl      -> "fun" function ;
-function     -> IDENTIFIER "(" parameters? ")" block ;
-parameters   -> IDENTIFIER ( "," IDENTIFIER )* ;
-
-varDecl      -> "var" IDENTIFIER ( "=" expression )? ";" ;
-varGoDecl    -> IDENTIFIER ":=" expression ";" ;
-
-exprStmt     -> expression ";" ;
-printStmt    -> "print" expression ";" ;
+exprStmt     -> expression "\n" ;
 
 expression   -> assignment ;
 assignment   -> IDENTIFIER "=" assignment
@@ -58,7 +39,7 @@ call         -> primary ( "(" arguments? ")" )* ;
 arguments    -> expression ( "," expression )* ;
 
 
-primary      -> "true" | "false" | "nil"
+primary      -> "true" | "false"
              |  NUMBER | STRING
              |  "(" expression ")"
              |  IDENTIFIER ;
