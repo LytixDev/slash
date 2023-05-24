@@ -50,15 +50,15 @@ typedef enum {
 typedef struct {
     TokenType type;
     union {
-        char *lexeme;
-        char *error;
+	char *lexeme;
+	char *error;
     };
 } Token;
 
 typedef struct {
-    char *input;        // the input string being scanned.
-    size_t start;       // start position of this token.
-    size_t pos;         // current position in the input.
+    char *input; // the input string being scanned.
+    size_t start; // start position of this token.
+    size_t pos; // current position in the input.
     struct darr_t *tokens;
 } Lexer;
 
@@ -66,7 +66,6 @@ typedef struct {
 typedef struct func_wrap {
     struct func_wrap (*fn)(Lexer *);
 } StateFn;
-
 
 
 #endif /* LEXER_H */

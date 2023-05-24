@@ -1,4 +1,4 @@
-# Nicolai Brand (lytix.dev) 2022-2023
+# Nicolai Brand (lytix.dev), Callum Gran 2022-2023
 # See LICENSE for license info
 
 RC = .slashrc
@@ -8,10 +8,12 @@ DIRS := $(shell find $(SRC) -type d)
 SRCS := $(shell find $(SRC) -type f -name "*.c")
 OBJS := $(SRCS:%.c=$(OBJDIR)/%.o)
 
-CC = gcc
-CFLAGS = -I include -Wall -Wpedantic -Wextra -Wshadow -std=c11
+CFLAGS = -Iinclude -Wall -Wpedantic -Wextra -Wshadow -std=c11
+#CFLAGS += -DLOGGING
+#LDFLAGS = -pthread
+#LDLIBS = -lm
 
-.PHONY: clean tags bear $(OBJDIR)
+.PHONY: format clean tags bear $(OBJDIR)
 TARGET = slash
 
 all: $(TARGET)
@@ -19,26 +21,26 @@ all: $(TARGET)
 $(OBJDIR)/%.o: %.c Makefile | $(OBJDIR)
 	@cp $(RC) ~
 	@echo [CC] $@
-	@$(CC) -c $(CFLAGS) -c $< -o $@
+	@$(CC) -c $(CFLAGS) $< -o $@
 
 $(TARGET): $(OBJS)
 	@echo [LD] $@
-	@$(CC) -o $@ $^
+	@$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
 debug: CFLAGS += -g -DDEBUG
 debug: $(TARGET)
 
-debug-verbose: CFLAGS += -DDEBUG_VERBOSE
-debug-verbose: debug
-
 clean:
-	@rm -rf $(OBJDIR) $(TARGET) ~/$(RC)
+	rm -rf $(OBJDIR) $(TARGET) $(TARGET_CLIENT) $(TARGET_GUI) $(TARGET_GUI_MACOS)
 
 tags:
 	@ctags -R
 
 bear:
-	bear -- make
+	@bear -- make
+
+format:
+	python format.py
 
 $(OBJDIR):
 	$(foreach dir, $(DIRS), $(shell mkdir -p $(OBJDIR)/$(dir)))

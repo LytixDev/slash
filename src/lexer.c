@@ -14,9 +14,9 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include "lexer.h"
 #include <stdio.h>
 #include <string.h>
-#include "lexer.h"
 
 // temporary as f
 static char *str_slice(char *s, size_t start, size_t end)
@@ -38,7 +38,7 @@ static char *str_slice(char *s, size_t start, size_t end)
 static char next(Lexer *lexer)
 {
     if (lexer->input[lexer->pos] == 0)
-        return EOF;
+	return EOF;
 
     return lexer->input[lexer->pos++];
 }
@@ -51,7 +51,7 @@ static char peek(Lexer *lexer)
 static char prev(Lexer *lexer)
 {
     if (lexer->pos == 0)
-        return -1;
+	return -1;
     return lexer->input[lexer->pos - 1];
 }
 
@@ -62,9 +62,9 @@ static void ignore(Lexer *lexer)
 
 static void backup(Lexer *lexer)
 {
-    //NOTE: should we give err?
+    // NOTE: should we give err?
     if (lexer->pos == 0)
-        return;
+	return;
 
     lexer->pos--;
 }
@@ -73,8 +73,8 @@ static bool consume(Lexer *lexer, char *accept)
 {
     char c = next(lexer);
     do {
-        if (*accept == c)
-            return true;
+	if (*accept == c)
+	    return true;
     } while (*accept++ != 0);
 
     backup(lexer);
@@ -84,14 +84,14 @@ static bool consume(Lexer *lexer, char *accept)
 static void consumeRun(Lexer *lexer, char *accept)
 {
     while (1) {
-        if (!consume(lexer, accept))
-            return;
+	if (!consume(lexer, accept))
+	    return;
     }
 }
 
 
-/* 
- * state functions 
+/*
+ * state functions
  */
 
 static void *lex_error(Lexer *lexer, char *err_str)
@@ -105,16 +105,16 @@ static void *lex_error(Lexer *lexer, char *err_str)
 
 StateFn lex_any(Lexer *lexer)
 {
-    return (StateFn){ .fn = NULL};
+    return (StateFn){ .fn = NULL };
 }
 
-StateFn lex_number(Lexer *lexer); 
+StateFn lex_number(Lexer *lexer);
 
 StateFn lex_identifier(Lexer *lexer);
 
 StateFn lex_string(Lexer *lexer);
 
-/* 
+/*
  * fsm
  */
 
@@ -131,15 +131,14 @@ void emit(Lexer *lexer, TokenType type)
 void run(Lexer *lexer)
 {
     StateFn start_state = lex_any(lexer);
-    for (StateFn state = start_state; state.fn != NULL; ) {
-        state = state.fn(lexer);
+    for (StateFn state = start_state; state.fn != NULL;) {
+	state = state.fn(lexer);
     }
 
-//https://www.youtube.com/watch?v=HxaD_trXwRE
-
+    // https://www.youtube.com/watch?v=HxaD_trXwRE
 }
 
-//list<Token> *lex(char *input)
+// list<Token> *lex(char *input)
 struct darr_t *lex(char *input)
 {
     struct darr_t *tokens = darr_malloc();
@@ -152,8 +151,7 @@ int main(void)
 {
     char *input = "if true { echo \"Hello\" }";
     struct darr_t *tokens = lex(input);
-    for (size_t i = 0; i< tokens->size; i++) {
-        printf("%s\n", ((Token *)darr_get(tokens, i))->lexeme);
-
+    for (size_t i = 0; i < tokens->size; i++) {
+	printf("%s\n", ((Token *)darr_get(tokens, i))->lexeme);
     }
 }
