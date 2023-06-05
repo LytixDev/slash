@@ -14,22 +14,30 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "slash_str.h"
 #include <stdio.h>
-#include <string.h>
 
-void slash_str_print(SlashStr s)
-{
-    char str[s.size + 1];
-    memcpy(str, s.p, s.size);
-    str[s.size] = 0;
-    printf("'%s'", str);
-}
+#include "lexer.h"
 
-void slash_str_println(SlashStr s)
+int main(void)
 {
-    char str[s.size + 1];
-    memcpy(str, s.p, s.size);
-    str[s.size] = 0;
-    printf("'%s'\n", str);
+    // https://www.youtube.com/watch?v=HxaD_trXwRE
+    char input[1024];
+    FILE *fp = fopen("src/test.slash", "r");
+    if (fp == NULL) {
+	return -1;
+    }
+
+    int c;
+    size_t counter = 0;
+    do {
+	c = fgetc(fp);
+	input[counter++] = c;
+	if (counter == 1024)
+	    break;
+    } while (c != EOF);
+
+    input[--counter] = 0;
+
+    struct darr_t *tokens = lex(input);
+    tokens_print(tokens);
 }

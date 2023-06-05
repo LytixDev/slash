@@ -19,45 +19,94 @@
 
 #include "lexer.h"
 #include "slash_str.h"
+#define NICC_IMPLEMENTATION
+#include "nicc/nicc.h"
 
-struct hashmap_t *keywords = NULL;
-
-char *keywords_str[keywords_len] = {
-    "var",
-    "if",
-    "true",
-    "false",
-};
+static void emit(Lexer *lexer, TokenType type);
 
 char *token_type_str_map[t_enum_count] = {
+    /* keywords */
     "t_var",
     "t_if",
+    "t_elif",
+    "t_else",
+    "t_loop",
+    "t_in",
     "t_true",
     "t_false",
+    "t_as",
+    "t_and",
+    "t_or",
     "t_str",
+    "t_num",
+    "t_bool",
+
+    /* single-character tokens */
+    "t_lparen",
+    "t_rparen",
     "t_lbrace",
     "t_rbrace",
-    "t_newline",
+    // t_star,
+    "t_dollar",
+
+    /* one or two character tokens */
+    "t_anp",
+    "t_anp_anp",
+    "t_equal",
+    "t_equal_equal",
+    "t_pipe",
+    "t_pipe_pipe",
+    "t_bang",
+    "t_bang_equal",
+    "t_greater",
+    "t_greater_equal",
+    "t_less",
+    "t_less_equal",
+
+    /* data types */
+    "dt_str",
+    "dt_num",
+    "dt_range",
+    "dt_bool",
+    // dt_shlit,
+
+    "t_interpolation",
     "t_identifier",
+    "t_newline",
     "t_eof",
     "t_error",
 };
 
-void emit(Lexer *lexer, TokenType type);
-
-void lexer_print(Lexer *lexer)
+static void keywords_init(struct hashmap_t *keywords)
 {
-    printf("--- input ---\n");
-    printf("%s\n", lexer->input);
+    /* init and populate hashmap with keyword strings */
+    hashmap_init(keywords);
+
+    char *keywords_str[keywords_len] = {
+	"var",	 "if", "elif", "else", "loop", "in",  "true",
+	"false", "as", "and",  "or",   "str",  "num", "bool",
+    };
+
+    TokenType keywords_val[keywords_len] = {
+	t_var,	 t_if, t_elif, t_else, t_loop, t_in,  t_true,
+	t_false, t_as, t_and,  t_or,   t_str,  t_num, t_bool,
+    };
+
+    for (int i = 0; i < keywords_len; i++)
+	hashmap_sput(keywords, keywords_str[i], &keywords_val[i], sizeof(TokenType), true);
+}
+
+
+void tokens_print(struct darr_t *tokens)
+{
     printf("--- tokens ---\n");
 
-    struct darr_t *tokens = lexer->tokens;
     for (size_t i = 0; i < tokens->size; i++) {
 	Token *token = darr_get(tokens, i);
-        printf("[%zu] (%s) ", i, token_type_str_map[token->type]);
-        if (token->type != t_newline)
-            slash_str_print(token->lexeme);
-        putchar('\n');
+	printf("[%zu] (%s) ", i, token_type_str_map[token->type]);
+	if (token->type != t_newline)
+	    slash_str_print(token->lexeme);
+	putchar('\n');
     }
 }
 
@@ -77,12 +126,12 @@ static char peek(Lexer *lexer)
     return lexer->input[lexer->pos];
 }
 
-static char prev(Lexer *lexer)
-{
-    if (lexer->pos == 0)
-	return -1;
-    return lexer->input[lexer->pos - 1];
-}
+// static char prev(Lexer *lexer)
+//{
+//     if (lexer->pos == 0)
+//	return -1;
+//     return lexer->input[lexer->pos - 1];
+// }
 
 static void ignore(Lexer *lexer)
 {
@@ -96,6 +145,25 @@ static void backup(Lexer *lexer)
 	return;
 
     lexer->pos--;
+}
+
+static bool match(Lexer *lexer, char expected)
+{
+    if (peek(lexer) == expected) {
+	next(lexer);
+	return true;
+    }
+    return false;
+}
+
+static bool consume_single(Lexer *lexer, char accept)
+{
+    if (peek(lexer) == accept) {
+	next(lexer);
+	return true;
+    }
+
+    return false;
 }
 
 static bool consume(Lexer *lexer, char *accept)
@@ -112,31 +180,28 @@ static bool consume(Lexer *lexer, char *accept)
 
 static void consume_run(Lexer *lexer, char *accept)
 {
-    while (1) {
-	if (!consume(lexer, accept))
-	    return;
-    }
+    while (consume(lexer, accept))
+	;
+    // while (1) {
+    //     if (!consume(lexer, accept))
+    //         break;
+    // }
 }
 
 /*
  * semantic
  */
-bool is_space(char c)
-{
-    return c == ' ' || c == '\t' || c == '\v';
-}
-
-bool is_numeric(char c)
+static bool is_numeric(char c)
 {
     return c >= '0' && c <= '9';
 }
 
-bool is_alpha(char c)
+static bool is_alpha(char c)
 {
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 }
 
-bool is_valid_identifier(char c)
+static bool is_valid_identifier(char c)
 {
     return is_numeric(c) || is_alpha(c) || c == '_';
 }
@@ -148,8 +213,10 @@ bool is_valid_identifier(char c)
 StateFn lex_any(Lexer *lexer);
 StateFn lex_end(Lexer *lexer);
 StateFn lex_number(Lexer *lexer);
-StateFn lex_identifier(Lexer *lexer);
 StateFn lex_string(Lexer *lexer);
+StateFn lex_identifier(Lexer *lexer);
+StateFn lex_interpolation(Lexer *lexer);
+StateFn lex_comment(Lexer *lexer);
 
 StateFn lex_any(Lexer *lexer)
 {
@@ -158,6 +225,7 @@ StateFn lex_any(Lexer *lexer)
 	switch (c) {
 	case ' ':
 	case '\t':
+	case '\v':
 	    ignore(lexer);
 	    break;
 
@@ -165,25 +233,57 @@ StateFn lex_any(Lexer *lexer)
 	    emit(lexer, t_newline);
 	    break;
 
-	// TODO: lex_block state function
+	/* one character tokens */
 	case '{':
 	    emit(lexer, t_lbrace);
 	    break;
 	case '}':
 	    emit(lexer, t_rbrace);
 	    break;
+	case '(':
+	    emit(lexer, t_lparen);
+	    break;
+	case ')':
+	    emit(lexer, t_rparen);
+	    break;
 
-	case EOF:
-	    return STATE_FN(lex_end);
+	/* one or two character tokens */
+	case '=':
+	    emit(lexer, match(lexer, '=') ? t_equal_equal : t_equal);
+	    break;
+	case '&':
+	    emit(lexer, match(lexer, '&') ? t_anp_anp : t_anp);
+	    break;
+	case '|':
+	    emit(lexer, match(lexer, '|') ? t_pipe_pipe : t_pipe);
+	    break;
+	case '!':
+	    emit(lexer, match(lexer, '=') ? t_bang_equal : t_bang);
+	    break;
+	case '>':
+	    emit(lexer, match(lexer, '=') ? t_greater_equal : t_greater);
+	    break;
+	case '<':
+	    emit(lexer, match(lexer, '=') ? t_less_equal : t_less);
+	    break;
+
+	case '$':
+	    return STATE_FN(lex_interpolation);
 
 	case '"':
 	    return STATE_FN(lex_string);
 
+	case '#':
+	    return STATE_FN(lex_comment);
+
+	case EOF:
+	    return STATE_FN(lex_end);
+
 	default:
-	    // if (is_alpha(c)) {
-	    //     backup(lexer);
-	    //     return STATE_FN(lex_number);
-	    // }
+	    if (is_numeric(c)) {
+		backup(lexer);
+		return STATE_FN(lex_number);
+	    }
 
 	    if (is_valid_identifier(c)) {
 		backup(lexer);
@@ -202,18 +302,51 @@ error:
 StateFn lex_end(Lexer *lexer)
 {
     emit(lexer, t_eof);
-    return (StateFn){ .fn = NULL };
+    return STATE_FN(NULL);
 }
 
-StateFn lex_number(Lexer *lexer);
+// TODO: add hex, binary and octal support?
+StateFn lex_number(Lexer *lexer)
+{
+    consume_run(lexer, "0123456789");
+    if (consume_single(lexer, '.'))
+	consume_run(lexer, "0123456789");
+
+    emit(lexer, dt_num);
+    return STATE_FN(lex_any);
+}
 
 StateFn lex_identifier(Lexer *lexer)
 {
     while (is_valid_identifier(next(lexer)))
 	;
     backup(lexer);
-    // TODO resolve what identifier it is
-    emit(lexer, t_identifier);
+
+    /* figure out what identifier we are dealing with */
+    // TODO: better use of string
+    size_t size = lexer->pos - lexer->start + 1;
+    char identifier[size];
+    memcpy(identifier, lexer->input + lexer->start, size - 1);
+    identifier[size - 1] = 0;
+
+    TokenType *tt = hashmap_sget(lexer->keywords, identifier);
+    if (tt == NULL)
+	emit(lexer, t_identifier);
+    else
+	emit(lexer, *tt);
+
+    return STATE_FN(lex_any);
+}
+
+StateFn lex_interpolation(Lexer *lexer)
+{
+    /* came from '$' */
+    // TODO: make sure there is at least one char here?
+    while (is_valid_identifier(next(lexer)))
+	;
+    backup(lexer);
+    emit(lexer, t_interpolation);
+
     return STATE_FN(lex_any);
 }
 
@@ -238,11 +371,25 @@ StateFn lex_string(Lexer *lexer)
     return STATE_FN(lex_any);
 }
 
+StateFn lex_comment(Lexer *lexer)
+{
+    /* came from '#' */
+    char c;
+    while ((c = next(lexer)) != '\n') {
+	// TODO: error
+	if (c == EOF)
+	    return STATE_FN(NULL);
+    }
+    backup(lexer);
+    ignore(lexer);
+    return STATE_FN(lex_any);
+}
+
 
 /*
  * fsm
  */
-void emit(Lexer *lexer, TokenType type)
+static void emit(Lexer *lexer, TokenType type)
 {
     Token *token = malloc(sizeof(Token));
     token->type = type;
@@ -253,55 +400,24 @@ void emit(Lexer *lexer, TokenType type)
     lexer->start = lexer->pos;
 }
 
-void run(Lexer *lexer)
+static void run(Lexer *lexer)
 {
     StateFn start_state = lex_any(lexer);
-    for (StateFn state = start_state; state.fn != NULL;) {
+    for (StateFn state = start_state; state.fn != NULL;)
 	state = state.fn(lexer);
-    }
 }
 
-Lexer lex(char *input)
+struct darr_t *lex(char *input)
 {
-    struct darr_t *tokens = darr_malloc();
-    Lexer lexer = { .input = input, .pos = 0, .start = 0, .tokens = tokens };
+    struct hashmap_t keywords;
+    keywords_init(&keywords);
+
+    Lexer lexer = {
+	.input = input, .pos = 0, .start = 0, .tokens = darr_malloc(), .keywords = &keywords
+    };
     run(&lexer);
-    return lexer;
-}
 
-int main(void)
-{
-    // https://www.youtube.com/watch?v=HxaD_trXwRE
-    char input[1024];
-    FILE *fp = fopen("src/test.sh", "r");
-    if (fp == NULL) {
-	return -1;
-    }
+    hashmap_free(&keywords);
 
-    int c;
-    size_t i = 0;
-    do {
-	c = fgetc(fp);
-	input[i++] = c;
-	if (i == 1024)
-	    break;
-    } while (c != EOF);
-
-    input[--i] = 0;
-
-
-    /* init and populate hashmap with keyword strings */
-    hashmap_init(keywords);
-    hashmap_sput(keywords, "var", (TokenType *)t_var, sizeof(TokenType), false);
-
-
-
-    Lexer lexer = lex(input);
-    lexer_print(&lexer);
-    //struct darr_t *tokens = lex(input);
-    //for (i = 0; i < tokens->size; i++) {
-    //    Token *token = darr_get(tokens, i);
-    //    printf("[%zu] ", i);
-    //    slash_str_println(token->lexeme);
-    //}
+    return lexer.tokens;
 }
