@@ -18,26 +18,48 @@
 #include <string.h>
 
 #include "lexer.h"
-#define SAC_IMPLEMENTATION
-#define SAC_TYPEDEF
-#include "sac/sac.h"
+#include "slash_str.h"
 
-char *keywords[t_false + 1] = {
+struct hashmap_t *keywords = NULL;
+
+char *keywords_str[keywords_len] = {
     "var",
     "if",
     "true",
     "false",
 };
 
-void slash_str_println(SlashStr s)
-{
-    char str[s.size + 1];
-    memcpy(str, s.p, s.size);
-    str[s.size] = 0;
-    printf("'%s'\n", str);
-}
+char *token_type_str_map[t_enum_count] = {
+    "t_var",
+    "t_if",
+    "t_true",
+    "t_false",
+    "t_str",
+    "t_lbrace",
+    "t_rbrace",
+    "t_newline",
+    "t_identifier",
+    "t_eof",
+    "t_error",
+};
 
 void emit(Lexer *lexer, TokenType type);
+
+void lexer_print(Lexer *lexer)
+{
+    printf("--- input ---\n");
+    printf("%s\n", lexer->input);
+    printf("--- tokens ---\n");
+
+    struct darr_t *tokens = lexer->tokens;
+    for (size_t i = 0; i < tokens->size; i++) {
+	Token *token = darr_get(tokens, i);
+        printf("[%zu] (%s) ", i, token_type_str_map[token->type]);
+        if (token->type != t_newline)
+            slash_str_print(token->lexeme);
+        putchar('\n');
+    }
+}
 
 /*
  * helper functions
@@ -239,12 +261,12 @@ void run(Lexer *lexer)
     }
 }
 
-struct darr_t *lex(char *input)
+Lexer lex(char *input)
 {
     struct darr_t *tokens = darr_malloc();
     Lexer lexer = { .input = input, .pos = 0, .start = 0, .tokens = tokens };
     run(&lexer);
-    return lexer.tokens;
+    return lexer;
 }
 
 int main(void)
@@ -268,16 +290,18 @@ int main(void)
     input[--i] = 0;
 
 
-    // Arena lex_arena;
-    // m_arena_init_dynamic(&lex_arena, SAC_DEFAULT_CAPACITY, SAC_DEFAULT_COMMIT_SIZE);
+    /* init and populate hashmap with keyword strings */
+    hashmap_init(keywords);
+    hashmap_sput(keywords, "var", (TokenType *)t_var, sizeof(TokenType), false);
 
-    struct darr_t *tokens = lex(input);
-    for (i = 0; i < tokens->size; i++) {
-	// printf("%s\n", ((Token *)darr_get(tokens, i))->lexeme);
-	Token *token = darr_get(tokens, i);
-	printf("[%zu] ", i);
-	slash_str_println(token->lexeme);
-    }
 
-    // m_arena_release(&lex_arena);
+
+    Lexer lexer = lex(input);
+    lexer_print(&lexer);
+    //struct darr_t *tokens = lex(input);
+    //for (i = 0; i < tokens->size; i++) {
+    //    Token *token = darr_get(tokens, i);
+    //    printf("[%zu] ", i);
+    //    slash_str_println(token->lexeme);
+    //}
 }

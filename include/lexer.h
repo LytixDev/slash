@@ -2,8 +2,9 @@
 #define LEXER_H
 
 #include <stdint.h>
-#define NICC_DARR_IMPLEMENTATION
+#define NICC_IMPLEMENTATION
 #include "nicc/nicc.h"
+#include "slash_str.h"
 
 #define STATE_FN(___state_fn) \
     (StateFn)                 \
@@ -55,13 +56,11 @@ typedef enum {
     t_enum_count,
 } TokenType;
 
-extern char *keywords[t_false + 1];
+#define keywords_len (t_false + 1)
 
-/* arena string */
-typedef struct {
-    char *p;
-    size_t size;
-} SlashStr;
+extern char *keywords_str[keywords_len];
+
+extern char *token_type_str_map[t_enum_count];
 
 typedef struct {
     TokenType type;
