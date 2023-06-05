@@ -56,7 +56,7 @@ typedef enum {
     dt_num,
     dt_range,
     dt_bool,
-    // dt_shlit,
+    dt_shlit,
 
     /* */
     t_interpolation,
@@ -84,6 +84,7 @@ typedef struct {
     char *input; // the input string being scanned.
     size_t start; // start position of this token.
     size_t pos; // current position in the input.
+    bool command_mode;
     struct darr_t *tokens;
     struct hashmap_t *keywords;
 } Lexer;

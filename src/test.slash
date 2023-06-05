@@ -1,6 +1,1 @@
-var pi = 3.14
-
-var system = (uname)
-if $system == "Linux" {
-    echo "well akthually youre using GNU/Linux"
-}
+var file_count = (ls | wc -l) as num

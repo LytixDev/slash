@@ -68,13 +68,17 @@ char *token_type_str_map[t_enum_count] = {
     "dt_num",
     "dt_range",
     "dt_bool",
-    // dt_shlit,
+    "dt_shlit",
 
     "t_interpolation",
     "t_identifier",
     "t_newline",
     "t_eof",
     "t_error",
+};
+
+TokenType command_mode_terminals[] = {
+    t_newline,
 };
 
 static void keywords_init(struct hashmap_t *keywords)
@@ -182,10 +186,15 @@ static void consume_run(Lexer *lexer, char *accept)
 {
     while (consume(lexer, accept))
 	;
-    // while (1) {
-    //     if (!consume(lexer, accept))
-    //         break;
-    // }
+}
+
+static TokenType prev_token_type(Lexer *lexer)
+{
+    size_t size = lexer->tokens->size;
+    if (size == 0)
+        return t_error;
+    Token *token = darr_get(lexer->tokens, size - 1);
+    return token->type;
 }
 
 /*
@@ -212,6 +221,7 @@ static bool is_valid_identifier(char c)
  */
 StateFn lex_any(Lexer *lexer);
 StateFn lex_end(Lexer *lexer);
+StateFn lex_error(Lexer *lexer);
 StateFn lex_number(Lexer *lexer);
 StateFn lex_string(Lexer *lexer);
 StateFn lex_identifier(Lexer *lexer);
@@ -295,7 +305,12 @@ StateFn lex_any(Lexer *lexer)
     }
 
 error:
-    printf("error\n");
+    return STATE_FN(lex_error);
+}
+
+StateFn lex_error(Lexer *lexer)
+{
+    printf("error at %zu :-(\n", lexer->pos);
     return STATE_FN(NULL);
 }
 
@@ -330,10 +345,15 @@ StateFn lex_identifier(Lexer *lexer)
     identifier[size - 1] = 0;
 
     TokenType *tt = hashmap_sget(lexer->keywords, identifier);
-    if (tt == NULL)
+    TokenType previous = prev_token_type(lexer);
+    if (tt == NULL && (previous == t_var || previous == t_loop)) {
 	emit(lexer, t_identifier);
-    else
+    } else if (tt == NULL) {
+        lexer->command_mode = true;
+	emit(lexer, dt_shlit);
+    } else {
 	emit(lexer, *tt);
+    }
 
     return STATE_FN(lex_any);
 }
@@ -358,7 +378,7 @@ StateFn lex_string(Lexer *lexer)
     char c;
     while ((c = next(lexer)) != '"') {
 	if (c == EOF)
-	    return STATE_FN(NULL);
+	    return STATE_FN(lex_error);
     }
 
     /* backup final qoute */
@@ -376,9 +396,8 @@ StateFn lex_comment(Lexer *lexer)
     /* came from '#' */
     char c;
     while ((c = next(lexer)) != '\n') {
-	// TODO: error
 	if (c == EOF)
-	    return STATE_FN(NULL);
+	    return STATE_FN(lex_error);
     }
     backup(lexer);
     ignore(lexer);
@@ -413,7 +432,7 @@ struct darr_t *lex(char *input)
     keywords_init(&keywords);
 
     Lexer lexer = {
-	.input = input, .pos = 0, .start = 0, .tokens = darr_malloc(), .keywords = &keywords
+	.input = input, .pos = 0, .start = 0, .command_mode = false, .tokens = darr_malloc(), .keywords = &keywords
     };
     run(&lexer);
 
