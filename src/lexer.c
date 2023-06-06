@@ -17,13 +17,26 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "common.h"
 #include "lexer.h"
 #include "slash_str.h"
 #define NICC_IMPLEMENTATION
 #include "nicc/nicc.h"
 
+static void lex_panic(Lexer *lexer, char *err_msg);
 static void run_until(Lexer *lexer, StateFn start_state, StateFn end_state);
 static void emit(Lexer *lexer, TokenType type);
+StateFn lex_any(Lexer *lexer);
+StateFn lex_end(Lexer *lexer);
+StateFn lex_cmd(Lexer *lexer);
+StateFn lex_number(Lexer *lexer);
+StateFn lex_string(Lexer *lexer);
+StateFn lex_identifier(Lexer *lexer);
+StateFn lex_interpolation(Lexer *lexer);
+StateFn lex_comment(Lexer *lexer);
+StateFn lex_subshell_start(Lexer *lexer);
+StateFn lex_subshell_end(Lexer *lexer);
+
 
 char *token_type_str_map[t_enum_count] = {
     /* keywords */
@@ -38,6 +51,7 @@ char *token_type_str_map[t_enum_count] = {
     "t_as",
     "t_and",
     "t_or",
+    "t_not",
     "t_str",
     "t_num",
     "t_bool",
@@ -48,7 +62,6 @@ char *token_type_str_map[t_enum_count] = {
     "t_lbrace",
     "t_rbrace",
     // t_star,
-    "t_dollar",
 
     /* one or two character tokens */
     "t_anp",
@@ -84,13 +97,13 @@ static void keywords_init(struct hashmap_t *keywords)
     hashmap_init(keywords);
 
     char *keywords_str[keywords_len] = {
-	"var",	 "if", "elif", "else", "loop", "in",  "true",
-	"false", "as", "and",  "or",   "str",  "num", "bool",
+	"var", "if",  "elif", "else", "loop", "in",  "true", "false",
+	"as",  "and", "or",   "not",  "str",  "num", "bool",
     };
 
     TokenType keywords_val[keywords_len] = {
-	t_var,	 t_if, t_elif, t_else, t_loop, t_in,  t_true,
-	t_false, t_as, t_and,  t_or,   t_str,  t_num, t_bool,
+	t_var, t_if,  t_elif, t_else, t_loop, t_in,  t_true, t_false,
+	t_as,  t_and, t_or,   t_not,  t_str,  t_num, t_bool,
     };
 
     for (int i = 0; i < keywords_len; i++)
@@ -141,9 +154,8 @@ static void ignore(Lexer *lexer)
 
 static void backup(Lexer *lexer)
 {
-    // NOTE: should we give err?
     if (lexer->pos == 0)
-	return;
+	lex_panic(lexer, "tried to backup at input position zero");
 
     lexer->pos--;
 }
@@ -157,15 +169,24 @@ static bool match(Lexer *lexer, char expected)
     return false;
 }
 
-static bool consume_single(Lexer *lexer, char accept)
+static bool match_any(Lexer *lexer, char *expected)
 {
-    if (peek(lexer) == accept) {
-	next(lexer);
-	return true;
-    }
+    do {
+	if (match(lexer, *expected))
+	    return true;
+    } while (*expected++ != 0);
 
     return false;
 }
+
+// static bool consume_single(Lexer *lexer, char accept)
+//{
+//     if (peek(lexer) == accept) {
+//	next(lexer);
+//	return true;
+//     }
+//     return false;
+// }
 
 static bool consume(Lexer *lexer, char *accept)
 {
@@ -201,6 +222,14 @@ static void shlit_seperate(Lexer *lexer)
 	emit(lexer, dt_shlit);
 }
 
+static void lex_panic(Lexer *lexer, char *err_msg)
+{
+    printf("--- lex internal state --\n");
+    printf("start: %zu. pos: %zu\n", lexer->start, lexer->pos);
+    tokens_print(lexer->tokens);
+    slash_exit_lex_err(err_msg);
+}
+
 
 /*
  * semantic
@@ -224,19 +253,6 @@ static bool is_valid_identifier(char c)
 /*
  * state functions
  */
-StateFn lex_any(Lexer *lexer);
-StateFn lex_end(Lexer *lexer);
-StateFn lex_error(Lexer *lexer);
-StateFn lex_cmd(Lexer *lexer);
-StateFn lex_number(Lexer *lexer);
-StateFn lex_string(Lexer *lexer);
-StateFn lex_identifier(Lexer *lexer);
-StateFn lex_interpolation(Lexer *lexer);
-StateFn lex_comment(Lexer *lexer);
-StateFn lex_subshell_start(Lexer *lexer);
-StateFn lex_subshell_end(Lexer *lexer);
-
-
 StateFn lex_any(Lexer *lexer)
 {
     while (1) {
@@ -297,7 +313,7 @@ StateFn lex_any(Lexer *lexer)
 	    return STATE_FN(lex_end);
 
 	default:
-	    if (is_numeric(c)) {
+	    if (is_numeric(c) || c == '+' || c == '-') {
 		backup(lexer);
 		return STATE_FN(lex_number);
 	    }
@@ -307,17 +323,12 @@ StateFn lex_any(Lexer *lexer)
 		return STATE_FN(lex_identifier);
 	    }
 
-	    goto error;
+	    goto panic;
 	}
     }
 
-error:
-    return STATE_FN(lex_error);
-}
-
-StateFn lex_error(Lexer *lexer)
-{
-    printf("error at %zu :-(\n", lexer->pos);
+panic:
+    lex_panic(lexer, "lex_any unsuccesfull");
     return STATE_FN(NULL);
 }
 
@@ -329,12 +340,17 @@ StateFn lex_end(Lexer *lexer)
 
 StateFn lex_cmd(Lexer *lexer)
 {
+    /* previous token was a shell literal */
+
     while (1) {
 	char c = next(lexer);
 	switch (c) {
+	/* space and tab is treated as seperators when parsing arguments to a shell literal */
 	case ' ':
+	case '\t':
+	case '\v':
 	    shlit_seperate(lexer);
-	    consume_run(lexer, " ");
+	    consume_run(lexer, " \t\v");
 	    ignore(lexer);
 	    break;
 
@@ -356,16 +372,13 @@ StateFn lex_cmd(Lexer *lexer)
 	    lex_string(lexer);
 	    break;
 
+	/* terminating characters */
 	case ')':
 	    shlit_seperate(lexer);
 	    next(lexer);
 	    return STATE_FN(lex_subshell_end);
-
-	/* terminating characters */
 	case EOF:
 	case '&':
-	case '>':
-	case '<':
 	case '|':
 	case '\n':
 	    shlit_seperate(lexer);
@@ -374,12 +387,33 @@ StateFn lex_cmd(Lexer *lexer)
     }
 }
 
-// TODO: add hex, binary and octal support?
+// TODO: octal support?
 StateFn lex_number(Lexer *lexer)
 {
-    consume_run(lexer, "0123456789");
-    if (consume_single(lexer, '.'))
-	consume_run(lexer, "0123456789");
+    char *digits = "0123456789";
+
+    /* optional leading sign */
+    if (consume(lexer, "+-")) {
+	/* edge case where leading sign is not followed by a digit */
+	if (!match_any(lexer, digits))
+	    lex_panic(lexer, "optional leading sign must be followed by a digit");
+    }
+
+    /* hex and binary */
+    if (consume(lexer, "0")) {
+	if (consume(lexer, "xX"))
+	    digits = "0123456789abcdefABCDEF";
+	else if (consume(lexer, "bB"))
+	    digits = "01";
+    }
+
+    consume_run(lexer, digits);
+    /* 
+     * here we say any number can have a decimal part, even hex and binary. of course, this is not
+     * the case, and the parser will deal with this 
+     */
+    if (consume(lexer, "."))
+	consume_run(lexer, digits);
 
     emit(lexer, dt_num);
     return STATE_FN(lex_any);
@@ -432,7 +466,7 @@ StateFn lex_string(Lexer *lexer)
     char c;
     while ((c = next(lexer)) != '"') {
 	if (c == EOF)
-	    return STATE_FN(lex_error);
+	    lex_panic(lexer, "String not terminated");
     }
 
     /* backup final qoute */
@@ -451,7 +485,7 @@ StateFn lex_comment(Lexer *lexer)
     char c;
     while ((c = next(lexer)) != '\n') {
 	if (c == EOF)
-	    return STATE_FN(lex_error);
+	    return STATE_FN(lex_end);
     }
     backup(lexer);
     ignore(lexer);
@@ -490,10 +524,8 @@ static void emit(Lexer *lexer, TokenType type)
 static void run_until(Lexer *lexer, StateFn start_state, StateFn end_state)
 {
     for (StateFn state = start_state; state.fn != end_state.fn;) {
-	if (state.fn == NULL) {
-	    lex_error(lexer);
-	    return;
-	}
+	if (state.fn == NULL)
+	    lex_panic(lexer, "expected end_state not reached");
 	state = state.fn(lexer);
     }
 }
@@ -516,6 +548,5 @@ struct darr_t *lex(char *input)
     run(&lexer);
 
     hashmap_free(&keywords);
-
     return lexer.tokens;
 }
