@@ -1,1 +1,1 @@
-var file_count = (ls | wc -l) as num
+(echo "arg" (ls -l | wc -l) "arg2")

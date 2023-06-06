@@ -74,17 +74,12 @@ extern char *token_type_str_map[t_enum_count];
 typedef struct {
     TokenType type;
     SlashStr lexeme;
-    // union {
-    //     char *lexeme;
-    //     char *error;
-    // };
 } Token;
 
 typedef struct {
     char *input; // the input string being scanned.
     size_t start; // start position of this token.
     size_t pos; // current position in the input.
-    bool command_mode;
     struct darr_t *tokens;
     struct hashmap_t *keywords;
 } Lexer;

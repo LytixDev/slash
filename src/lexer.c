@@ -22,6 +22,7 @@
 #define NICC_IMPLEMENTATION
 #include "nicc/nicc.h"
 
+static void run_until(Lexer *lexer, StateFn start_state, StateFn end_state);
 static void emit(Lexer *lexer, TokenType type);
 
 char *token_type_str_map[t_enum_count] = {
@@ -75,10 +76,6 @@ char *token_type_str_map[t_enum_count] = {
     "t_newline",
     "t_eof",
     "t_error",
-};
-
-TokenType command_mode_terminals[] = {
-    t_newline,
 };
 
 static void keywords_init(struct hashmap_t *keywords)
@@ -192,10 +189,18 @@ static TokenType prev_token_type(Lexer *lexer)
 {
     size_t size = lexer->tokens->size;
     if (size == 0)
-        return t_error;
+	return t_error;
     Token *token = darr_get(lexer->tokens, size - 1);
     return token->type;
 }
+
+static void shlit_seperate(Lexer *lexer)
+{
+    backup(lexer);
+    if (lexer->start != lexer->pos)
+	emit(lexer, dt_shlit);
+}
+
 
 /*
  * semantic
@@ -222,11 +227,15 @@ static bool is_valid_identifier(char c)
 StateFn lex_any(Lexer *lexer);
 StateFn lex_end(Lexer *lexer);
 StateFn lex_error(Lexer *lexer);
+StateFn lex_cmd(Lexer *lexer);
 StateFn lex_number(Lexer *lexer);
 StateFn lex_string(Lexer *lexer);
 StateFn lex_identifier(Lexer *lexer);
 StateFn lex_interpolation(Lexer *lexer);
 StateFn lex_comment(Lexer *lexer);
+StateFn lex_subshell_start(Lexer *lexer);
+StateFn lex_subshell_end(Lexer *lexer);
+
 
 StateFn lex_any(Lexer *lexer)
 {
@@ -244,17 +253,15 @@ StateFn lex_any(Lexer *lexer)
 	    break;
 
 	/* one character tokens */
+	case '(':
+	    return STATE_FN(lex_subshell_start);
+	case ')':
+	    return STATE_FN(lex_subshell_end);
 	case '{':
 	    emit(lexer, t_lbrace);
 	    break;
 	case '}':
 	    emit(lexer, t_rbrace);
-	    break;
-	case '(':
-	    emit(lexer, t_lparen);
-	    break;
-	case ')':
-	    emit(lexer, t_rparen);
 	    break;
 
 	/* one or two character tokens */
@@ -320,6 +327,53 @@ StateFn lex_end(Lexer *lexer)
     return STATE_FN(NULL);
 }
 
+StateFn lex_cmd(Lexer *lexer)
+{
+    while (1) {
+	char c = next(lexer);
+	switch (c) {
+	case ' ':
+	    shlit_seperate(lexer);
+	    consume_run(lexer, " ");
+	    ignore(lexer);
+	    break;
+
+	case '(':
+	    shlit_seperate(lexer);
+	    next(lexer);
+	    lex_subshell_start(lexer);
+	    break;
+
+	case '$':
+	    shlit_seperate(lexer);
+	    next(lexer);
+	    lex_interpolation(lexer);
+	    break;
+
+	case '"':
+	    shlit_seperate(lexer);
+	    next(lexer);
+	    lex_string(lexer);
+	    break;
+
+	case ')':
+	    shlit_seperate(lexer);
+	    next(lexer);
+	    return STATE_FN(lex_subshell_end);
+
+	/* terminating characters */
+	case EOF:
+	case '&':
+	case '>':
+	case '<':
+	case '|':
+	case '\n':
+	    shlit_seperate(lexer);
+	    return STATE_FN(lex_any);
+	}
+    }
+}
+
 // TODO: add hex, binary and octal support?
 StateFn lex_number(Lexer *lexer)
 {
@@ -349,8 +403,8 @@ StateFn lex_identifier(Lexer *lexer)
     if (tt == NULL && (previous == t_var || previous == t_loop)) {
 	emit(lexer, t_identifier);
     } else if (tt == NULL) {
-        lexer->command_mode = true;
 	emit(lexer, dt_shlit);
+	return STATE_FN(lex_cmd);
     } else {
 	emit(lexer, *tt);
     }
@@ -404,6 +458,20 @@ StateFn lex_comment(Lexer *lexer)
     return STATE_FN(lex_any);
 }
 
+StateFn lex_subshell_start(Lexer *lexer)
+{
+    emit(lexer, t_lparen);
+    run_until(lexer, STATE_FN(lex_any), STATE_FN(lex_subshell_end));
+    StateFn next = lex_subshell_end(lexer);
+    return next;
+}
+
+StateFn lex_subshell_end(Lexer *lexer)
+{
+    emit(lexer, t_rparen);
+    return STATE_FN(lex_any);
+}
+
 
 /*
  * fsm
@@ -419,6 +487,17 @@ static void emit(Lexer *lexer, TokenType type)
     lexer->start = lexer->pos;
 }
 
+static void run_until(Lexer *lexer, StateFn start_state, StateFn end_state)
+{
+    for (StateFn state = start_state; state.fn != end_state.fn;) {
+	if (state.fn == NULL) {
+	    lex_error(lexer);
+	    return;
+	}
+	state = state.fn(lexer);
+    }
+}
+
 static void run(Lexer *lexer)
 {
     StateFn start_state = lex_any(lexer);
@@ -432,7 +511,7 @@ struct darr_t *lex(char *input)
     keywords_init(&keywords);
 
     Lexer lexer = {
-	.input = input, .pos = 0, .start = 0, .command_mode = false, .tokens = darr_malloc(), .keywords = &keywords
+	.input = input, .pos = 0, .start = 0, .tokens = darr_malloc(), .keywords = &keywords
     };
     run(&lexer);
 
