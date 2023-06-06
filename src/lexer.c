@@ -20,7 +20,6 @@
 #include "common.h"
 #include "lexer.h"
 #include "slash_str.h"
-#define NICC_IMPLEMENTATION
 #include "nicc/nicc.h"
 
 static void lex_panic(Lexer *lexer, char *err_msg);

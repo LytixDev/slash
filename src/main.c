@@ -17,10 +17,17 @@
 #include <stdio.h>
 
 #include "lexer.h"
+#include "ast.h"
+#include "parser.h"
+#define SAC_TYPEDEF
+#define SAC_IMPLEMENTATION
+#include "sac/sac.h"
+#define NICC_IMPLEMENTATION
+#include "nicc/nicc.h"
+
 
 int main(void)
 {
-    // https://www.youtube.com/watch?v=HxaD_trXwRE
     char input[1024];
     FILE *fp = fopen("src/test.slash", "r");
     if (fp == NULL) {
@@ -38,6 +45,20 @@ int main(void)
 
     input[--counter] = 0;
 
+    /* lex */
     struct darr_t *tokens = lex(input);
     tokens_print(tokens);
+
+    /* parse */
+    Arena ast_arena;
+    ast_arena_init(&ast_arena);
+    struct darr_t *stmts = parse(&ast_arena, tokens);
+    if (stmts != NULL) {
+        for (size_t i = 0; stmts->size; i++)
+            ast_print(darr_get(stmts, i));
+    }
+
+
+    /* interpret */
+    ast_arena_release(&ast_arena);
 }
