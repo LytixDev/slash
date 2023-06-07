@@ -25,4 +25,7 @@ typedef struct {
 } Interpreter;
 
 
+int interpret(struct darr_t *statements);
+
+
 #endif /* INTERPRETER_H */

@@ -17,6 +17,7 @@
 #include <stdio.h>
 
 #include "ast.h"
+#include "interpreter.h"
 #include "lexer.h"
 #include "parser.h"
 #define SAC_TYPEDEF
@@ -56,6 +57,7 @@ int main(void)
     ast_print(stmts);
 
     /* interpret */
+    interpret(stmts);
 
     /* clean up */
     ast_arena_release(&ast_arena);
