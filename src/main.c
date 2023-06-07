@@ -16,8 +16,8 @@
  */
 #include <stdio.h>
 
-#include "lexer.h"
 #include "ast.h"
+#include "lexer.h"
 #include "parser.h"
 #define SAC_TYPEDEF
 #define SAC_IMPLEMENTATION
@@ -53,11 +53,7 @@ int main(void)
     Arena ast_arena;
     ast_arena_init(&ast_arena);
     struct darr_t *stmts = parse(&ast_arena, tokens);
-    if (stmts != NULL) {
-        for (size_t i = 0; stmts->size; i++)
-            ast_print(darr_get(stmts, i));
-    }
-
+    ast_print(stmts);
 
     /* interpret */
     ast_arena_release(&ast_arena);

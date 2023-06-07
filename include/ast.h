@@ -25,18 +25,10 @@
 
 
 /* types */
-typedef enum {
-    EXPR_UNARY,
-    EXPR_BINARY,
-    EXPR_LITERAL,
-    EXPR_ENUM_COUNT
-} ExprType;
+typedef enum { EXPR_UNARY, EXPR_BINARY, EXPR_LITERAL, EXPR_ENUM_COUNT } ExprType;
 
-typedef enum {
-    STMT_EXPRESSION,
-    STMT_VAR,
-    STMT_ENUM_COUNT
-} StmtType;
+typedef enum { STMT_EXPRESSION, STMT_VAR, STMT_ENUM_COUNT } StmtType;
+
 
 /*
  * evil trick to get some sort of polymorphism (I concede, my brain has been corrupted by OOP)
@@ -63,6 +55,13 @@ typedef struct {
     Expr *right;
 } BinaryExpr;
 
+typedef struct {
+    ExprType type;
+    TokenType value_type; // dt_str, dt_num, dt_bool ...
+    void *value;
+} LiteralExpr;
+
+
 /* statements */
 typedef struct {
     StmtType type;
@@ -77,11 +76,12 @@ typedef struct {
 
 
 /* functions */
-Expr *expr_alloc(Arena *ast_arena, ExprType type, Token *token);
-Stmt *stmt_alloc(Arena *ast_arena, StmtType type, Token *token);
+Expr *expr_alloc(Arena *ast_arena, ExprType type);
+Stmt *stmt_alloc(Arena *ast_arena, StmtType type);
 
-void ast_print(Stmt *ast_head);
+void ast_print(struct darr_t *ast_heads);
 
+/* do I really need a memory arena? Can all expr and stmts just be stack allocated? */
 void ast_arena_init(Arena *ast_arena);
 void ast_arena_release(Arena *ast_arena);
 

@@ -18,8 +18,20 @@
 #include <stdlib.h>
 
 
-void slash_exit_lex_err(char *p)
+void slash_exit_lex_err(char *err_msg)
 {
-    fprintf(stderr, "Error during lexing: %s\n", p);
+    fprintf(stderr, "Error during lexing: %s\n", err_msg);
+    exit(1);
+}
+
+void slash_exit_parse_err(char *err_msg)
+{
+    fprintf(stderr, "Error during parsing: %s\n", err_msg);
+    exit(1);
+}
+
+void slash_exit_internal_err(char *err_msg)
+{
+    fprintf(stderr, "Internal error: %s\n", err_msg);
     exit(1);
 }

@@ -19,8 +19,8 @@
 
 #include "common.h"
 #include "lexer.h"
-#include "slash_str.h"
 #include "nicc/nicc.h"
+#include "slash_str.h"
 
 static void lex_panic(Lexer *lexer, char *err_msg);
 static void run_until(Lexer *lexer, StateFn start_state, StateFn end_state);
@@ -407,9 +407,9 @@ StateFn lex_number(Lexer *lexer)
     }
 
     consume_run(lexer, digits);
-    /* 
+    /*
      * here we say any number can have a decimal part, even hex and binary. of course, this is not
-     * the case, and the parser will deal with this 
+     * the case, and the parser will deal with this
      */
     if (consume(lexer, "."))
 	consume_run(lexer, digits);
@@ -470,7 +470,7 @@ StateFn lex_string(Lexer *lexer)
 
     /* backup final qoute */
     backup(lexer);
-    emit(lexer, t_str);
+    emit(lexer, dt_str);
     /* advance past final qoute and ignore it */
     next(lexer);
     ignore(lexer);

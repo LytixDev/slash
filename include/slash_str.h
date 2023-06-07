@@ -20,6 +20,7 @@
 #include <stdlib.h>
 
 
+/* string view */
 typedef struct {
     char *p;
     size_t size;

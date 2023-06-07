@@ -23,6 +23,13 @@
 #endif
 #include "sac/sac.h"
 
+/* types */
+typedef struct {
+    Arena *ast_arena;
+    struct darr_t *tokens;
+    size_t token_pos;
+} Parser;
+
 /*
  * parses a list of tokens into a list of Stmt's.
  * the Stmt objects in the list are the first nodes in an AST.

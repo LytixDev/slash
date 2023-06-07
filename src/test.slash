@@ -1,14 +1,5 @@
-# we only support linux at the moment
-var is_supported = (uname) == "Linux"
-
-if not $is_supported {
-    echo "System" (uname) "is not supported and may not work properly"
-}
-
-loop c in "Alice" {
-    echo $c
-}
-
-var neg_pi = -3.14
-var hex = 0x00ff
-var byte = 0b11110000
+var name1 = "Alice"
+var name2 = "Bob"
+var pi = 3.14
+var t = true
+var f = false
