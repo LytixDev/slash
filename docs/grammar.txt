@@ -1,0 +1,66 @@
+//context-free expression grammar
+
+program         -> declaration* EOF ;
+
+statement       -> declaration ( "\n" *) ;
+
+declaration     -> var_declation
+                |  shell_cmd;
+
+var_declation   -> "var" IDENTIFIER "=" expression "\n" ;
+
+shell_cmd       -> SHLIT ( argument* );
+
+argument        -> expression ;
+
+expression      -> primary ;
+
+primary         -> "true" | "false"
+                |  NUMBER | STRING ;
+
+
+
+
+//program      -> declaration* EOF ;
+//
+//declaration  -> varDecl
+//             | statement ;
+//
+//statement    -> exprStmt
+//             |  loopStmt
+//             |  ifStmt
+//             |  block ;
+//
+//loopStmt     -> "loop" () block ;
+//
+//ifStmt       -> "if" expression block ;
+//
+//block        -> "{" declaration* "}" ;
+//
+//varDecl      -> "var" IDENTIFIER "=" expression "\n" ;
+//
+//exprStmt     -> expression "\n" ;
+//
+//expression   -> assignment ;
+//assignment   -> IDENTIFIER "=" assignment
+//             |  equality
+//             |  logic_or ;
+//
+//logic_or     -> logic_and ( "or" logic_and )* ;
+//logic_and    -> equality ( "and" equality )* ;
+//
+//equality     -> comparison ( ( "!=" | "==" ) comparison )* ;
+//comparison   -> term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
+//term         -> factor ( ( "-" | "+" ) factor )* ;
+//factor       -> unary ( ( "/" | "*" ) unary )* ;
+//unary        -> ( "!" | "-") unary
+//             |  call;
+//
+//call         -> primary ( "(" arguments? ")" )* ;
+//arguments    -> expression ( "," expression )* ;
+//
+//
+//primary      -> "true" | "false"
+//             |  NUMBER | STRING
+//             |  "(" expression ")"
+//             |  IDENTIFIER ;
