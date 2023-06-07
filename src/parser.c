@@ -86,33 +86,43 @@ static Token *consume(Parser *parser, TokenType expected, char *err_msg)
     return advance(parser);
 }
 
+// TODO: match multiple?
+static void ignore(Parser *parser, TokenType type)
+{
+    while (check(parser, type))
+	advance(parser);
+}
+
 // TODO: match multiple
-// static bool match(Parser *parser, TokenType type)
-//{
-//     if (check(parser, type)) {
-//         advance(parser);
-//         return true;
-//     }
-//
-//     return false;
-// }
+static bool match(Parser *parser, TokenType type)
+{
+    if (check(parser, type)) {
+	advance(parser);
+	return true;
+    }
+
+    return false;
+}
 
 
 /* grammar functions */
 static Stmt *declaration(Parser *parser);
 static Stmt *var_decl(Parser *parser);
+static Stmt *shell_cmd(Parser *parser);
+static Expr *argument(Parser *parser);
 static Expr *expression(Parser *parser);
 static Expr *primary(Parser *parser);
 
 static Stmt *declaration(Parser *parser)
 {
-    return var_decl(parser);
+    if (match(parser, t_var))
+	return var_decl(parser);
+
+    return shell_cmd(parser);
 }
 
 static Stmt *var_decl(Parser *parser)
 {
-    // TODO: should not consume var token as var token will be advanced past when we enter here
-    consume(parser, t_var, "lol");
     Token *name = consume(parser, t_identifier, "Expected variable name");
     consume(parser, t_equal, "Expected variable definition");
     Expr *initializer = expression(parser);
@@ -122,6 +132,26 @@ static Stmt *var_decl(Parser *parser)
     stmt->name = name;
     stmt->initializer = initializer;
     return (Stmt *)stmt;
+}
+
+static Stmt *shell_cmd(Parser *parser)
+{
+    // TODO: should be previous since we will only enter here if we came from dt_shlit
+    Token *cmd_name = consume(parser, dt_shlit, "Expected shell literal");
+
+    ArgExpr *arg = (ArgExpr *)expr_alloc(parser->ast_arena, EXPR_ARG);
+    arg->this = argument(parser);
+    arg->next = NULL;
+
+    CmdStmt *stmt = (CmdStmt *)stmt_alloc(parser->ast_arena, STMT_CMD);
+    stmt->cmd_name = cmd_name;
+    stmt->args_ll = arg;
+    return (Stmt *)stmt;
+}
+
+static Expr *argument(Parser *parser)
+{
+    return expression(parser);
 }
 
 static Expr *expression(Parser *parser)
@@ -170,7 +200,10 @@ struct darr_t *parse(Arena *ast_arena, struct darr_t *tokens)
 {
     Parser parser = { .ast_arena = ast_arena, .tokens = tokens, .token_pos = 0 };
     struct darr_t *statements = darr_malloc();
-    while (!check(&parser, t_eof))
+    while (!check(&parser, t_eof)) {
 	darr_append(statements, declaration(&parser));
+	/* ignore all trailing newlines after statement */
+	ignore(&parser, t_newline);
+    }
     return statements;
 }

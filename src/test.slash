@@ -1,5 +1,2 @@
-var name1 = "Alice"
-var name2 = "Bob"
-var pi = 3.14
-var t = true
-var f = false
+var name = "Alice"
+echo "Alice"

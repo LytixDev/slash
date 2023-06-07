@@ -25,9 +25,11 @@
 
 
 /* types */
-typedef enum { EXPR_UNARY, EXPR_BINARY, EXPR_LITERAL, EXPR_ENUM_COUNT } ExprType;
+typedef enum { EXPR_UNARY = 0, EXPR_BINARY, EXPR_LITERAL, EXPR_ARG, EXPR_ENUM_COUNT } ExprType;
 
-typedef enum { STMT_EXPRESSION, STMT_VAR, STMT_ENUM_COUNT } StmtType;
+typedef enum { STMT_EXPRESSION = 0, STMT_VAR, STMT_CMD, STMT_ENUM_COUNT } StmtType;
+
+extern char *stmt_type_str_map[STMT_ENUM_COUNT];
 
 
 /*
@@ -61,6 +63,13 @@ typedef struct {
     void *value;
 } LiteralExpr;
 
+typedef struct arg_expr_t ArgExpr;
+struct arg_expr_t {
+    ExprType type;
+    Expr *this;
+    ArgExpr *next;
+};
+
 
 /* statements */
 typedef struct {
@@ -73,6 +82,12 @@ typedef struct {
     Token *name;
     Expr *initializer;
 } VarStmt;
+
+typedef struct {
+    StmtType type;
+    Token *cmd_name;
+    ArgExpr *args_ll; // NULL terminated linked list
+} CmdStmt;
 
 
 /* functions */

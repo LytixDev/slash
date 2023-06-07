@@ -1,15 +1,23 @@
 //context-free expression grammar
 
-program      -> declaration* EOF ;
+program         -> declaration* EOF ;
 
-declaration  -> varDecl ;
+statement       -> declaration ( "\n" *) ;
 
-varDecl      -> "var" IDENTIFIER "=" expression "\n" ;
+declaration     -> var_declation
+                |  shell_cmd;
 
-expression   -> primary ;
+var_declation   -> "var" IDENTIFIER "=" expression "\n" ;
 
-primary      -> "true" | "false"
-             |  NUMBER | STRING ;
+shell_cmd       -> SHLIT ( argument* );
+
+argument        -> expression ;
+
+expression      -> primary ;
+
+primary         -> "true" | "false"
+                |  NUMBER | STRING ;
+
 
 
 

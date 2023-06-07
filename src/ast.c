@@ -23,25 +23,19 @@
 #include "slash_str.h"
 
 
-// TODO: table lookup faster
+const size_t expr_size_table[] = { sizeof(UnaryExpr), sizeof(BinaryExpr), sizeof(LiteralExpr),
+				   sizeof(ArgExpr) };
+const size_t stmt_size_table[] = { sizeof(ExpressionStmt), sizeof(VarStmt), sizeof(CmdStmt) };
+
+char *stmt_type_str_map[STMT_ENUM_COUNT] = {
+    "STMT_EXPRESSION",
+    "STMT_VAR",
+    "STMT_CMD",
+};
+
 Expr *expr_alloc(Arena *ast_arena, ExprType type)
 {
-    size_t size = 0;
-    switch (type) {
-    case EXPR_UNARY:
-	size = sizeof(UnaryExpr);
-	break;
-    case EXPR_BINARY:
-	size = sizeof(BinaryExpr);
-	break;
-    case EXPR_LITERAL:
-	size = sizeof(LiteralExpr);
-	break;
-    default:
-	slash_exit_internal_err("expr type not known");
-	break;
-    }
-
+    size_t size = expr_size_table[type];
     Expr *expr = m_arena_alloc(ast_arena, size);
     expr->type = type;
     return expr;
@@ -49,25 +43,14 @@ Expr *expr_alloc(Arena *ast_arena, ExprType type)
 
 Stmt *stmt_alloc(Arena *ast_arena, StmtType type)
 {
-    size_t size = 0;
-    switch (type) {
-    case STMT_EXPRESSION:
-	size = sizeof(ExpressionStmt);
-	break;
-    case STMT_VAR:
-	size = sizeof(VarStmt);
-	break;
-    default:
-	slash_exit_internal_err("stmt type not known");
-	break;
-    }
-
+    size_t size = stmt_size_table[type];
     Stmt *stmt = m_arena_alloc(ast_arena, size);
     stmt->type = type;
     return stmt;
 }
 
 
+/* arena */
 void ast_arena_init(Arena *ast_arena)
 {
     m_arena_init_dynamic(ast_arena, SAC_DEFAULT_CAPACITY, SAC_DEFAULT_COMMIT_SIZE);
@@ -130,6 +113,19 @@ static void ast_print_var(VarStmt *stmt)
     ast_print_expr(stmt->initializer);
 }
 
+static void ast_print_cmd(CmdStmt *stmt)
+{
+    slash_str_print(stmt->cmd_name->lexeme);
+    printf(", ");
+    ArgExpr *arg = stmt->args_ll;
+    while (arg != NULL) {
+	ast_print_expr(arg->this);
+	arg = arg->next;
+	if (arg != NULL)
+	    printf(", ");
+    }
+}
+
 static void ast_print_expr(Expr *expr)
 {
     putchar('[');
@@ -156,6 +152,7 @@ static void ast_print_expr(Expr *expr)
 
 static void ast_print_stmt(Stmt *stmt)
 {
+    printf("%s", stmt_type_str_map[stmt->type]);
     putchar('{');
 
     switch (stmt->type) {
@@ -165,6 +162,10 @@ static void ast_print_stmt(Stmt *stmt)
 
     case STMT_VAR:
 	ast_print_var((VarStmt *)stmt);
+	break;
+
+    case STMT_CMD:
+	ast_print_cmd((CmdStmt *)stmt);
 	break;
 
     default:
