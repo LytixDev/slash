@@ -14,22 +14,15 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "slash_str.h"
-#include <stdio.h>
-#include <string.h>
+#ifndef INTERPRETER_H
+#define INTERPRETER_H
 
-void slash_str_print(SlashStr s)
-{
-    char str[s.size + 1];
-    memcpy(str, s.p, s.size);
-    str[s.size] = 0;
-    printf("%s", str);
-}
+#include "nicc/nicc.h"
 
-void slash_str_println(SlashStr s)
-{
-    char str[s.size + 1];
-    memcpy(str, s.p, s.size);
-    str[s.size] = 0;
-    printf("%s\n", str);
-}
+typedef struct {
+    struct hashmap_t variables;
+    int exit_code;
+} Interpreter;
+
+
+#endif /* INTERPRETER_H */

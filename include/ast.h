@@ -18,6 +18,7 @@
 #define AST_H
 
 #include "lexer.h"
+#include "slash_value.h"
 #ifndef SAC_TYPEDEF
 #define SAC_TYPEDEF
 #endif
@@ -29,6 +30,7 @@ typedef enum { EXPR_UNARY = 0, EXPR_BINARY, EXPR_LITERAL, EXPR_ARG, EXPR_ENUM_CO
 
 typedef enum { STMT_EXPRESSION = 0, STMT_VAR, STMT_CMD, STMT_ENUM_COUNT } StmtType;
 
+extern char *expr_type_str_map[EXPR_ENUM_COUNT];
 extern char *stmt_type_str_map[STMT_ENUM_COUNT];
 
 
@@ -59,8 +61,9 @@ typedef struct {
 
 typedef struct {
     ExprType type;
-    TokenType value_type; // dt_str, dt_num, dt_bool ...
-    void *value;
+    SlashValue value;
+    // TokenType value_type; // dt_bool, dt_str, dt_num, dt_shlit, t_interpolation
+    // void *value;
 } LiteralExpr;
 
 typedef struct arg_expr_t ArgExpr;

@@ -22,6 +22,7 @@
 #include "nicc/nicc.h"
 #include "parser.h"
 #include "sac/sac.h"
+#include "slash_value.h"
 
 /* util/helper functions */
 static Token *peek(Parser *parser)
@@ -163,14 +164,13 @@ static Expr *primary(Parser *parser)
 {
     Token *token = advance(parser);
 
-    // TODO: fix this lol
-    TokenType value_type = t_error;
+    // TODO: fix this entire func lol
+    TokenType tt_type = t_error;
     bool is_valid = false;
-    TokenType valid[] = { t_true, t_false, dt_num, dt_str };
-    for (int i = 0; i < 4; i++) {
+    TokenType valid[] = { t_true, t_false, t_interpolation, dt_num, dt_str, dt_shlit };
+    for (int i = 0; i < 6; i++) {
 	if (token->type == valid[i]) {
 	    is_valid = true;
-	    value_type = i > 1 ? valid[i] : dt_bool;
 	    break;
 	}
     }
@@ -178,18 +178,25 @@ static Expr *primary(Parser *parser)
 	slash_exit_parse_err("not a valid primary type");
 
     LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
-    expr->value_type = value_type;
-    void *value;
 
-    if (value_type == dt_bool) {
-	value = m_arena_alloc(parser->ast_arena, sizeof(bool));
-	*(bool *)value = token->type == t_true ? true : false;
-    } else if (value_type == dt_num) {
-	// TODO: here we need to figure out the base and a bunch of things
-	value = m_arena_alloc(parser->ast_arena, sizeof(double));
-	*(double *)value = 3.14;
+    SlashValue value;
+    if (tt_type == t_true || tt_type == t_false) {
+	value.type = SVT_BOOL;
+	value.p = m_arena_alloc(parser->ast_arena, sizeof(bool));
+	*(bool *)value.p = tt_type == t_true ? true : false;
+    } else if (tt_type == t_num) {
+	value.type = SVT_NUM;
+	value.p = m_arena_alloc(parser->ast_arena, sizeof(double));
+	*(double *)value.p = 3.14;
+    } else if (tt_type == t_interpolation) {
+	value.type = SVT_INTERPOLATION;
+	value.p = &token->lexeme;
+    } else if (tt_type == dt_shlit) {
+	value.type = SVT_SHLIT;
+	value.p = &token->lexeme;
     } else {
-	value = &token->lexeme;
+	value.type = SVT_STR;
+	value.p = &token->lexeme;
     }
 
     expr->value = value;

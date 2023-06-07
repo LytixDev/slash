@@ -14,22 +14,22 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "slash_str.h"
-#include <stdio.h>
-#include <string.h>
+#ifndef SLASH_VALUE_H
+#define SLASH_VALUE_H
 
-void slash_str_print(SlashStr s)
-{
-    char str[s.size + 1];
-    memcpy(str, s.p, s.size);
-    str[s.size] = 0;
-    printf("%s", str);
-}
 
-void slash_str_println(SlashStr s)
-{
-    char str[s.size + 1];
-    memcpy(str, s.p, s.size);
-    str[s.size] = 0;
-    printf("%s\n", str);
-}
+typedef enum {
+    SVT_BOOL = 0,
+    SVT_STR,
+    SVT_NUM,
+    SVT_RANGE,
+    SVT_INTERPOLATION,
+    SVT_SHLIT
+} SlashValueType;
+
+typedef struct {
+    void *p; // arena allocated
+    SlashValueType type;
+} SlashValue;
+
+#endif /* SLASH_VALUE_H */

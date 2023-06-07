@@ -21,11 +21,19 @@
 #include "lexer.h"
 #include "sac/sac.h"
 #include "slash_str.h"
+#include "slash_value.h"
 
 
 const size_t expr_size_table[] = { sizeof(UnaryExpr), sizeof(BinaryExpr), sizeof(LiteralExpr),
 				   sizeof(ArgExpr) };
 const size_t stmt_size_table[] = { sizeof(ExpressionStmt), sizeof(VarStmt), sizeof(CmdStmt) };
+
+char *expr_type_str_map[EXPR_ENUM_COUNT] = {
+    "EXPR_UNARY",
+    "EXPR_BINARY",
+    "EXPR_LITERAL",
+    "EXPR_ARG",
+};
 
 char *stmt_type_str_map[STMT_ENUM_COUNT] = {
     "STMT_EXPRESSION",
@@ -82,17 +90,19 @@ static void ast_print_binary(BinaryExpr *expr)
 
 static void ast_print_literal(LiteralExpr *expr)
 {
-    switch (expr->value_type) {
-    case dt_str:
-	slash_str_print(*(SlashStr *)expr->value);
+    switch (expr->value.type) {
+    case SVT_STR:
+    case SVT_INTERPOLATION:
+    case SVT_SHLIT:
+	slash_str_print(*(SlashStr *)expr->value.p);
 	break;
 
-    case dt_num:
-	printf("%f", *(double *)expr->value);
+    case SVT_NUM:
+	printf("%f", *(double *)expr->value.p);
 	break;
 
-    case dt_bool:
-	printf("%s", *(bool *)expr->value == true ? "true" : "false");
+    case SVT_BOOL:
+	printf("%s", *(bool *)expr->value.p == true ? "true" : "false");
 	break;
 
     default:
@@ -128,6 +138,7 @@ static void ast_print_cmd(CmdStmt *stmt)
 
 static void ast_print_expr(Expr *expr)
 {
+    printf("%s", expr_type_str_map[expr->type]);
     putchar('[');
 
     switch (expr->type) {
