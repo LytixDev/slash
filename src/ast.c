@@ -25,7 +25,7 @@
 
 
 const size_t expr_size_table[] = { sizeof(UnaryExpr), sizeof(BinaryExpr), sizeof(LiteralExpr),
-				   sizeof(ArgExpr) };
+				   sizeof(InterpolationExpr), sizeof(ArgExpr) };
 const size_t stmt_size_table[] = { sizeof(ExpressionStmt), sizeof(VarStmt), sizeof(CmdStmt) };
 
 char *expr_type_str_map[EXPR_ENUM_COUNT] = {
@@ -92,7 +92,6 @@ static void ast_print_literal(LiteralExpr *expr)
 {
     switch (expr->value.type) {
     case SVT_STR:
-    case SVT_INTERPOLATION:
     case SVT_SHLIT:
 	slash_str_print(*(SlashStr *)expr->value.p);
 	break;
@@ -110,6 +109,10 @@ static void ast_print_literal(LiteralExpr *expr)
     }
 }
 
+static void ast_print_interpolation(InterpolationExpr *expr)
+{
+    slash_str_print(expr->var_name->lexeme);
+}
 
 static void ast_print_expression(ExpressionStmt *stmt)
 {
@@ -152,6 +155,10 @@ static void ast_print_expr(Expr *expr)
 
     case EXPR_LITERAL:
 	ast_print_literal((LiteralExpr *)expr);
+	break;
+
+    case EXPR_INTERPOLATION:
+	ast_print_interpolation((InterpolationExpr *)expr);
 	break;
 
     default:

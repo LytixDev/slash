@@ -447,7 +447,9 @@ StateFn lex_identifier(Lexer *lexer)
 
 StateFn lex_interpolation(Lexer *lexer)
 {
-    /* came from '$' */
+    /* came from '$' which we want to ignore */
+    ignore(lexer);
+
     // TODO: make sure there is at least one char here?
     while (is_valid_identifier(next(lexer)))
 	;

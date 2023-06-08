@@ -19,12 +19,10 @@
 
 
 typedef enum {
-    SVT_BOOL = 0,
-    SVT_STR,
-    SVT_NUM,
-    SVT_RANGE,
-    SVT_INTERPOLATION,
-    SVT_SHLIT
+    SVT_BOOL = 0, // p = bool *
+    SVT_STR, // p = SlashStr *
+    SVT_NUM, // p = double *
+    SVT_SHLIT // p = SlashStr *
 } SlashValueType;
 
 typedef struct {

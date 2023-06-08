@@ -15,8 +15,17 @@ argument        -> expression ;
 
 expression      -> primary ;
 
-primary         -> "true" | "false"
-                |  NUMBER | STRING ;
+primary         -> STRING 
+                |  SHLIT
+                |  bool_lit
+                |  number
+                |  interpolation ;
+
+bool_lit        -> "true" | "false ";
+
+number          -> NUMBER ;
+
+interpolation   -> INTERPOLATION ;
 
 
 

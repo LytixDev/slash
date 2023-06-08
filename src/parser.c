@@ -94,8 +94,7 @@ static void ignore(Parser *parser, TokenType type)
 	advance(parser);
 }
 
-// TODO: match multiple
-static bool match(Parser *parser, TokenType type)
+static bool match_single(Parser *parser, TokenType type)
 {
     if (check(parser, type)) {
 	advance(parser);
@@ -105,6 +104,24 @@ static bool match(Parser *parser, TokenType type)
     return false;
 }
 
+static bool match_either(Parser *parser, unsigned int n, ...)
+{
+    TokenType type;
+    va_list args;
+    va_start(args, n);
+
+    for (unsigned int i = 0; i < n; i++) {
+	type = va_arg(args, TokenType);
+	if (match_single(parser, type))
+	    return true;
+    }
+
+    va_end(args);
+    return false;
+}
+
+#define match(parser, ...) match_either(parser, VA_NUMBER_OF_ARGS(__VA_ARGS__), __VA_ARGS__)
+
 
 /* grammar functions */
 static Stmt *declaration(Parser *parser);
@@ -113,6 +130,9 @@ static Stmt *shell_cmd(Parser *parser);
 static Expr *argument(Parser *parser);
 static Expr *expression(Parser *parser);
 static Expr *primary(Parser *parser);
+static Expr *bool_lit(Parser *parser);
+static Expr *number(Parser *parser);
+static Expr *interpolation(Parser *parser);
 
 static Stmt *declaration(Parser *parser)
 {
@@ -140,19 +160,33 @@ static Stmt *shell_cmd(Parser *parser)
     // TODO: should be previous since we will only enter here if we came from dt_shlit
     Token *cmd_name = consume(parser, dt_shlit, "Expected shell literal");
 
-    ArgExpr *arg = (ArgExpr *)expr_alloc(parser->ast_arena, EXPR_ARG);
-    arg->this = argument(parser);
-    arg->next = NULL;
-
     CmdStmt *stmt = (CmdStmt *)stmt_alloc(parser->ast_arena, STMT_CMD);
     stmt->cmd_name = cmd_name;
-    stmt->args_ll = arg;
+    stmt->args_ll = (ArgExpr *)argument(parser);
     return (Stmt *)stmt;
 }
 
 static Expr *argument(Parser *parser)
 {
-    return expression(parser);
+    if (check(parser, t_newline, t_eof))
+	return NULL;
+
+    ArgExpr *args_ll = (ArgExpr *)expr_alloc(parser->ast_arena, EXPR_ARG);
+    args_ll->next = NULL;
+
+    // TODO: bruh kanke være nødvendig
+    ArgExpr **arg = &args_ll;
+    while (!check(parser, t_newline, t_eof)) {
+	if (*arg == NULL) {
+	    *arg = (ArgExpr *)expr_alloc(parser->ast_arena, EXPR_ARG);
+	    (*arg)->next = NULL;
+	}
+
+	(*arg)->this = expression(parser);
+	arg = &(*arg)->next;
+    }
+
+    return (Expr *)args_ll;
 }
 
 static Expr *expression(Parser *parser)
@@ -162,44 +196,61 @@ static Expr *expression(Parser *parser)
 
 static Expr *primary(Parser *parser)
 {
-    Token *token = advance(parser);
+    if (match(parser, t_true, t_false))
+	return bool_lit(parser);
 
-    // TODO: fix this entire func lol
-    TokenType tt_type = t_error;
-    bool is_valid = false;
-    TokenType valid[] = { t_true, t_false, t_interpolation, dt_num, dt_str, dt_shlit };
-    for (int i = 0; i < 6; i++) {
-	if (token->type == valid[i]) {
-	    is_valid = true;
-	    break;
-	}
-    }
-    if (!is_valid)
+    if (match(parser, t_num))
+	return number(parser);
+
+    if (match(parser, t_interpolation))
+	return interpolation(parser);
+
+    /* str or shlit */
+    if (!match(parser, dt_str, dt_shlit))
 	slash_exit_parse_err("not a valid primary type");
 
+    Token *token = previous(parser);
+    LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
+    expr->value =
+	(SlashValue){ .type = token->type == dt_str ? SVT_STR : SVT_SHLIT, .p = &token->lexeme };
+    return (Expr *)expr;
+}
+
+static Expr *bool_lit(Parser *parser)
+{
+    Token *token = previous(parser);
     LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
 
     SlashValue value;
-    if (tt_type == t_true || tt_type == t_false) {
-	value.type = SVT_BOOL;
-	value.p = m_arena_alloc(parser->ast_arena, sizeof(bool));
-	*(bool *)value.p = tt_type == t_true ? true : false;
-    } else if (tt_type == t_num) {
-	value.type = SVT_NUM;
-	value.p = m_arena_alloc(parser->ast_arena, sizeof(double));
-	*(double *)value.p = 3.14;
-    } else if (tt_type == t_interpolation) {
-	value.type = SVT_INTERPOLATION;
-	value.p = &token->lexeme;
-    } else if (tt_type == dt_shlit) {
-	value.type = SVT_SHLIT;
-	value.p = &token->lexeme;
-    } else {
-	value.type = SVT_STR;
-	value.p = &token->lexeme;
-    }
+    value.type = SVT_BOOL;
+    value.p = m_arena_alloc(parser->ast_arena, sizeof(bool));
+    *(bool *)value.p = token->type == t_true ? true : false;
 
     expr->value = value;
+    return (Expr *)expr;
+}
+
+static Expr *number(Parser *parser)
+{
+    Token *token = previous(parser);
+    LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
+
+    SlashValue value;
+    value.type = SVT_NUM;
+    // TODO: different parsing based on number base
+    value.p = m_arena_alloc(parser->ast_arena, sizeof(double));
+    *(double *)value.p = 3.14;
+
+    expr->value = value;
+    return (Expr *)expr;
+}
+
+static Expr *interpolation(Parser *parser)
+{
+    Token *token = previous(parser);
+    InterpolationExpr *expr =
+	(InterpolationExpr *)expr_alloc(parser->ast_arena, EXPR_INTERPOLATION);
+    expr->var_name = token;
     return (Expr *)expr;
 }
 

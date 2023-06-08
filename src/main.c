@@ -57,7 +57,7 @@ int main(void)
     ast_print(stmts);
 
     /* interpret */
-    interpret(stmts);
+    // interpret(stmts);
 
     /* clean up */
     ast_arena_release(&ast_arena);

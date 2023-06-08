@@ -26,7 +26,14 @@
 
 
 /* types */
-typedef enum { EXPR_UNARY = 0, EXPR_BINARY, EXPR_LITERAL, EXPR_ARG, EXPR_ENUM_COUNT } ExprType;
+typedef enum {
+    EXPR_UNARY = 0,
+    EXPR_BINARY,
+    EXPR_LITERAL,
+    EXPR_INTERPOLATION,
+    EXPR_ARG,
+    EXPR_ENUM_COUNT
+} ExprType;
 
 typedef enum { STMT_EXPRESSION = 0, STMT_VAR, STMT_CMD, STMT_ENUM_COUNT } StmtType;
 
@@ -62,9 +69,12 @@ typedef struct {
 typedef struct {
     ExprType type;
     SlashValue value;
-    // TokenType value_type; // dt_bool, dt_str, dt_num, dt_shlit, t_interpolation
-    // void *value;
 } LiteralExpr;
+
+typedef struct {
+    ExprType type;
+    Token *var_name;
+} InterpolationExpr;
 
 typedef struct arg_expr_t ArgExpr;
 struct arg_expr_t {
