@@ -14,9 +14,12 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "interpreter.h"
+// TODO: remove
+#include <stdio.h>
+
 #include "ast.h"
 #include "common.h"
+#include "interpreter.h"
 #include "nicc/nicc.h"
 #include "slash_str.h"
 #include "slash_value.h"
@@ -46,21 +49,42 @@ static SlashValue eval_literal(Interpreter *interpreter, LiteralExpr *expr)
     return expr->value;
 }
 
+static SlashValue eval_interpolation(Interpreter *interpreter, InterpolationExpr *expr)
+{
+    SlashValue *value =
+	hashmap_get(&interpreter->variables, &expr->var_name->lexeme, sizeof(SlashStr));
+    if (value == NULL)
+	return (SlashValue){ .p = NULL, .type = SVT_NULL };
+    return *value;
+}
+
 
 static void exec_var(Interpreter *interpreter, VarStmt *stmt)
 {
     SlashValue value = eval(interpreter, stmt->initializer);
     hashmap_put(&interpreter->variables, &stmt->name->lexeme, sizeof(SlashStr), &value,
 		sizeof(SlashValue), false);
-#include <stdio.h>
-    slash_str_print(stmt->name->lexeme);
-    putchar('=');
-    SlashValue *v = hashmap_get(&interpreter->variables, &stmt->name->lexeme, sizeof(SlashStr));
-    slash_str_print(*(SlashStr *)v->p);
 }
 
 static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
 {
+    // TODO: this is temporary
+    slash_str_println(*(SlashStr *)((LiteralExpr *)stmt->args_ll->this)->value.p);
+}
+
+static void exec_if(Interpreter *interpreter, IfStmt *stmt)
+{
+    SlashValue r = eval(interpreter, stmt->condition);
+    if (is_truthy(&r))
+	exec(interpreter, stmt->then_branch);
+    else if (stmt->else_branch != NULL)
+	exec(interpreter, stmt->else_branch);
+}
+
+static void exec_block(Interpreter *interpreter, BlockStmt *stmt)
+{
+    for (size_t i = 0; i < stmt->statements->size; i++)
+	exec(interpreter, darr_get(stmt->statements, i));
 }
 
 
@@ -77,12 +101,15 @@ static SlashValue eval(Interpreter *interpreter, Expr *expr)
     case EXPR_LITERAL:
 	return eval_literal(interpreter, (LiteralExpr *)expr);
 
+    case EXPR_INTERPOLATION:
+	return eval_interpolation(interpreter, (InterpolationExpr *)expr);
+
     case EXPR_ARG:
 	return eval_arg(interpreter, (ArgExpr *)expr);
 
     default:
 	slash_exit_internal_err("expr enum count wtf");
-	// will never happen, but lets make the compiler hapyy
+	// will never happen, but lets make the compiler happy
 	return (SlashValue){ 0 };
     }
 }
@@ -102,6 +129,14 @@ static void exec(Interpreter *interpreter, Stmt *stmt)
 	exec_cmd(interpreter, (CmdStmt *)stmt);
 	break;
 
+    case STMT_IF:
+	exec_if(interpreter, (IfStmt *)stmt);
+	break;
+
+    case STMT_BLOCK:
+	exec_block(interpreter, (BlockStmt *)stmt);
+	break;
+
     default:
 	slash_exit_internal_err("stmt enum count wtf");
     }
@@ -110,6 +145,8 @@ static void exec(Interpreter *interpreter, Stmt *stmt)
 
 int interpret(struct darr_t *statements)
 {
+    // TODO: remove
+    printf("--- interpreter ---\n");
     Interpreter interpreter = { 0 };
     hashmap_init(&interpreter.variables);
 

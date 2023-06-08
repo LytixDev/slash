@@ -57,10 +57,10 @@ int main(void)
     ast_print(stmts);
 
     /* interpret */
-    // interpret(stmts);
+    interpret(stmts);
 
     /* clean up */
     ast_arena_release(&ast_arena);
     darr_free(tokens);
-    // darr_free(stmts);
+    darr_free(stmts);
 }

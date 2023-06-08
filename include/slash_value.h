@@ -17,17 +17,23 @@
 #ifndef SLASH_VALUE_H
 #define SLASH_VALUE_H
 
+#include <stdbool.h>
+
 
 typedef enum {
     SVT_BOOL = 0, // p = bool *
     SVT_STR, // p = SlashStr *
     SVT_NUM, // p = double *
-    SVT_SHLIT // p = SlashStr *
+    SVT_SHLIT, // p = SlashStr *
+    SVT_NULL, // p = NULL
 } SlashValueType;
 
 typedef struct {
     void *p; // arena allocated
     SlashValueType type;
 } SlashValue;
+
+
+bool is_truthy(SlashValue *value);
 
 #endif /* SLASH_VALUE_H */

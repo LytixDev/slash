@@ -1,7 +1,12 @@
-if false {
-    echo "hmmm"
-} elif false {
-    echo "hmmm 2"
+if "str" {
+    echo "The string 'str' is truthy"
 } else {
-    echo "Yo!"
+    echo "The string 'str' is not truthy"
+}
+
+var empty = ""
+if $empty {
+    echo "what ... its empty!"
+} else {
+    echo "empty string is false!"
 }
