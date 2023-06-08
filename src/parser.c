@@ -125,8 +125,11 @@ static bool match_either(Parser *parser, unsigned int n, ...)
 
 /* grammar functions */
 static Stmt *declaration(Parser *parser);
+static Stmt *statement(Parser *parser);
 static Stmt *var_decl(Parser *parser);
-static Stmt *shell_cmd(Parser *parser);
+static Stmt *if_stmt(Parser *parser);
+static Stmt *cmd_stmt(Parser *parser);
+static Stmt *block(Parser *parser);
 static Expr *argument(Parser *parser);
 static Expr *expression(Parser *parser);
 static Expr *primary(Parser *parser);
@@ -136,10 +139,31 @@ static Expr *interpolation(Parser *parser);
 
 static Stmt *declaration(Parser *parser)
 {
-    if (match(parser, t_var))
-	return var_decl(parser);
+    Stmt *stmt;
+    /* ignore all leading newlines */
+    ignore(parser, t_newline);
 
-    return shell_cmd(parser);
+    if (match(parser, t_var))
+	stmt = var_decl(parser);
+    else
+	stmt = statement(parser);
+
+    /* ignore all trailing newlines */
+    ignore(parser, t_newline);
+
+    return stmt;
+}
+
+static Stmt *statement(Parser *parser)
+{
+    if (match(parser, t_if))
+	return if_stmt(parser);
+
+    if (match(parser, t_lbrace))
+	return block(parser);
+
+    // TODO: error handling
+    return cmd_stmt(parser);
 }
 
 static Stmt *var_decl(Parser *parser)
@@ -155,7 +179,40 @@ static Stmt *var_decl(Parser *parser)
     return (Stmt *)stmt;
 }
 
-static Stmt *shell_cmd(Parser *parser)
+static Stmt *if_stmt(Parser *parser)
+{
+    /* came from 'if' or 'elif' */
+    IfStmt *stmt = (IfStmt *)stmt_alloc(parser->ast_arena, STMT_IF);
+    stmt->condition = expression(parser);
+    consume(parser, t_lbrace, "Expression after if-statement must be succeded by '{'");
+    stmt->then_branch = block(parser);
+
+    // TODO: elif support
+    stmt->else_branch = NULL;
+    if (match(parser, t_elif)) {
+	stmt->else_branch = if_stmt(parser);
+    } else if (match(parser, t_else)) {
+	consume(parser, t_lbrace, "expected '{' after else-statement");
+	stmt->else_branch = block(parser);
+    }
+
+    return (Stmt *)stmt;
+}
+
+static Stmt *block(Parser *parser)
+{
+    /* came from '{' */
+    BlockStmt *stmt = (BlockStmt *)stmt_alloc(parser->ast_arena, STMT_BLOCK);
+    stmt->statements = darr_malloc();
+
+    while (!check(parser, t_rbrace) && !is_at_end(parser))
+	darr_append(stmt->statements, declaration(parser));
+
+    consume(parser, t_rbrace, "Expected '}' after block");
+    return (Stmt *)stmt;
+}
+
+static Stmt *cmd_stmt(Parser *parser)
 {
     // TODO: should be previous since we will only enter here if we came from dt_shlit
     Token *cmd_name = consume(parser, dt_shlit, "Expected shell literal");
@@ -260,8 +317,6 @@ struct darr_t *parse(Arena *ast_arena, struct darr_t *tokens)
     struct darr_t *statements = darr_malloc();
     while (!check(&parser, t_eof)) {
 	darr_append(statements, declaration(&parser));
-	/* ignore all trailing newlines after statement */
-	ignore(&parser, t_newline);
     }
     return statements;
 }

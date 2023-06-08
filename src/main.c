@@ -47,7 +47,7 @@ int main(void)
     input[--counter] = 0;
 
     /* lex */
-    struct darr_t *tokens = lex(input);
+    struct darr_t *tokens = lex(input, counter + 1);
     tokens_print(tokens);
 
     /* parse */
@@ -62,5 +62,5 @@ int main(void)
     /* clean up */
     ast_arena_release(&ast_arena);
     darr_free(tokens);
-    darr_free(stmts);
+    // darr_free(stmts);
 }

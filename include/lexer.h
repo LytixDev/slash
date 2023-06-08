@@ -51,7 +51,9 @@ typedef enum {
     t_rparen,
     t_lbrace,
     t_rbrace,
-    // t_star,
+    t_star,
+    t_tilde,
+    t_backslash,
 
     /* one or two character tokens */
     t_anp,
@@ -66,6 +68,8 @@ typedef enum {
     t_greater_equal,
     t_less,
     t_less_equal,
+    t_dot,
+    t_dot_dot,
 
     /* data types */
     dt_str,
@@ -94,6 +98,7 @@ typedef struct {
 
 typedef struct {
     char *input; // the input string being scanned.
+    size_t input_size;
     size_t start; // start position of this token.
     size_t pos; // current position in the input.
     struct darr_t *tokens;
@@ -107,7 +112,7 @@ typedef struct func_wrap {
 
 
 /* functions */
-struct darr_t *lex(char *input);
+struct darr_t *lex(char *input, size_t input_size);
 
 void tokens_print(struct darr_t *tokens);
 

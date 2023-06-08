@@ -1,15 +1,27 @@
-//context-free expression grammar
+/* context-free expression grammar */
 
-program         -> declaration* EOF ;
+program         -> (declaration "\n"?* )* EOF ;
 
-statement       -> declaration ( "\n" *) ;
+declaration     -> var_declaration
+                |  statement ;
 
-declaration     -> var_declation
-                |  shell_cmd;
+statement       -> if_stmt
+                |  cmd_stmt
+                |  block ;
 
-var_declation   -> "var" IDENTIFIER "=" expression "\n" ;
+var_declaration -> "var" IDENTIFIER "=" expression "\n" ;
 
-shell_cmd       -> SHLIT ( argument* );
+
+/* statemetns */
+
+if_stmt         -> "if" expression block (( "elif" expression block ) | ( "else" block ))? ;
+
+cmd_stmt        -> SHLIT ( argument* );
+
+block           -> "{" statement* "}" ;
+
+
+/* expressions */
 
 argument        -> expression ;
 
@@ -27,6 +39,8 @@ number          -> NUMBER ;
 
 interpolation   -> INTERPOLATION ;
 
+
+/* if, elif, else */
 
 
 

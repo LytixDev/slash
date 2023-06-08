@@ -35,7 +35,14 @@ typedef enum {
     EXPR_ENUM_COUNT
 } ExprType;
 
-typedef enum { STMT_EXPRESSION = 0, STMT_VAR, STMT_CMD, STMT_ENUM_COUNT } StmtType;
+typedef enum {
+    STMT_EXPRESSION = 0,
+    STMT_VAR,
+    STMT_IF,
+    STMT_CMD,
+    STMT_BLOCK,
+    STMT_ENUM_COUNT
+} StmtType;
 
 extern char *expr_type_str_map[EXPR_ENUM_COUNT];
 extern char *stmt_type_str_map[STMT_ENUM_COUNT];
@@ -98,9 +105,22 @@ typedef struct {
 
 typedef struct {
     StmtType type;
+    Expr *condition;
+    Stmt *then_branch;
+    Stmt *else_branch; // optional
+} IfStmt;
+
+typedef struct {
+    StmtType type;
     Token *cmd_name;
     ArgExpr *args_ll; // NULL terminated linked list
 } CmdStmt;
+
+typedef struct {
+    StmtType type;
+    // TODO: use a list data structure that operates on the ast_arena
+    struct darr_t *statements;
+} BlockStmt;
 
 
 /* functions */

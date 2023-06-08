@@ -1,2 +1,7 @@
-var name = "Alice"
-echo $name false 3.14 "lol"
+if false {
+    echo "hmmm"
+} elif false {
+    echo "hmmm 2"
+} else {
+    echo "Yo!"
+}

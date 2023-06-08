@@ -60,7 +60,9 @@ char *token_type_str_map[t_enum_count] = {
     "t_rparen",
     "t_lbrace",
     "t_rbrace",
-    // t_star,
+    "t_star",
+    "t_tilde",
+    "t_backslash",
 
     /* one or two character tokens */
     "t_anp",
@@ -75,6 +77,8 @@ char *token_type_str_map[t_enum_count] = {
     "t_greater_equal",
     "t_less",
     "t_less_equal",
+    "t_dot",
+    "t_dot_dot",
 
     /* data types */
     "dt_str",
@@ -137,6 +141,15 @@ static char next(Lexer *lexer)
 static char peek(Lexer *lexer)
 {
     return lexer->input[lexer->pos];
+}
+
+static char peek_ahead(Lexer *lexer, int step)
+{
+    size_t idx = lexer->pos + step;
+    if (idx >= lexer->input_size)
+	return EOF;
+
+    return lexer->input[idx];
 }
 
 // static char prev(Lexer *lexer)
@@ -278,6 +291,16 @@ StateFn lex_any(Lexer *lexer)
 	case '}':
 	    emit(lexer, t_rbrace);
 	    break;
+	// TODO: handle these better
+	case '*':
+	    emit(lexer, t_star);
+	    break;
+	case '~':
+	    emit(lexer, t_tilde);
+	    break;
+	case '\\':
+	    emit(lexer, t_backslash);
+	    break;
 
 	/* one or two character tokens */
 	case '=':
@@ -297,6 +320,9 @@ StateFn lex_any(Lexer *lexer)
 	    break;
 	case '<':
 	    emit(lexer, match(lexer, '=') ? t_less_equal : t_less);
+	    break;
+	case '.':
+	    emit(lexer, match(lexer, '.') ? t_dot_dot : t_dot);
 	    break;
 
 	case '$':
@@ -407,12 +433,16 @@ StateFn lex_number(Lexer *lexer)
     }
 
     consume_run(lexer, digits);
-    /*
-     * here we say any number can have a decimal part, even hex and binary. of course, this is not
-     * the case, and the parser will deal with this
-     */
-    if (consume(lexer, "."))
-	consume_run(lexer, digits);
+
+    /* treating two '.' as a seperate token */
+    if (peek_ahead(lexer, 1) != '.') {
+	/*
+	 * here we say any number can have a decimal part, of course, this is not
+	 * the case, and the parser will deal with this later
+	 */
+	if (consume(lexer, "."))
+	    consume_run(lexer, digits);
+    }
 
     emit(lexer, dt_num);
     return STATE_FN(lex_any);
@@ -538,14 +568,17 @@ static void run(Lexer *lexer)
 	state = state.fn(lexer);
 }
 
-struct darr_t *lex(char *input)
+struct darr_t *lex(char *input, size_t input_size)
 {
     struct hashmap_t keywords;
     keywords_init(&keywords);
 
-    Lexer lexer = {
-	.input = input, .pos = 0, .start = 0, .tokens = darr_malloc(), .keywords = &keywords
-    };
+    Lexer lexer = { .input = input,
+		    .input_size = input_size,
+		    .pos = 0,
+		    .start = 0,
+		    .tokens = darr_malloc(),
+		    .keywords = &keywords };
     run(&lexer);
 
     hashmap_free(&keywords);
