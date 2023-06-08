@@ -14,24 +14,24 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef SLASH_STR_H
-#define SLASH_STR_H
-
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdlib.h>
+#ifndef SCOPE_H
+#define SCOPE_H
 
 #include "nicc/nicc.h"
+#include "slash_str.h"
 #include "slash_value.h"
 
-/* string view */
-typedef struct {
-    char *p;
-    size_t size;
-} SlashStr;
+
+typedef struct scope_t Scope;
+struct scope_t {
+    Scope *enclosing;
+    struct hashmap_t values;
+    // arena;
+};
+
+void scope_init(Scope *scope, Scope *enclosing);
+void var_set(Scope *scope, SlashStr *key, SlashValue *value);
+SlashValue var_get(Scope *scope, SlashStr *key);
 
 
-void slash_str_print(SlashStr s);
-void slash_str_println(SlashStr s);
-
-#endif /* SLASH_STR_H */
+#endif /* SCOPE_H */

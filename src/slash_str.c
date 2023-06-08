@@ -14,9 +14,13 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "slash_str.h"
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+
+#include "nicc/nicc.h"
+#include "slash_str.h"
+#include "slash_value.h"
 
 void slash_str_print(SlashStr s)
 {

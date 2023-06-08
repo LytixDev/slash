@@ -17,10 +17,12 @@
 #ifndef INTERPRETER_H
 #define INTERPRETER_H
 
-#include "nicc/nicc.h"
+
+#include "scope.h"
 
 typedef struct {
-    struct hashmap_t variables;
+    Scope globals;
+    Scope *scope;
     int exit_code;
 } Interpreter;
 

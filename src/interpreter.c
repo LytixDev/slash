@@ -21,6 +21,7 @@
 #include "common.h"
 #include "interpreter.h"
 #include "nicc/nicc.h"
+#include "scope.h"
 #include "slash_str.h"
 #include "slash_value.h"
 
@@ -51,25 +52,21 @@ static SlashValue eval_literal(Interpreter *interpreter, LiteralExpr *expr)
 
 static SlashValue eval_interpolation(Interpreter *interpreter, InterpolationExpr *expr)
 {
-    SlashValue *value =
-	hashmap_get(&interpreter->variables, &expr->var_name->lexeme, sizeof(SlashStr));
-    if (value == NULL)
-	return (SlashValue){ .p = NULL, .type = SVT_NULL };
-    return *value;
+    return var_get(interpreter->scope, &expr->var_name->lexeme);
 }
 
 
 static void exec_var(Interpreter *interpreter, VarStmt *stmt)
 {
     SlashValue value = eval(interpreter, stmt->initializer);
-    hashmap_put(&interpreter->variables, &stmt->name->lexeme, sizeof(SlashStr), &value,
-		sizeof(SlashValue), false);
+    var_set(interpreter->scope, &stmt->name->lexeme, &value);
 }
 
 static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
 {
-    // TODO: this is temporary
-    slash_str_println(*(SlashStr *)((LiteralExpr *)stmt->args_ll->this)->value.p);
+    SlashValue value = eval(interpreter, stmt->args_ll->this);
+    if (value.type == SVT_STR)
+	slash_str_println(*(SlashStr *)value.p);
 }
 
 static void exec_if(Interpreter *interpreter, IfStmt *stmt)
@@ -147,8 +144,10 @@ int interpret(struct darr_t *statements)
 {
     // TODO: remove
     printf("--- interpreter ---\n");
+
     Interpreter interpreter = { 0 };
-    hashmap_init(&interpreter.variables);
+    scope_init(&interpreter.globals, NULL);
+    interpreter.scope = &interpreter.globals;
 
     for (size_t i = 0; i < statements->size; i++)
 	exec(&interpreter, darr_get(statements, i));

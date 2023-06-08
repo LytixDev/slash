@@ -1,12 +1,12 @@
-if "str" {
-    echo "The string 'str' is truthy"
-} else {
-    echo "The string 'str' is not truthy"
+var name = "Alice"
+#var name2 = "Alice"
+
+if $name {
+    echo $name
 }
 
-var empty = ""
-if $empty {
-    echo "what ... its empty!"
+if $name2 {
+    echo $name2
 } else {
-    echo "empty string is false!"
+    echo "name2 does not exist :-("
 }
