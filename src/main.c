@@ -16,8 +16,59 @@
  */
 #include <stdio.h>
 
-int main()
+#include "interpreter/ast.h"
+#include "interpreter/interpreter.h"
+#include "interpreter/lexer.h"
+#include "interpreter/parser.h"
+#define SAC_TYPEDEF
+#define SAC_IMPLEMENTATION
+#include "sac/sac.h"
+#define NICC_IMPLEMENTATION
+#include "nicc/nicc.h"
+
+#define input_size 4096
+
+
+int main(int argc, char **argv)
 {
-    printf("Hello, World!\n");
-    return 0;
+    char *file_path = "src/test.slash";
+    if (argc > 1)
+	file_path = argv[1];
+
+    char input[input_size];
+    FILE *fp = fopen(file_path, "r");
+    if (fp == NULL) {
+	fprintf(stderr, "error opening file %s\n", file_path);
+	return -1;
+    }
+
+    int c;
+    size_t counter = 0;
+    do {
+	c = fgetc(fp);
+	input[counter++] = c;
+	if (counter == input_size)
+	    break;
+    } while (c != EOF);
+
+    input[--counter] = 0;
+
+    /* lex */
+    struct darr_t *tokens = lex(input, counter + 1);
+    tokens_print(tokens);
+
+    /* parse */
+    Arena ast_arena;
+    ast_arena_init(&ast_arena);
+    struct darr_t *stmts = parse(&ast_arena, tokens);
+    ast_print(stmts);
+
+    /* interpret */
+    printf("--- interpreter ---\n");
+    interpret(stmts);
+
+    /* clean up */
+    ast_arena_release(&ast_arena);
+    darr_free(tokens);
+    darr_free(stmts);
 }

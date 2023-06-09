@@ -1,0 +1,56 @@
+/* context-free expression grammar */
+
+program         -> (declaration "\n"?* )* EOF ;
+
+declaration     -> var_declaration
+                |  statement ;
+
+statement       -> expr_stmt
+                |  loop_stmt
+                |  if_stmt
+                |  cmd_stmt
+                |  assignment_stmt
+                |  block ;
+
+var_declaration -> "var" IDENTIFIER "=" expression "\n" ;
+
+
+/* statemetns */
+
+/* ad-hoc IDENTIFIER in ITERABLE */
+loop_stmt       -> "loop" ( IDENTIFIER "in" ITERABLE | expression ) block
+
+if_stmt         -> "if" expression block (( "elif" expression block ) | ( "else" block ))? ;
+
+cmd_stmt        -> SHLIT ( argument* );
+
+assignment_stmt -> INTERPOLATION ("=" | "+=" | "-=") expression ;
+
+expr_stmt       -> expressions "\n" ;
+
+block           -> "{" statement* "}" ;
+
+
+/* expressions */
+
+argument        -> expression ;
+
+expression      -> equality ;
+
+equality        -> comparison (( "!=" | "==" ) comparison )* ;
+comparison      -> term (( ">" | ">=" | "<" | "<=" ) term )* ;
+term            -> factor (( "-" | "+" ) factor )* ;
+factor          -> unary ;
+unary           -> primary ;
+
+primary         -> STRING 
+                |  SHLIT
+                |  bool_lit
+                |  number
+                |  interpolation ;
+
+bool_lit        -> "true" | "false ";
+
+number          -> NUMBER ;
+
+interpolation   -> INTERPOLATION ;

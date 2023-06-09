@@ -1,6 +1,8 @@
 [submodule "include/nicc"]
 	path = include/nicc
 	url = git@github.com:LytixDev/nicc.git
+	branch = master
 [submodule "include/sac"]
 	path = include/sac
 	url = git@github.com:LytixDev/sac.git
+	branch = stb
