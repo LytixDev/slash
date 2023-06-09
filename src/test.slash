@@ -1,6 +1,9 @@
 var i = 10
 
 loop $i > 0 {
-    echo $i
+    if $i == 1 {
+        echo $i
+    }
+
     $i = $i - 1
 }

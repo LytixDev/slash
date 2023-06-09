@@ -32,10 +32,11 @@ block           -> "{" statement* "}" ;
 
 argument        -> expression ;
 
-expression      -> term ;
+expression      -> equality ;
 
-comparison      -> term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
-term            -> factor ( ( "-" | "+" ) factor )* ;
+equality        -> comparison (( "!=" | "==" ) comparison )* ;
+comparison      -> term (( ">" | ">=" | "<" | "<=" ) term )* ;
+term            -> factor (( "-" | "+" ) factor )* ;
 factor          -> unary ;
 unary           -> primary ;
 

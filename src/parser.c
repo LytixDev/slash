@@ -136,6 +136,7 @@ static Stmt *block(Parser *parser);
 
 static Expr *argument(Parser *parser);
 static Expr *expression(Parser *parser);
+static Expr *equality(Parser *parser);
 static Expr *comparison(Parser *parser);
 static Expr *term(Parser *parser);
 static Expr *factor(Parser *parser);
@@ -288,7 +289,25 @@ static Expr *argument(Parser *parser)
 
 static Expr *expression(Parser *parser)
 {
-    return comparison(parser);
+    return equality(parser);
+}
+
+static Expr *equality(Parser *parser)
+{
+    Expr *expr = comparison(parser);
+
+    while (match(parser, t_equal_equal, t_bang_equal)) {
+	Token *operator_ = previous(parser);
+	Expr *right = factor(parser);
+
+	BinaryExpr *bin_expr = (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY);
+	bin_expr->left = expr;
+	bin_expr->operator_ = operator_;
+	bin_expr->right = right;
+	expr = (Expr *)bin_expr;
+    }
+
+    return expr;
 }
 
 static Expr *comparison(Parser *parser)

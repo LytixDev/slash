@@ -44,6 +44,10 @@ static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
 	return slash_minus(eval(interpreter, expr->left), eval(interpreter, expr->right));
     case t_greater:
 	return slash_greater(eval(interpreter, expr->left), eval(interpreter, expr->right));
+    case t_equal_equal:
+	return slash_equal(eval(interpreter, expr->left), eval(interpreter, expr->right));
+    case t_bang_equal:
+	return slash_not_equal(eval(interpreter, expr->left), eval(interpreter, expr->right));
     default:
 	slash_exit_interpreter_err("operator not supported");
     }

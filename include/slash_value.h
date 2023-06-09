@@ -39,5 +39,7 @@ bool is_truthy(SlashValue *value);
 SlashValue slash_plus(SlashValue a, SlashValue b);
 SlashValue slash_minus(SlashValue a, SlashValue b);
 SlashValue slash_greater(SlashValue a, SlashValue b);
+SlashValue slash_equal(SlashValue a, SlashValue b);
+SlashValue slash_not_equal(SlashValue a, SlashValue b);
 
 #endif /* SLASH_VALUE_H */
