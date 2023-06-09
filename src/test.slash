@@ -1,12 +1,8 @@
 var name = "Alice"
-#var name2 = "Alice"
 
-if $name {
-    echo $name
+loop $name {
+    echo "yo"
+    $name = false
 }
 
-if $name2 {
-    echo $name2
-} else {
-    echo "name2 does not exist :-("
-}
+echo "g"

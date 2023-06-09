@@ -84,6 +84,20 @@ static void exec_block(Interpreter *interpreter, BlockStmt *stmt)
 	exec(interpreter, darr_get(stmt->statements, i));
 }
 
+static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
+{
+    SlashValue value = eval(interpreter, stmt->value);
+    var_set(interpreter->scope, &stmt->name->lexeme, &value);
+}
+
+static void exec_loop(Interpreter *interpreter, LoopStmt *stmt)
+{
+    SlashValue r = eval(interpreter, stmt->condition);
+    while (is_truthy(&r)) {
+	exec(interpreter, stmt->body);
+	r = eval(interpreter, stmt->condition);
+    }
+}
 
 // TODO: table better for this
 static SlashValue eval(Interpreter *interpreter, Expr *expr)
@@ -126,6 +140,10 @@ static void exec(Interpreter *interpreter, Stmt *stmt)
 	exec_cmd(interpreter, (CmdStmt *)stmt);
 	break;
 
+    case STMT_LOOP:
+	exec_loop(interpreter, (LoopStmt *)stmt);
+	break;
+
     case STMT_IF:
 	exec_if(interpreter, (IfStmt *)stmt);
 	break;
@@ -133,6 +151,11 @@ static void exec(Interpreter *interpreter, Stmt *stmt)
     case STMT_BLOCK:
 	exec_block(interpreter, (BlockStmt *)stmt);
 	break;
+
+    case STMT_ASSIGN:
+	exec_assign(interpreter, (AssignStmt *)stmt);
+	break;
+
 
     default:
 	slash_exit_internal_err("stmt enum count wtf");

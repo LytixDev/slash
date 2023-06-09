@@ -24,17 +24,21 @@
 #include "slash_value.h"
 
 
-const size_t expr_size_table[] = { sizeof(UnaryExpr), sizeof(BinaryExpr), sizeof(LiteralExpr),
-				   sizeof(InterpolationExpr), sizeof(ArgExpr) };
-const size_t stmt_size_table[] = { sizeof(ExpressionStmt), sizeof(VarStmt), sizeof(IfStmt),
-				   sizeof(CmdStmt), sizeof(BlockStmt) };
+const size_t expr_size_table[] = {
+    sizeof(UnaryExpr),	       sizeof(BinaryExpr), sizeof(LiteralExpr),
+    sizeof(InterpolationExpr), sizeof(ArgExpr),
+};
+
+const size_t stmt_size_table[] = { sizeof(ExpressionStmt), sizeof(VarStmt), sizeof(LoopStmt),
+				   sizeof(IfStmt),	   sizeof(CmdStmt), sizeof(AssignStmt),
+				   sizeof(BlockStmt) };
 
 char *expr_type_str_map[EXPR_ENUM_COUNT] = {
     "EXPR_UNARY", "EXPR_BINARY", "EXPR_LITERAL", "EXPR_INTERPOLATION", "EXPR_ARG",
 };
 
 char *stmt_type_str_map[STMT_ENUM_COUNT] = {
-    "STMT_EXPRESSION", "STMT_VAR", "STMT_IF", "STMT_CMD", "STMT_BLOCK",
+    "STMT_EXPRESSION", "STMT_VAR", "STMT_LOOP", "STMT_IF", "STMT_CMD", "STMT_ASSIGN", "STMT_BLOCK",
 };
 
 Expr *expr_alloc(Arena *ast_arena, ExprType type)
@@ -156,6 +160,19 @@ static void ast_print_block(BlockStmt *stmt)
     }
 }
 
+static void ast_print_loop(LoopStmt *stmt)
+{
+    ast_print_expr(stmt->condition);
+    ast_print_stmt(stmt->body);
+}
+
+static void ast_print_assign(AssignStmt *stmt)
+{
+    slash_str_print(stmt->name->lexeme);
+    printf(" = ");
+    ast_print_expr(stmt->value);
+}
+
 static void ast_print_expr(Expr *expr)
 {
     printf("%s", expr_type_str_map[expr->type]);
@@ -207,8 +224,16 @@ static void ast_print_stmt(Stmt *stmt)
 	ast_print_block((BlockStmt *)stmt);
 	break;
 
+    case STMT_LOOP:
+	ast_print_loop((LoopStmt *)stmt);
+	break;
+
     case STMT_IF:
 	ast_print_if((IfStmt *)stmt);
+	break;
+
+    case STMT_ASSIGN:
+	ast_print_assign((AssignStmt *)stmt);
 	break;
 
     default:

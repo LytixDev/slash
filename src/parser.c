@@ -127,9 +127,12 @@ static bool match_either(Parser *parser, unsigned int n, ...)
 static Stmt *declaration(Parser *parser);
 static Stmt *statement(Parser *parser);
 static Stmt *var_decl(Parser *parser);
+static Stmt *loop_stmt(Parser *parser);
 static Stmt *if_stmt(Parser *parser);
 static Stmt *cmd_stmt(Parser *parser);
+static Stmt *assignment_stmt(Parser *parser);
 static Stmt *block(Parser *parser);
+
 static Expr *argument(Parser *parser);
 static Expr *expression(Parser *parser);
 static Expr *primary(Parser *parser);
@@ -156,8 +159,14 @@ static Stmt *declaration(Parser *parser)
 
 static Stmt *statement(Parser *parser)
 {
+    if (match(parser, t_loop))
+	return loop_stmt(parser);
+
     if (match(parser, t_if))
 	return if_stmt(parser);
+
+    if (match(parser, t_interpolation))
+	return assignment_stmt(parser);
 
     if (match(parser, t_lbrace))
 	return block(parser);
@@ -176,6 +185,19 @@ static Stmt *var_decl(Parser *parser)
     VarStmt *stmt = (VarStmt *)stmt_alloc(parser->ast_arena, STMT_VAR);
     stmt->name = name;
     stmt->initializer = initializer;
+    return (Stmt *)stmt;
+}
+
+static Stmt *loop_stmt(Parser *parser)
+{
+    LoopStmt *stmt = (LoopStmt *)stmt_alloc(parser->ast_arena, STMT_LOOP);
+    stmt->condition = expression(parser);
+    if (match(parser, t_lbrace)) {
+	stmt->body = block(parser);
+    } else {
+	// TODO: cont
+	consume(parser, t_identifier, "Expected either an identifier or '{' after loop keyword");
+    }
     return (Stmt *)stmt;
 }
 
@@ -209,6 +231,19 @@ static Stmt *block(Parser *parser)
 	darr_append(stmt->statements, declaration(parser));
 
     consume(parser, t_rbrace, "Expected '}' after block");
+    return (Stmt *)stmt;
+}
+
+static Stmt *assignment_stmt(Parser *parser)
+{
+    /* came from t_interpolation */
+    Token *name = previous(parser);
+    consume(parser, t_equal, "Expected '='");
+    Expr *value = expression(parser);
+
+    AssignStmt *stmt = (AssignStmt *)stmt_alloc(parser->ast_arena, STMT_ASSIGN);
+    stmt->name = name;
+    stmt->value = value;
     return (Stmt *)stmt;
 }
 
@@ -250,6 +285,7 @@ static Expr *expression(Parser *parser)
 {
     return primary(parser);
 }
+
 
 static Expr *primary(Parser *parser)
 {

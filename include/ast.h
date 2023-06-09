@@ -38,8 +38,10 @@ typedef enum {
 typedef enum {
     STMT_EXPRESSION = 0,
     STMT_VAR,
+    STMT_LOOP,
     STMT_IF,
     STMT_CMD,
+    STMT_ASSIGN,
     STMT_BLOCK,
     STMT_ENUM_COUNT
 } StmtType;
@@ -99,6 +101,12 @@ typedef struct {
 
 typedef struct {
     StmtType type;
+    Expr *condition;
+    Stmt *body;
+} LoopStmt;
+
+typedef struct {
+    StmtType type;
     Token *name;
     Expr *initializer;
 } VarStmt;
@@ -115,6 +123,13 @@ typedef struct {
     Token *cmd_name;
     ArgExpr *args_ll; // NULL terminated linked list
 } CmdStmt;
+
+// TODO: this is the same as the VarStmt type, and could be reused?
+typedef struct {
+    StmtType type;
+    Token *name;
+    Expr *value;
+} AssignStmt;
 
 typedef struct {
     StmtType type;
