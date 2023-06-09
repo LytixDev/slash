@@ -43,4 +43,6 @@ SlashValue slash_greater(SlashValue a, SlashValue b);
 SlashValue slash_equal(SlashValue a, SlashValue b);
 SlashValue slash_not_equal(SlashValue a, SlashValue b);
 
+void slash_value_println(SlashValue sv);
+
 #endif /* SLASH_VALUE_H */

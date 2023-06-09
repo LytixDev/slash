@@ -70,6 +70,11 @@ static SlashValue eval_interpolation(Interpreter *interpreter, InterpolationExpr
     return var_get(interpreter->scope, &expr->var_name->lexeme);
 }
 
+static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
+{
+    SlashValue value = eval(interpreter, stmt->expression);
+    slash_value_println(value);
+}
 
 static void exec_var(Interpreter *interpreter, VarStmt *stmt)
 {
@@ -80,11 +85,7 @@ static void exec_var(Interpreter *interpreter, VarStmt *stmt)
 static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
 {
     SlashValue value = eval(interpreter, stmt->args_ll->this);
-    if (value.type == SVT_STR) {
-	slash_str_println(*(SlashStr *)value.p);
-    } else if (value.type == SVT_NUM) {
-	printf("%f\n", *(double *)value.p);
-    }
+    slash_value_println(value);
 }
 
 static void exec_if(Interpreter *interpreter, IfStmt *stmt)
@@ -156,7 +157,7 @@ static void exec(Interpreter *interpreter, Stmt *stmt)
 	break;
 
     case STMT_EXPRESSION:
-	eval(interpreter, ((ExpressionStmt *)stmt)->expression);
+	exec_expr(interpreter, (ExpressionStmt *)stmt);
 	break;
 
     case STMT_CMD:

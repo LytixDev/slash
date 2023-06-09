@@ -132,6 +132,7 @@ static Stmt *loop_stmt(Parser *parser);
 static Stmt *if_stmt(Parser *parser);
 static Stmt *cmd_stmt(Parser *parser);
 static Stmt *assignment_stmt(Parser *parser);
+static Stmt *expr_stmt(Parser *parser);
 static Stmt *block(Parser *parser);
 
 static Expr *argument(Parser *parser);
@@ -177,8 +178,20 @@ static Stmt *statement(Parser *parser)
     if (match(parser, t_lbrace))
 	return block(parser);
 
-    // TODO: error handling
-    return cmd_stmt(parser);
+    if (match(parser, dt_shlit))
+	return cmd_stmt(parser);
+
+    return expr_stmt(parser);
+}
+
+static Stmt *expr_stmt(Parser *parser)
+{
+    Expr *expr = expression(parser);
+    consume(parser, t_newline, "Expected newline after expression statement");
+
+    ExpressionStmt *stmt = (ExpressionStmt *)stmt_alloc(parser->ast_arena, STMT_EXPRESSION);
+    stmt->expression = expr;
+    return (Stmt *)stmt;
 }
 
 static Stmt *var_decl(Parser *parser)
@@ -201,7 +214,7 @@ static Stmt *loop_stmt(Parser *parser)
     if (match(parser, t_lbrace)) {
 	stmt->body = block(parser);
     } else {
-	// TODO: cont
+	// TODO: continue with 'in ITERABLE' syntax
 	consume(parser, t_identifier, "Expected either an identifier or '{' after loop keyword");
     }
     return (Stmt *)stmt;
@@ -261,8 +274,7 @@ static Stmt *assignment_stmt(Parser *parser)
 
 static Stmt *cmd_stmt(Parser *parser)
 {
-    // TODO: should be previous since we will only enter here if we came from dt_shlit
-    Token *cmd_name = consume(parser, dt_shlit, "Expected shell literal");
+    Token *cmd_name = previous(parser);
 
     CmdStmt *stmt = (CmdStmt *)stmt_alloc(parser->ast_arena, STMT_CMD);
     stmt->cmd_name = cmd_name;

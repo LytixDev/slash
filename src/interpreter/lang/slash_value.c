@@ -15,6 +15,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <stdbool.h>
+#include <stdio.h>
 
 #include "common.h"
 #include "interpreter/lang/slash_str.h"
@@ -140,5 +141,25 @@ SlashValue slash_not_equal(SlashValue a, SlashValue b)
     // TODO: handle
     default:
 	return (SlashValue){ .p = NULL, .type = SVT_NONE };
+    }
+}
+
+void slash_value_println(SlashValue sv)
+{
+    switch (sv.type) {
+    case SVT_STR:
+	slash_str_println(*(SlashStr *)sv.p);
+	break;
+
+    case SVT_BOOL:
+	printf("%s\n", *(bool *)sv.p ? "true" : "false");
+	break;
+
+    case SVT_NUM:
+	printf("%f\n", *(double *)sv.p);
+	break;
+
+    default:
+	break;
     }
 }

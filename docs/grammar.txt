@@ -5,7 +5,8 @@ program         -> (declaration "\n"?* )* EOF ;
 declaration     -> var_declaration
                 |  statement ;
 
-statement       -> loop_stmt
+statement       -> expr_stmt
+                |  loop_stmt
                 |  if_stmt
                 |  cmd_stmt
                 |  assignment_stmt
@@ -24,6 +25,8 @@ if_stmt         -> "if" expression block (( "elif" expression block ) | ( "else"
 cmd_stmt        -> SHLIT ( argument* );
 
 assignment_stmt -> INTERPOLATION ("=" | "+=" | "-=") expression ;
+
+expr_stmt       -> expressions "\n" ;
 
 block           -> "{" statement* "}" ;
 
