@@ -52,3 +52,57 @@ bool is_truthy(SlashValue *value)
 	return false;
     }
 }
+
+SlashValue slash_plus(SlashValue a, SlashValue b)
+{
+    // TODO: return error
+    if (a.type != b.type)
+	return (SlashValue){ .p = NULL, .type = SVT_NULL };
+
+    // TODO: temporary
+    double *res = malloc(sizeof(double));
+    switch (a.type) {
+    case SVT_NUM:
+	*res = *(double *)a.p + *(double *)b.p;
+	return (SlashValue){ .p = res, .type = SVT_NUM };
+    // TODO: handle
+    default:
+	return (SlashValue){ .p = NULL, .type = SVT_NULL };
+    }
+}
+
+SlashValue slash_minus(SlashValue a, SlashValue b)
+{
+    // TODO: return error
+    if (a.type != b.type)
+	return (SlashValue){ .p = NULL, .type = SVT_NULL };
+
+    // TODO: temporary
+    double *res = malloc(sizeof(double));
+    switch (a.type) {
+    case SVT_NUM:
+	*res = *(double *)a.p - *(double *)b.p;
+	return (SlashValue){ .p = res, .type = SVT_NUM };
+    // TODO: handle
+    default:
+	return (SlashValue){ .p = NULL, .type = SVT_NULL };
+    }
+}
+
+SlashValue slash_greater(SlashValue a, SlashValue b)
+{
+    // TODO: return error
+    if (a.type != b.type)
+	return (SlashValue){ .p = NULL, .type = SVT_NULL };
+
+    // TODO: temporary
+    bool *res = malloc(sizeof(bool));
+    switch (a.type) {
+    case SVT_NUM:
+	*res = *(double *)a.p > *(double *)b.p;
+	return (SlashValue){ .p = res, .type = SVT_BOOL };
+    // TODO: handle
+    default:
+	return (SlashValue){ .p = NULL, .type = SVT_NULL };
+    }
+}

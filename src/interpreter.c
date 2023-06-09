@@ -20,6 +20,7 @@
 #include "ast.h"
 #include "common.h"
 #include "interpreter.h"
+#include "lexer.h"
 #include "nicc/nicc.h"
 #include "scope.h"
 #include "slash_str.h"
@@ -36,6 +37,16 @@ static SlashValue eval_unary(Interpreter *interpreter, UnaryExpr *expr)
 
 static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
 {
+    switch (expr->operator_->type) {
+    case t_plus:
+	return slash_plus(eval(interpreter, expr->left), eval(interpreter, expr->right));
+    case t_minus:
+	return slash_minus(eval(interpreter, expr->left), eval(interpreter, expr->right));
+    case t_greater:
+	return slash_greater(eval(interpreter, expr->left), eval(interpreter, expr->right));
+    default:
+	slash_exit_interpreter_err("operator not supported");
+    }
     return (SlashValue){ 0 };
 }
 
@@ -65,8 +76,11 @@ static void exec_var(Interpreter *interpreter, VarStmt *stmt)
 static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
 {
     SlashValue value = eval(interpreter, stmt->args_ll->this);
-    if (value.type == SVT_STR)
+    if (value.type == SVT_STR) {
 	slash_str_println(*(SlashStr *)value.p);
+    } else if (value.type == SVT_NUM) {
+	printf("%f\n", *(double *)value.p);
+    }
 }
 
 static void exec_if(Interpreter *interpreter, IfStmt *stmt)

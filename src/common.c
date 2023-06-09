@@ -30,6 +30,12 @@ void slash_exit_parse_err(char *err_msg)
     exit(1);
 }
 
+void slash_exit_interpreter_err(char *err_msg)
+{
+    fprintf(stderr, "Error during interpreting: %s\n", err_msg);
+    exit(1);
+}
+
 void slash_exit_internal_err(char *err_msg)
 {
     fprintf(stderr, "Internal error: %s\n", err_msg);

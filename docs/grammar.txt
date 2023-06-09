@@ -32,7 +32,12 @@ block           -> "{" statement* "}" ;
 
 argument        -> expression ;
 
-expression      -> primary ;
+expression      -> term ;
+
+comparison      -> term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
+term            -> factor ( ( "-" | "+" ) factor )* ;
+factor          -> unary ;
+unary           -> primary ;
 
 primary         -> STRING 
                 |  SHLIT

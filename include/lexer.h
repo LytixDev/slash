@@ -70,6 +70,10 @@ typedef enum {
     t_less_equal,
     t_dot,
     t_dot_dot,
+    t_plus,
+    t_plus_equal,
+    t_minus,
+    t_minus_equal,
 
     /* data types */
     dt_str,

@@ -22,6 +22,7 @@
 #include "nicc/nicc.h"
 #include "parser.h"
 #include "sac/sac.h"
+#include "slash_str.h"
 #include "slash_value.h"
 
 /* util/helper functions */
@@ -135,6 +136,10 @@ static Stmt *block(Parser *parser);
 
 static Expr *argument(Parser *parser);
 static Expr *expression(Parser *parser);
+static Expr *comparison(Parser *parser);
+static Expr *term(Parser *parser);
+static Expr *factor(Parser *parser);
+static Expr *unary(Parser *parser);
 static Expr *primary(Parser *parser);
 static Expr *bool_lit(Parser *parser);
 static Expr *number(Parser *parser);
@@ -283,25 +288,69 @@ static Expr *argument(Parser *parser)
 
 static Expr *expression(Parser *parser)
 {
-    return primary(parser);
+    return comparison(parser);
 }
 
+static Expr *comparison(Parser *parser)
+{
+    Expr *expr = term(parser);
+
+    while (match(parser, t_greater, t_greater_equal, t_less, t_less_equal)) {
+	Token *operator_ = previous(parser);
+	Expr *right = factor(parser);
+
+	BinaryExpr *bin_expr = (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY);
+	bin_expr->left = expr;
+	bin_expr->operator_ = operator_;
+	bin_expr->right = right;
+	expr = (Expr *)bin_expr;
+    }
+
+    return expr;
+}
+
+static Expr *term(Parser *parser)
+{
+    Expr *expr = factor(parser);
+
+    while (match(parser, t_minus, t_plus)) {
+	Token *operator_ = previous(parser);
+	Expr *right = factor(parser);
+
+	BinaryExpr *bin_expr = (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY);
+	bin_expr->left = expr;
+	bin_expr->operator_ = operator_;
+	bin_expr->right = right;
+	expr = (Expr *)bin_expr;
+    }
+    return expr;
+}
+
+static Expr *factor(Parser *parser)
+{
+    return unary(parser);
+}
+
+static Expr *unary(Parser *parser)
+{
+    return primary(parser);
+}
 
 static Expr *primary(Parser *parser)
 {
     if (match(parser, t_true, t_false))
 	return bool_lit(parser);
 
-    if (match(parser, t_num))
-	return number(parser);
-
     if (match(parser, t_interpolation))
 	return interpolation(parser);
 
-    /* str or shlit */
+    if (match(parser, dt_num))
+	return number(parser);
+
     if (!match(parser, dt_str, dt_shlit))
 	slash_exit_parse_err("not a valid primary type");
 
+    /* str or shlit */
     Token *token = previous(parser);
     LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
     expr->value =
@@ -330,9 +379,8 @@ static Expr *number(Parser *parser)
 
     SlashValue value;
     value.type = SVT_NUM;
-    // TODO: different parsing based on number base
     value.p = m_arena_alloc(parser->ast_arena, sizeof(double));
-    *(double *)value.p = 3.14;
+    *(double *)value.p = slash_str_to_double(token->lexeme);
 
     expr->value = value;
     return (Expr *)expr;

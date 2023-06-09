@@ -16,6 +16,7 @@
  */
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "nicc/nicc.h"
@@ -36,4 +37,13 @@ void slash_str_println(SlashStr s)
     memcpy(str, s.p, s.size);
     str[s.size] = 0;
     printf("%s\n", str);
+}
+
+// TODO: currently assume all numbers are base10 and are not prefixed with + or -
+double slash_str_to_double(SlashStr s)
+{
+    char str[s.size + 1];
+    memcpy(str, s.p, s.size);
+    str[s.size] = 0;
+    return strtod(str, NULL);
 }

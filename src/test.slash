@@ -1,8 +1,6 @@
-var name = "Alice"
+var i = 10
 
-loop $name {
-    echo "yo"
-    $name = false
+loop $i > 0 {
+    echo $i
+    $i = $i - 1
 }
-
-echo "g"

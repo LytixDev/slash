@@ -79,6 +79,10 @@ char *token_type_str_map[t_enum_count] = {
     "t_less_equal",
     "t_dot",
     "t_dot_dot",
+    "t_plus",
+    "t_plus_equal",
+    "t_minus",
+    "t_minus_equal",
 
     /* data types */
     "dt_str",
@@ -170,6 +174,21 @@ static void backup(Lexer *lexer)
 	lex_panic(lexer, "tried to backup at input position zero");
 
     lexer->pos--;
+}
+
+static bool check(Lexer *lexer, char expected)
+{
+    return peek(lexer) == expected;
+}
+
+static bool check_any(Lexer *lexer, char *expected)
+{
+    do {
+	if (check(lexer, *expected))
+	    return true;
+    } while (*expected++ != 0);
+
+    return false;
 }
 
 static bool match(Lexer *lexer, char expected)
@@ -325,6 +344,30 @@ StateFn lex_any(Lexer *lexer)
 	    emit(lexer, match(lexer, '.') ? t_dot_dot : t_dot);
 	    break;
 
+	case '+':
+	    if (match(lexer, '=')) {
+		emit(lexer, t_plus_equal);
+		break;
+	    } else if (!check_any(lexer, "0123456789")) {
+		emit(lexer, t_plus);
+		break;
+	    } else {
+		backup(lexer);
+		return STATE_FN(lex_number);
+	    }
+
+	case '-':
+	    if (match(lexer, '=')) {
+		emit(lexer, t_minus_equal);
+		break;
+	    } else if (!check_any(lexer, "0123456789")) {
+		emit(lexer, t_minus);
+		break;
+	    } else {
+		backup(lexer);
+		return STATE_FN(lex_number);
+	    }
+
 	case '$':
 	    return STATE_FN(lex_interpolation);
 
@@ -338,7 +381,8 @@ StateFn lex_any(Lexer *lexer)
 	    return STATE_FN(lex_end);
 
 	default:
-	    if (is_numeric(c) || c == '+' || c == '-') {
+	    // if (is_numeric(c) || c == '+' || c == '-') {
+	    if (is_numeric(c)) {
 		backup(lexer);
 		return STATE_FN(lex_number);
 	    }
