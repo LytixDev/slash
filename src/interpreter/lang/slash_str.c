@@ -23,6 +23,7 @@
 #include "interpreter/lang/slash_value.h"
 #include "nicc/nicc.h"
 
+
 void slash_str_print(SlashStr s)
 {
     char str[s.size + 1];
@@ -39,7 +40,7 @@ void slash_str_println(SlashStr s)
     printf("%s\n", str);
 }
 
-// TODO: currently assume all numbers are base10 or base16 and are not prefixed with + or -
+// TODO: add base2 support
 double slash_str_to_double(SlashStr s)
 {
     char str[s.size + 1];

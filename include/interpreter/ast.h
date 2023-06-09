@@ -144,7 +144,6 @@ Stmt *stmt_alloc(Arena *ast_arena, StmtType type);
 
 void ast_print(struct darr_t *ast_heads);
 
-/* do I really need a memory arena? Can all expr and stmts just be stack allocated? */
 void ast_arena_init(Arena *ast_arena);
 void ast_arena_release(Arena *ast_arena);
 

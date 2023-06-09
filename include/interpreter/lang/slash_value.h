@@ -30,16 +30,14 @@ typedef enum {
 } SlashValueType;
 
 typedef struct {
-    void *p; // arena allocated
+    void *p; // arena allocated (TODO: well, should be)
     SlashValueType type;
 } SlashValue;
 
 
 bool is_truthy(SlashValue *value);
-
 // TODO: this is turbo ugly
 SlashValue slash_value_cmp(SlashValue a, SlashValue b, TokenType operator);
-
 void slash_value_println(SlashValue sv);
 
 #endif /* SLASH_VALUE_H */

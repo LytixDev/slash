@@ -114,7 +114,10 @@ static SlashValue slash_value_not_equal(SlashValue a, SlashValue b)
     if (value.p == NULL)
 	return value;
 
-    *(bool *)value.p = false;
+    // TODO: lol
+    bool *v = value.p;
+    *v = !*v;
+    *(bool *)value.p = *v;
     return value;
 }
 
@@ -131,7 +134,7 @@ SlashValue slash_value_cmp(SlashValue a, SlashValue b, TokenType operator)
 	return slash_value_minus(a, b);
     if (operator== t_greater)
 	return slash_value_greater(a, b);
-    if (operator== t_equal)
+    if (operator== t_equal_equal)
 	return slash_value_equal(a, b);
     if (operator== t_bang_equal)
 	return slash_value_not_equal(a, b);

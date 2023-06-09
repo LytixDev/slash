@@ -23,9 +23,8 @@
 
 #include "nicc/nicc.h"
 
-/* string view */
 typedef struct {
-    char *p;
+    char *p; // pointer into some memory in an arena
     size_t size;
 } SlashStr;
 

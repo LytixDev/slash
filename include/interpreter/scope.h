@@ -26,7 +26,7 @@ typedef struct scope_t Scope;
 struct scope_t {
     Scope *enclosing;
     struct hashmap_t values;
-    // arena;
+    // every scope should have an arena where new or modified values data is stored;
 };
 
 void scope_init(Scope *scope, Scope *enclosing);

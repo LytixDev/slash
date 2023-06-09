@@ -25,6 +25,7 @@
 #include "nicc/nicc.h"
 #include "sac/sac.h"
 
+
 /* util/helper functions */
 static Token *peek(Parser *parser)
 {
@@ -228,7 +229,6 @@ static Stmt *if_stmt(Parser *parser)
     consume(parser, t_lbrace, "Expression after if-statement must be succeded by '{'");
     stmt->then_branch = block(parser);
 
-    // TODO: elif support
     stmt->else_branch = NULL;
     if (match(parser, t_elif)) {
 	stmt->else_branch = if_stmt(parser);

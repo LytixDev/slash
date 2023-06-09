@@ -20,7 +20,7 @@
 #include "interpreter/lang/slash_value.h"
 #include "nicc/nicc.h"
 
-
+// TODO: actually create new scope when encountering a block
 // TODO: arena
 void scope_init(Scope *scope, Scope *enclosing)
 {
@@ -28,12 +28,9 @@ void scope_init(Scope *scope, Scope *enclosing)
     hashmap_init(&scope->values);
 }
 
-// TODO: this is a hack because my original hashmap is not very flexible it turns out
-//       anyways, it should be be in this file
-//       creat environment abstraction
 void var_set(Scope *scope, SlashStr *key, SlashValue *value)
 {
-    // YOLO conversion to uint32_t
+    // TODO: YOLO conversion to uint32_t
     hashmap_put(&scope->values, key->p, (uint32_t)key->size, value, sizeof(SlashValue), true);
 }
 
