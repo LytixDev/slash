@@ -16,10 +16,10 @@
  */
 #include <stdio.h>
 
-#include "ast.h"
-#include "interpreter.h"
-#include "lexer.h"
-#include "parser.h"
+#include "interpreter/ast.h"
+#include "interpreter/interpreter.h"
+#include "interpreter/lexer.h"
+#include "interpreter/parser.h"
 #define SAC_TYPEDEF
 #define SAC_IMPLEMENTATION
 #include "sac/sac.h"

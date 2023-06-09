@@ -16,14 +16,14 @@
  */
 #include <stdarg.h>
 
-#include "ast.h"
 #include "common.h"
-#include "lexer.h"
+#include "interpreter/ast.h"
+#include "interpreter/lang/slash_str.h"
+#include "interpreter/lang/slash_value.h"
+#include "interpreter/lexer.h"
+#include "interpreter/parser.h"
 #include "nicc/nicc.h"
-#include "parser.h"
 #include "sac/sac.h"
-#include "slash_str.h"
-#include "slash_value.h"
 
 /* util/helper functions */
 static Token *peek(Parser *parser)

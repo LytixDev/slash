@@ -17,8 +17,8 @@
 #ifndef AST_H
 #define AST_H
 
-#include "lexer.h"
-#include "slash_value.h"
+#include "interpreter/lang/slash_value.h"
+#include "interpreter/lexer.h"
 #ifndef SAC_TYPEDEF
 #define SAC_TYPEDEF
 #endif

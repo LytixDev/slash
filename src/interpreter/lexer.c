@@ -18,9 +18,9 @@
 #include <string.h>
 
 #include "common.h"
-#include "lexer.h"
+#include "interpreter/lang/slash_str.h"
+#include "interpreter/lexer.h"
 #include "nicc/nicc.h"
-#include "slash_str.h"
 
 static void lex_panic(Lexer *lexer, char *err_msg);
 static void run_until(Lexer *lexer, StateFn start_state, StateFn end_state);

@@ -17,8 +17,8 @@
 #include <stdbool.h>
 
 #include "common.h"
-#include "slash_str.h"
-#include "slash_value.h"
+#include "interpreter/lang/slash_str.h"
+#include "interpreter/lang/slash_value.h"
 
 static bool svt_str_truthy(SlashStr *str)
 {

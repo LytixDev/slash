@@ -17,14 +17,14 @@
 // TODO: remove
 #include <stdio.h>
 
-#include "ast.h"
 #include "common.h"
-#include "interpreter.h"
-#include "lexer.h"
+#include "interpreter/ast.h"
+#include "interpreter/interpreter.h"
+#include "interpreter/lang/slash_str.h"
+#include "interpreter/lang/slash_value.h"
+#include "interpreter/lexer.h"
+#include "interpreter/scope.h"
 #include "nicc/nicc.h"
-#include "scope.h"
-#include "slash_str.h"
-#include "slash_value.h"
 
 
 static SlashValue eval(Interpreter *interpreter, Expr *expr);

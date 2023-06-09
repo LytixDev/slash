@@ -14,36 +14,20 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#ifndef INTERPRETER_H
+#define INTERPRETER_H
 
-#include "nicc/nicc.h"
-#include "slash_str.h"
-#include "slash_value.h"
 
-void slash_str_print(SlashStr s)
-{
-    char str[s.size + 1];
-    memcpy(str, s.p, s.size);
-    str[s.size] = 0;
-    printf("%s", str);
-}
+#include "interpreter/scope.h"
 
-void slash_str_println(SlashStr s)
-{
-    char str[s.size + 1];
-    memcpy(str, s.p, s.size);
-    str[s.size] = 0;
-    printf("%s\n", str);
-}
+typedef struct {
+    Scope globals;
+    Scope *scope;
+    int exit_code;
+} Interpreter;
 
-// TODO: currently assume all numbers are base10 and are not prefixed with + or -
-double slash_str_to_double(SlashStr s)
-{
-    char str[s.size + 1];
-    memcpy(str, s.p, s.size);
-    str[s.size] = 0;
-    return strtod(str, NULL);
-}
+
+int interpret(struct darr_t *statements);
+
+
+#endif /* INTERPRETER_H */

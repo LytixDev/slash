@@ -19,8 +19,8 @@
 
 #include <stdint.h>
 
+#include "interpreter/lang/slash_str.h"
 #include "nicc/nicc.h"
-#include "slash_str.h"
 
 #define STATE_FN(___state_fn) \
     (StateFn)                 \

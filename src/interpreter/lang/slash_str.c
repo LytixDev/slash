@@ -14,24 +14,36 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef SCOPE_H
-#define SCOPE_H
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
+#include "interpreter/lang/slash_str.h"
+#include "interpreter/lang/slash_value.h"
 #include "nicc/nicc.h"
-#include "slash_str.h"
-#include "slash_value.h"
 
+void slash_str_print(SlashStr s)
+{
+    char str[s.size + 1];
+    memcpy(str, s.p, s.size);
+    str[s.size] = 0;
+    printf("%s", str);
+}
 
-typedef struct scope_t Scope;
-struct scope_t {
-    Scope *enclosing;
-    struct hashmap_t values;
-    // arena;
-};
+void slash_str_println(SlashStr s)
+{
+    char str[s.size + 1];
+    memcpy(str, s.p, s.size);
+    str[s.size] = 0;
+    printf("%s\n", str);
+}
 
-void scope_init(Scope *scope, Scope *enclosing);
-void var_set(Scope *scope, SlashStr *key, SlashValue *value);
-SlashValue var_get(Scope *scope, SlashStr *key);
-
-
-#endif /* SCOPE_H */
+// TODO: currently assume all numbers are base10 and are not prefixed with + or -
+double slash_str_to_double(SlashStr s)
+{
+    char str[s.size + 1];
+    memcpy(str, s.p, s.size);
+    str[s.size] = 0;
+    return strtod(str, NULL);
+}

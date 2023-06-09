@@ -16,12 +16,12 @@
  */
 #include <stdio.h>
 
-#include "ast.h"
 #include "common.h"
-#include "lexer.h"
+#include "interpreter/ast.h"
+#include "interpreter/lang/slash_str.h"
+#include "interpreter/lang/slash_value.h"
+#include "interpreter/lexer.h"
 #include "sac/sac.h"
-#include "slash_str.h"
-#include "slash_value.h"
 
 
 const size_t expr_size_table[] = {

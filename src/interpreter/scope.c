@@ -15,10 +15,10 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "scope.h"
+#include "interpreter/scope.h"
+#include "interpreter/lang/slash_str.h"
+#include "interpreter/lang/slash_value.h"
 #include "nicc/nicc.h"
-#include "slash_str.h"
-#include "slash_value.h"
 
 
 // TODO: arena

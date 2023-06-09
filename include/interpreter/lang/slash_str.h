@@ -14,20 +14,26 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef INTERPRETER_H
-#define INTERPRETER_H
+#ifndef SLASH_STR_H
+#define SLASH_STR_H
 
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
 
-#include "scope.h"
+#include "interpreter/lang/slash_value.h"
+#include "nicc/nicc.h"
 
+/* string view */
 typedef struct {
-    Scope globals;
-    Scope *scope;
-    int exit_code;
-} Interpreter;
+    char *p;
+    size_t size;
+} SlashStr;
 
 
-int interpret(struct darr_t *statements);
+void slash_str_print(SlashStr s);
+void slash_str_println(SlashStr s);
 
+double slash_str_to_double(SlashStr s);
 
-#endif /* INTERPRETER_H */
+#endif /* SLASH_STR_H */
