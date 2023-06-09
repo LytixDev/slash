@@ -39,7 +39,7 @@ void slash_str_println(SlashStr s)
     printf("%s\n", str);
 }
 
-// TODO: currently assume all numbers are base10 and are not prefixed with + or -
+// TODO: currently assume all numbers are base10 or base16 and are not prefixed with + or -
 double slash_str_to_double(SlashStr s)
 {
     char str[s.size + 1];

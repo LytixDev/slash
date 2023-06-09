@@ -54,10 +54,13 @@ typedef enum {
     t_rparen,
     t_lbrace,
     t_rbrace,
+    t_lbracket,
+    t_rbracket,
     t_star,
     t_tilde,
     t_backslash,
     t_comma,
+    t_colon,
 
     /* one or two character tokens */
     t_anp,

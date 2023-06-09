@@ -14,12 +14,9 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-// TODO: remove
-#include <stdio.h>
-
+#include "interpreter/interpreter.h"
 #include "common.h"
 #include "interpreter/ast.h"
-#include "interpreter/interpreter.h"
 #include "interpreter/lang/slash_str.h"
 #include "interpreter/lang/slash_value.h"
 #include "interpreter/lexer.h"
@@ -37,21 +34,8 @@ static SlashValue eval_unary(Interpreter *interpreter, UnaryExpr *expr)
 
 static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
 {
-    switch (expr->operator_->type) {
-    case t_plus:
-	return slash_plus(eval(interpreter, expr->left), eval(interpreter, expr->right));
-    case t_minus:
-	return slash_minus(eval(interpreter, expr->left), eval(interpreter, expr->right));
-    case t_greater:
-	return slash_greater(eval(interpreter, expr->left), eval(interpreter, expr->right));
-    case t_equal_equal:
-	return slash_equal(eval(interpreter, expr->left), eval(interpreter, expr->right));
-    case t_bang_equal:
-	return slash_not_equal(eval(interpreter, expr->left), eval(interpreter, expr->right));
-    default:
-	slash_exit_interpreter_err("operator not supported");
-    }
-    return (SlashValue){ 0 };
+    return slash_value_cmp(eval(interpreter, expr->left), eval(interpreter, expr->right),
+			   expr->operator_->type);
 }
 
 static SlashValue eval_arg(Interpreter *interpreter, ArgExpr *expr)
@@ -108,8 +92,8 @@ static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
     SlashValue value = eval(interpreter, stmt->value);
     if (stmt->assignment_op->type != t_equal) {
 	SlashValue current = var_get(interpreter->scope, &stmt->name->lexeme);
-	value = stmt->assignment_op->type == t_plus_equal ? slash_plus(current, value)
-							  : slash_minus(current, value);
+	value = slash_value_cmp(current, value,
+				stmt->assignment_op->type == t_plus_equal ? t_plus : t_minus);
     }
     var_set(interpreter->scope, &stmt->name->lexeme, &value);
 }
@@ -144,7 +128,7 @@ static SlashValue eval(Interpreter *interpreter, Expr *expr)
 
     default:
 	slash_exit_internal_err("expr enum count wtf");
-	// will never happen, but lets make the compiler happy
+	/* will never happen, but lets make the compiler happy */
 	return (SlashValue){ 0 };
     }
 }
@@ -189,9 +173,6 @@ static void exec(Interpreter *interpreter, Stmt *stmt)
 
 int interpret(struct darr_t *statements)
 {
-    // TODO: remove
-    printf("--- interpreter ---\n");
-
     Interpreter interpreter = { 0 };
     scope_init(&interpreter.globals, NULL);
     interpreter.scope = &interpreter.globals;

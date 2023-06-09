@@ -1,27 +1,2 @@
-var name = "Alice"
-if $name {
-    echo $name
-}
-
-if false {
-    echo "what ... "
-} elif true {
-    echo "'true' is ofc also truthy"
-} else {
-    echo "what ... "
-}
-
-# scuffed for loop
-var i = 3
-loop $i > 0 {
-    echo $i
-    $i -= 1
-}
-
-# the idiomatic foor loop thats not implemented yet
-#loop c in "Alice" {
-#    echo $c
-#}
-
-# raw expressions are printed out like in a REPL
-0xff + 69
+var n = 10 >= 1
+echo $n

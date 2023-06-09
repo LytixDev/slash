@@ -20,13 +20,15 @@
 #include "common.h"
 #include "interpreter/lang/slash_str.h"
 #include "interpreter/lang/slash_value.h"
+#include "interpreter/lexer.h" //TODO: do not use types from the lexer. Tight coupling is le bad!!
 
+
+/* following are the three musketeers of soydev functions */
 static bool svt_str_truthy(SlashStr *str)
 {
     return str->size != 0;
 }
 
-// soidev function
 static bool svt_bool_truthy(bool *p)
 {
     return *p == true;
@@ -54,100 +56,95 @@ bool is_truthy(SlashValue *value)
     }
 }
 
-SlashValue slash_plus(SlashValue a, SlashValue b)
-{
-    // TODO: return error
-    if (a.type != b.type)
-	return (SlashValue){ .p = NULL, .type = SVT_NONE };
 
-    // TODO: temporary
+// TODO: all of the following functions need reworking.
+//       this is just temporary to get things going
+//       turbo ugly
+static SlashValue slash_value_plus(SlashValue a, SlashValue b)
+{
     double *res = malloc(sizeof(double));
     switch (a.type) {
     case SVT_NUM:
 	*res = *(double *)a.p + *(double *)b.p;
 	return (SlashValue){ .p = res, .type = SVT_NUM };
-    // TODO: handle
     default:
 	return (SlashValue){ .p = NULL, .type = SVT_NONE };
     }
 }
 
-SlashValue slash_minus(SlashValue a, SlashValue b)
+static SlashValue slash_value_minus(SlashValue a, SlashValue b)
 {
-    // TODO: return error
-    if (a.type != b.type)
-	return (SlashValue){ .p = NULL, .type = SVT_NONE };
-
-    // TODO: temporary
     double *res = malloc(sizeof(double));
     switch (a.type) {
     case SVT_NUM:
 	*res = *(double *)a.p - *(double *)b.p;
 	return (SlashValue){ .p = res, .type = SVT_NUM };
-    // TODO: handle
     default:
 	return (SlashValue){ .p = NULL, .type = SVT_NONE };
     }
 }
 
-SlashValue slash_greater(SlashValue a, SlashValue b)
+static SlashValue slash_value_greater(SlashValue a, SlashValue b)
 {
-    // TODO: return error
-    if (a.type != b.type)
-	return (SlashValue){ .p = NULL, .type = SVT_NONE };
-
-    // TODO: temporary
     bool *res = malloc(sizeof(bool));
     switch (a.type) {
     case SVT_NUM:
 	*res = *(double *)a.p > *(double *)b.p;
 	return (SlashValue){ .p = res, .type = SVT_BOOL };
-    // TODO: handle
     default:
 	return (SlashValue){ .p = NULL, .type = SVT_NONE };
     }
 }
 
-SlashValue slash_equal(SlashValue a, SlashValue b)
+static SlashValue slash_value_equal(SlashValue a, SlashValue b)
 {
-    // TODO: return error
-    if (a.type != b.type)
-	return (SlashValue){ .p = NULL, .type = SVT_NONE };
-
-    // TODO: temporary
     bool *res = malloc(sizeof(bool));
     switch (a.type) {
     case SVT_NUM:
 	*res = *(double *)a.p == *(double *)b.p;
 	return (SlashValue){ .p = res, .type = SVT_BOOL };
-    // TODO: handle
     default:
 	return (SlashValue){ .p = NULL, .type = SVT_NONE };
     }
 }
 
-SlashValue slash_not_equal(SlashValue a, SlashValue b)
+static SlashValue slash_value_not_equal(SlashValue a, SlashValue b)
 {
-    // TODO: return error
+    SlashValue value = slash_value_equal(a, b);
+    if (value.p == NULL)
+	return value;
+
+    *(bool *)value.p = false;
+    return value;
+}
+
+SlashValue slash_value_cmp(SlashValue a, SlashValue b, TokenType operator)
+{
+    // is this too conservative?
+    // TODO: better error handling in cases like this
     if (a.type != b.type)
 	return (SlashValue){ .p = NULL, .type = SVT_NONE };
 
-    // TODO: temporary
-    bool *res = malloc(sizeof(bool));
-    switch (a.type) {
-    case SVT_NUM:
-	*res = *(double *)a.p != *(double *)b.p;
-	return (SlashValue){ .p = res, .type = SVT_BOOL };
-    // TODO: handle
-    default:
-	return (SlashValue){ .p = NULL, .type = SVT_NONE };
-    }
+    if (operator== t_plus)
+	return slash_value_plus(a, b);
+    if (operator== t_minus)
+	return slash_value_minus(a, b);
+    if (operator== t_greater)
+	return slash_value_greater(a, b);
+    if (operator== t_equal)
+	return slash_value_equal(a, b);
+    if (operator== t_bang_equal)
+	return slash_value_not_equal(a, b);
+
+    fprintf(stderr, "operator not supported, returning SVT_NONE");
+    return (SlashValue){ .p = NULL, .type = SVT_NONE };
 }
 
 void slash_value_println(SlashValue sv)
 {
     switch (sv.type) {
     case SVT_STR:
+    case SVT_SHLIT:
 	slash_str_println(*(SlashStr *)sv.p);
 	break;
 

@@ -1,7 +1,5 @@
 # Types
 
-Types are actually useful in SLASH unlike most shell scripting languages
-
 ## String (str)
 `"string"`
 
@@ -25,21 +23,34 @@ String buitins such as .lower, .upper, .split, slice?
 `true`
 `false`
 
+## List (list)
+Very similar to a list in Python.
+
+TODO:
+list buitins
+```
+[1, 2, 3]
+["Baines", "Jagielka", "Distin", "Coleman"]
+[1, 2, "Baines"]  # A list can hold any data type
+```
+
+```
+var a = [1, 2, 3]
+var val1 = $a[0]
+var a_slice = $a[:2]
+```
 
 # Comments
 ```
-# this is a comment
+# this is a comment which is wholly ignored by the interpreter
 ```
 
 
 # Variables
-Variables are defined using the `var` keyword. Prefix a variable with the '$' sign to get its value.
-
+Variables are defined using the `var` keyword. Prefix a variable with the `$` sign to get its value. Using the `$` sign to grab a variables value is called a variable interpolation the Slash-speak.
 ```
-# assigns "Hello World!" to the variable a
-var a = "Hello World!"
-
-echo $a  # will print 'Hello World!'
+var a = "Hello World!"  # assigns "Hello World!" to the variable a
+echo $a
 ```
 
 # The `as` keyword
@@ -62,7 +73,7 @@ command1 | command2
 ls | wc -l
 ```
 
-# Comparison and Logical Operators
+# Comparison, Logical- and Arithmetic Operators
 ### Comparison
 Pretty standard for programming language, but rare for shell scripting languages:
 
@@ -87,6 +98,25 @@ The logical operators can be used in conjunction with any expression.
 
 ```
 var matches = $name == "Rodion" and $age < 30
+```
+
+### Arithmetic operators
+
+Arithmetic operators only work on numbers, other than the `+` operator which is also defined for lists and strings.
+
+- `+` 
+- `-`
+- `*`
+- `/`
+
+```
+var sum = 10 + 1.1	# adding to numbres
+var sum2 = $sum - 0xff	# subtracting to numbers
+```
+
+```
+var concat_str = "Hello " + "World!"
+var concat_list = [1, 2, 3] + [4, 5, 6]
 ```
 
 
@@ -115,7 +145,7 @@ becomes
 
 # unfinished: Mathematical Evaluation
 Where SLASH shines (hopefully).
-I want doing simple arithmetic and more "complex" math to feel super comfy and be really easy to do. I often open a python repl just to do basic maths. I want to be able to do math directly in the shell.
+I want doing more "complex" math to feel super comfy and be really easy to do. I often open a python repl just to do basic maths. I want to be able to do math directly in the shell.
 so far I think syntax should be:
 ```
 (( math_expressions ))
@@ -204,6 +234,13 @@ loop c in "Alice" {
 }
 ```
 
+```
+var names = ["Alice", "Bob"]
+loop name in $names {
+    echo $name
+}
+```
+
 loop with condition essentially becomes a while loop
 ```
 loop expr {
@@ -269,3 +306,4 @@ func fib(n) {
 
 var result = fib(n=5)
 ```
+

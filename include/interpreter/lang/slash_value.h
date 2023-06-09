@@ -17,6 +17,7 @@
 #ifndef SLASH_VALUE_H
 #define SLASH_VALUE_H
 
+#include "interpreter/lexer.h"
 #include <stdbool.h>
 
 
@@ -37,11 +38,7 @@ typedef struct {
 bool is_truthy(SlashValue *value);
 
 // TODO: this is turbo ugly
-SlashValue slash_plus(SlashValue a, SlashValue b);
-SlashValue slash_minus(SlashValue a, SlashValue b);
-SlashValue slash_greater(SlashValue a, SlashValue b);
-SlashValue slash_equal(SlashValue a, SlashValue b);
-SlashValue slash_not_equal(SlashValue a, SlashValue b);
+SlashValue slash_value_cmp(SlashValue a, SlashValue b, TokenType operator);
 
 void slash_value_println(SlashValue sv);
 

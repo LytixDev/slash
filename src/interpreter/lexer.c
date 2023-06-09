@@ -63,10 +63,13 @@ char *token_type_str_map[t_enum_count] = {
     "t_rparen",
     "t_lbrace",
     "t_rbrace",
+    "t_lbracket",
+    "t_rbracket",
     "t_star",
     "t_tilde",
     "t_backslash",
     "t_comma",
+    "t_colon",
 
     /* one or two character tokens */
     "t_anp",
@@ -286,8 +289,9 @@ static void shlit_seperate(Lexer *lexer)
 
 static void lex_panic(Lexer *lexer, char *err_msg)
 {
-    printf("--- lex internal state --\n");
-    printf("start: %zu. pos: %zu\n", lexer->start, lexer->pos);
+    fprintf(stderr, "LEX PANIC!\n");
+    printf("--- lexer internal state --\n");
+    printf("start: %zu. pos: %zu\ninput: %s", lexer->start, lexer->pos, lexer->input);
     tokens_print(lexer->tokens);
     slash_exit_lex_err(err_msg);
 }
@@ -338,6 +342,13 @@ StateFn lex_any(Lexer *lexer)
 	    break;
 	case ')':
 	    return STATE_FN(lex_subshell_end);
+	// TODO: handling brackets should have its own state fns?
+	case '[':
+	    emit(lexer, t_lbracket);
+	    break;
+	case ']':
+	    emit(lexer, t_rbracket);
+	    break;
 	case '{':
 	    emit(lexer, t_lbrace);
 	    break;
@@ -346,6 +357,10 @@ StateFn lex_any(Lexer *lexer)
 	    break;
 	case ',':
 	    emit(lexer, t_comma);
+	    break;
+	// TODO: should have its own state fn?
+	case ':':
+	    emit(lexer, t_colon);
 	    break;
 	// TODO: handle these better
 	case '*':
@@ -388,10 +403,9 @@ StateFn lex_any(Lexer *lexer)
 	    } else if (!check_any(lexer, "0123456789")) {
 		emit(lexer, t_plus);
 		break;
-	    } else {
-		backup(lexer);
-		return STATE_FN(lex_number);
 	    }
+	    backup(lexer);
+	    return STATE_FN(lex_number);
 
 	case '-':
 	    if (match(lexer, '=')) {
@@ -400,10 +414,9 @@ StateFn lex_any(Lexer *lexer)
 	    } else if (!check_any(lexer, "0123456789")) {
 		emit(lexer, t_minus);
 		break;
-	    } else {
-		backup(lexer);
-		return STATE_FN(lex_number);
 	    }
+	    backup(lexer);
+	    return STATE_FN(lex_number);
 
 	case '$':
 	    return STATE_FN(lex_interpolation);

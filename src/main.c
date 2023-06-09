@@ -26,12 +26,19 @@
 #define NICC_IMPLEMENTATION
 #include "nicc/nicc.h"
 
+#define input_size 4096
 
-int main(void)
+
+int main(int argc, char **argv)
 {
-    char input[1024];
-    FILE *fp = fopen("src/test.slash", "r");
+    char *file_path = "src/test.slash";
+    if (argc > 1)
+	file_path = argv[1];
+
+    char input[input_size];
+    FILE *fp = fopen(file_path, "r");
     if (fp == NULL) {
+	fprintf(stderr, "error opening file %s\n", file_path);
 	return -1;
     }
 
@@ -40,7 +47,7 @@ int main(void)
     do {
 	c = fgetc(fp);
 	input[counter++] = c;
-	if (counter == 1024)
+	if (counter == input_size)
 	    break;
     } while (c != EOF);
 
@@ -57,9 +64,10 @@ int main(void)
     ast_print(stmts);
 
     /* interpret */
+    printf("--- interpreter ---\n");
     interpret(stmts);
 
-    ///* clean up */
+    /* clean up */
     ast_arena_release(&ast_arena);
     darr_free(tokens);
     darr_free(stmts);
