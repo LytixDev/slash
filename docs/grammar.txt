@@ -23,7 +23,7 @@ if_stmt         -> "if" expression block (( "elif" expression block ) | ( "else"
 
 cmd_stmt        -> SHLIT ( argument* );
 
-assignment_stmt -> INTERPOLATION '=' expression ;
+assignment_stmt -> INTERPOLATION ("=" | "+=" | "-=") expression ;
 
 block           -> "{" statement* "}" ;
 

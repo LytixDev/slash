@@ -25,7 +25,7 @@ typedef enum {
     SVT_STR, // p = SlashStr *
     SVT_NUM, // p = double *
     SVT_SHLIT, // p = SlashStr *
-    SVT_NULL, // p = NULL
+    SVT_NONE, // p = NULL
 } SlashValueType;
 
 typedef struct {
@@ -36,6 +36,7 @@ typedef struct {
 
 bool is_truthy(SlashValue *value);
 
+// TODO: this is turbo ugly
 SlashValue slash_plus(SlashValue a, SlashValue b);
 SlashValue slash_minus(SlashValue a, SlashValue b);
 SlashValue slash_greater(SlashValue a, SlashValue b);

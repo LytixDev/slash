@@ -57,7 +57,7 @@ SlashValue slash_plus(SlashValue a, SlashValue b)
 {
     // TODO: return error
     if (a.type != b.type)
-	return (SlashValue){ .p = NULL, .type = SVT_NULL };
+	return (SlashValue){ .p = NULL, .type = SVT_NONE };
 
     // TODO: temporary
     double *res = malloc(sizeof(double));
@@ -67,7 +67,7 @@ SlashValue slash_plus(SlashValue a, SlashValue b)
 	return (SlashValue){ .p = res, .type = SVT_NUM };
     // TODO: handle
     default:
-	return (SlashValue){ .p = NULL, .type = SVT_NULL };
+	return (SlashValue){ .p = NULL, .type = SVT_NONE };
     }
 }
 
@@ -75,7 +75,7 @@ SlashValue slash_minus(SlashValue a, SlashValue b)
 {
     // TODO: return error
     if (a.type != b.type)
-	return (SlashValue){ .p = NULL, .type = SVT_NULL };
+	return (SlashValue){ .p = NULL, .type = SVT_NONE };
 
     // TODO: temporary
     double *res = malloc(sizeof(double));
@@ -85,7 +85,7 @@ SlashValue slash_minus(SlashValue a, SlashValue b)
 	return (SlashValue){ .p = res, .type = SVT_NUM };
     // TODO: handle
     default:
-	return (SlashValue){ .p = NULL, .type = SVT_NULL };
+	return (SlashValue){ .p = NULL, .type = SVT_NONE };
     }
 }
 
@@ -93,7 +93,7 @@ SlashValue slash_greater(SlashValue a, SlashValue b)
 {
     // TODO: return error
     if (a.type != b.type)
-	return (SlashValue){ .p = NULL, .type = SVT_NULL };
+	return (SlashValue){ .p = NULL, .type = SVT_NONE };
 
     // TODO: temporary
     bool *res = malloc(sizeof(bool));
@@ -103,7 +103,7 @@ SlashValue slash_greater(SlashValue a, SlashValue b)
 	return (SlashValue){ .p = res, .type = SVT_BOOL };
     // TODO: handle
     default:
-	return (SlashValue){ .p = NULL, .type = SVT_NULL };
+	return (SlashValue){ .p = NULL, .type = SVT_NONE };
     }
 }
 
@@ -111,7 +111,7 @@ SlashValue slash_equal(SlashValue a, SlashValue b)
 {
     // TODO: return error
     if (a.type != b.type)
-	return (SlashValue){ .p = NULL, .type = SVT_NULL };
+	return (SlashValue){ .p = NULL, .type = SVT_NONE };
 
     // TODO: temporary
     bool *res = malloc(sizeof(bool));
@@ -121,7 +121,7 @@ SlashValue slash_equal(SlashValue a, SlashValue b)
 	return (SlashValue){ .p = res, .type = SVT_BOOL };
     // TODO: handle
     default:
-	return (SlashValue){ .p = NULL, .type = SVT_NULL };
+	return (SlashValue){ .p = NULL, .type = SVT_NONE };
     }
 }
 
@@ -129,7 +129,7 @@ SlashValue slash_not_equal(SlashValue a, SlashValue b)
 {
     // TODO: return error
     if (a.type != b.type)
-	return (SlashValue){ .p = NULL, .type = SVT_NULL };
+	return (SlashValue){ .p = NULL, .type = SVT_NONE };
 
     // TODO: temporary
     bool *res = malloc(sizeof(bool));
@@ -139,6 +139,6 @@ SlashValue slash_not_equal(SlashValue a, SlashValue b)
 	return (SlashValue){ .p = res, .type = SVT_BOOL };
     // TODO: handle
     default:
-	return (SlashValue){ .p = NULL, .type = SVT_NULL };
+	return (SlashValue){ .p = NULL, .type = SVT_NONE };
     }
 }

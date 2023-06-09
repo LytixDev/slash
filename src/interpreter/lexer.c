@@ -40,6 +40,8 @@ StateFn lex_subshell_end(Lexer *lexer);
 char *token_type_str_map[t_enum_count] = {
     /* keywords */
     "t_var",
+    "t_func",
+    "t_return",
     "t_if",
     "t_elif",
     "t_else",
@@ -54,6 +56,7 @@ char *token_type_str_map[t_enum_count] = {
     "t_str",
     "t_num",
     "t_bool",
+    "t_none",
 
     /* single-character tokens */
     "t_lparen",
@@ -63,6 +66,7 @@ char *token_type_str_map[t_enum_count] = {
     "t_star",
     "t_tilde",
     "t_backslash",
+    "t_comma",
 
     /* one or two character tokens */
     "t_anp",
@@ -98,23 +102,50 @@ char *token_type_str_map[t_enum_count] = {
     "t_error",
 };
 
+static void keyword_set(struct hashmap_t *keywords, SlashStr key, TokenType val)
+{
+    hashmap_put(keywords, key.p, key.size, &val, sizeof(TokenType), true);
+}
+
+static TokenType *keyword_get_from_start(Lexer *lexer)
+{
+    return hashmap_get(lexer->keywords, lexer->input + lexer->start, lexer->pos - lexer->start);
+}
+
 static void keywords_init(struct hashmap_t *keywords)
 {
     /* init and populate hashmap with keyword strings */
     hashmap_init(keywords);
 
-    char *keywords_str[keywords_len] = {
-	"var", "if",  "elif", "else", "loop", "in",  "true", "false",
-	"as",  "and", "or",   "not",  "str",  "num", "bool",
+    /* hardcoding the sizes because strlen is demonic */
+    SlashStr keys[keywords_len] = {
+	{ .p = "var", .size = sizeof("var") - 1 },
+	{ .p = "func", .size = sizeof("func") - 1 },
+	{ .p = "return", .size = sizeof("return") - 1 },
+	{ .p = "if", .size = sizeof("if") - 1 },
+	{ .p = "elif", .size = sizeof("elif") - 1 },
+	{ .p = "else", .size = sizeof("else") - 1 },
+	{ .p = "loop", .size = sizeof("loop") - 1 },
+	{ .p = "in", .size = sizeof("in") - 1 },
+	{ .p = "true", .size = sizeof("true") - 1 },
+	{ .p = "false", .size = sizeof("false") - 1 },
+	{ .p = "as", .size = sizeof("as") - 1 },
+	{ .p = "and", .size = sizeof("and") - 1 },
+	{ .p = "or", .size = sizeof("or") - 1 },
+	{ .p = "not", .size = sizeof("not") - 1 },
+	{ .p = "str", .size = sizeof("str") - 1 },
+	{ .p = "num", .size = sizeof("num") - 1 },
+	{ .p = "bool", .size = sizeof("bool") - 1 },
+	{ .p = "none", .size = sizeof("none") - 1 },
     };
 
-    TokenType keywords_val[keywords_len] = {
-	t_var, t_if,  t_elif, t_else, t_loop, t_in,  t_true, t_false,
-	t_as,  t_and, t_or,   t_not,  t_str,  t_num, t_bool,
+    TokenType vals[keywords_len] = {
+	t_var,	 t_func, t_return, t_if, t_elif, t_else, t_loop, t_in,	 t_true,
+	t_false, t_as,	 t_and,	   t_or, t_not,	 t_str,	 t_num,	 t_bool, t_none,
     };
 
     for (int i = 0; i < keywords_len; i++)
-	hashmap_sput(keywords, keywords_str[i], &keywords_val[i], sizeof(TokenType), true);
+	keyword_set(keywords, keys[i], vals[i]);
 }
 
 
@@ -301,7 +332,10 @@ StateFn lex_any(Lexer *lexer)
 
 	/* one character tokens */
 	case '(':
-	    return STATE_FN(lex_subshell_start);
+	    if (prev_token_type(lexer) != t_identifier)
+		return STATE_FN(lex_subshell_start);
+	    emit(lexer, t_lparen);
+	    break;
 	case ')':
 	    return STATE_FN(lex_subshell_end);
 	case '{':
@@ -309,6 +343,9 @@ StateFn lex_any(Lexer *lexer)
 	    break;
 	case '}':
 	    emit(lexer, t_rbrace);
+	    break;
+	case ',':
+	    emit(lexer, t_comma);
 	    break;
 	// TODO: handle these better
 	case '*':
@@ -381,7 +418,6 @@ StateFn lex_any(Lexer *lexer)
 	    return STATE_FN(lex_end);
 
 	default:
-	    // if (is_numeric(c) || c == '+' || c == '-') {
 	    if (is_numeric(c)) {
 		backup(lexer);
 		return STATE_FN(lex_number);
@@ -498,25 +534,21 @@ StateFn lex_identifier(Lexer *lexer)
 	;
     backup(lexer);
 
-    /* figure out what identifier we are dealing with */
-    // TODO: better use of string
-    size_t size = lexer->pos - lexer->start + 1;
-    char identifier[size];
-    memcpy(identifier, lexer->input + lexer->start, size - 1);
-    identifier[size - 1] = 0;
-
-    TokenType *tt = hashmap_sget(lexer->keywords, identifier);
+    TokenType *tt = keyword_get_from_start(lexer);
     TokenType previous = prev_token_type(lexer);
-    if (tt == NULL && (previous == t_var || previous == t_loop)) {
-	emit(lexer, t_identifier);
-    } else if (tt == NULL) {
-	emit(lexer, dt_shlit);
-	return STATE_FN(lex_cmd);
-    } else {
+    if (tt != NULL) {
 	emit(lexer, *tt);
+	return STATE_FN(lex_any);
     }
 
-    return STATE_FN(lex_any);
+    if (previous == t_var || previous == t_loop || previous == t_func || previous == t_lparen ||
+	previous == t_comma || peek(lexer) == '(') {
+	emit(lexer, t_identifier);
+	return STATE_FN(lex_any);
+    }
+
+    emit(lexer, dt_shlit);
+    return STATE_FN(lex_cmd);
 }
 
 StateFn lex_interpolation(Lexer *lexer)

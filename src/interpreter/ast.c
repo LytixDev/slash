@@ -169,7 +169,12 @@ static void ast_print_loop(LoopStmt *stmt)
 static void ast_print_assign(AssignStmt *stmt)
 {
     slash_str_print(stmt->name->lexeme);
-    printf(" = ");
+    if (stmt->assignment_op->type == t_equal)
+	printf(" = ");
+    else if (stmt->assignment_op->type == t_plus_equal)
+	printf(" += ");
+    else
+	printf(" -= ");
     ast_print_expr(stmt->value);
 }
 

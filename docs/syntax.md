@@ -218,6 +218,54 @@ Can also be used to create a sugar-free for loop.
 ```
 var i = 0
 loop $i < 10 {
-  i += 1
+  $i += 1
 }
+```
+
+# Functions
+
+Functions are declared using the `func` keyword.
+```
+func say_hello() {
+	echo "Hello!"
+}
+
+say_hello()
+```
+
+Functions can take in arbitrary many parameters. Arguments are not positional, but must be given to a function as keyword arguments. If only a variable interpolation is given as a function argument, its keyword argument is inferred based on the variable name.
+
+```
+func greet(name) {
+	echo "Hello" $name
+}
+
+greet(name="Nicolai")
+var name = "Alice"
+greet($name)	# same as writing name = $name
+# greet($name2) is not allowed as name2 can not be inferred as any keyword argument
+```
+
+```
+func foo(a, b) {
+	echo $a $b
+}
+
+func(a="Hello", b="World")
+func(b="World", a="Hello")
+```
+
+A function can return any data using the return statement. If no return statement is present, the function returns nothing.
+```
+func fib(n) {
+    if $n <= 0 {
+        return 0
+    } elif $n == 1 {
+        return 1
+    } else {
+        return fibonacci(n=$n-1) + fibonacci(n=$n-2)
+    }
+ }
+
+var result = fib(n=5)
 ```

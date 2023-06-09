@@ -244,11 +244,17 @@ static Stmt *assignment_stmt(Parser *parser)
 {
     /* came from t_interpolation */
     Token *name = previous(parser);
-    consume(parser, t_equal, "Expected '='");
+    // TODO: consume_any
+    if (!match(parser, t_equal, t_plus_equal, t_minus_equal)) {
+	slash_exit_parse_err("Expected '=', '+=' or '-='");
+    }
+
+    Token *assignment_op = previous(parser);
     Expr *value = expression(parser);
 
     AssignStmt *stmt = (AssignStmt *)stmt_alloc(parser->ast_arena, STMT_ASSIGN);
     stmt->name = name;
+    stmt->assignment_op = assignment_op;
     stmt->value = value;
     return (Stmt *)stmt;
 }

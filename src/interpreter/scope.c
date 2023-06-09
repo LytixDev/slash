@@ -47,5 +47,5 @@ SlashValue var_get(Scope *scope, SlashStr *key)
 	scope = scope->enclosing;
     } while (value == NULL && scope != NULL);
 
-    return (SlashValue){ .p = NULL, .type = SVT_NULL };
+    return (SlashValue){ .p = NULL, .type = SVT_NONE };
 }

@@ -105,6 +105,11 @@ static void exec_block(Interpreter *interpreter, BlockStmt *stmt)
 static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
 {
     SlashValue value = eval(interpreter, stmt->value);
+    if (stmt->assignment_op->type != t_equal) {
+	SlashValue current = var_get(interpreter->scope, &stmt->name->lexeme);
+	value = stmt->assignment_op->type == t_plus_equal ? slash_plus(current, value)
+							  : slash_minus(current, value);
+    }
     var_set(interpreter->scope, &stmt->name->lexeme, &value);
 }
 

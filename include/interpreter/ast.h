@@ -124,10 +124,10 @@ typedef struct {
     ArgExpr *args_ll; // NULL terminated linked list
 } CmdStmt;
 
-// TODO: this is the same as the VarStmt type, and could be reused?
 typedef struct {
     StmtType type;
     Token *name;
+    Token *assignment_op;
     Expr *value;
 } AssignStmt;
 
