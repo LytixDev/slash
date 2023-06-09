@@ -25,7 +25,7 @@ You want to do the same in POSIX sh? That would look something like:
 echo $((0xff + 1))  # prints 256
 ```
 This verbosity is really annoying and makes the POSIX shell a poor choice for quick mafs. One major goal for Slash is empowering (buzzy buzzy) the user to do simple and more complex calculations ergonomically.
-### C-style syntax
+### C-style, but no parentheses or semicolons
 ``` 
 var system = (uname)  # '(...)' is exactly the same as the POSIX '$(...)' 
 if $system == "Linux" {
