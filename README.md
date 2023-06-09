@@ -1,5 +1,5 @@
 # Slash
-Slash aims to be very simple yet powerful shell scripting language. It breaks free from shackles of the POSIX standard that was standardizes some 30 years ago in favor of a more modern language design.
+Slash aims to be a very simple yet powerful interactive shell scripting language. It breaks free from shackles of the POSIX standard that was standardized some 30 years ago in favor of a more modern language design.
 
 ## Quick start
 ```sh
@@ -12,7 +12,7 @@ make
 
 ## Design
 
-Design document of the language can be found [here](https://github.com/LytixDev/slash/blob/dev/docs/syntax.md). A semi scuffed document containing the context free grammar expression grammer can be found [here](https://github.com/LytixDev/slash/blob/dev/docs/grammar.txt).
+Design document of the language can be found [here](https://github.com/LytixDev/slash/blob/main/docs/syntax.md). A semi scuffed document containing the context free grammar expression grammer can be found [here](https://github.com/LytixDev/slash/blob/main/docs/grammar.txt).
 
 ### REPL-like
 Raw expressions are evaluted and printed out to the terminal.
