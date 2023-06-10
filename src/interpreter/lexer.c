@@ -152,12 +152,12 @@ static void keywords_init(struct hashmap_t *keywords)
 }
 
 
-void tokens_print(struct darr_t *tokens)
+void tokens_print(struct arraylist_t *tokens)
 {
     printf("--- tokens ---\n");
 
     for (size_t i = 0; i < tokens->size; i++) {
-	Token *token = darr_get(tokens, i);
+	Token *token = arraylist_get(tokens, i);
 	printf("[%zu] (%s) ", i, token_type_str_map[token->type]);
 	if (token->type != t_newline)
 	    slash_str_print(token->lexeme);
@@ -276,7 +276,7 @@ static TokenType prev_token_type(Lexer *lexer)
     size_t size = lexer->tokens->size;
     if (size == 0)
 	return t_error;
-    Token *token = darr_get(lexer->tokens, size - 1);
+    Token *token = arraylist_get(lexer->tokens, size - 1);
     return token->type;
 }
 
@@ -632,12 +632,10 @@ StateFn lex_subshell_end(Lexer *lexer)
  */
 static void emit(Lexer *lexer, TokenType type)
 {
-    Token *token = malloc(sizeof(Token));
-    token->type = type;
-    token->lexeme =
-	(SlashStr){ .p = lexer->input + lexer->start, .size = lexer->pos - lexer->start };
-    darr_append(lexer->tokens, token);
-
+    Token token = { .type = type,
+		    .lexeme = (SlashStr){ .p = lexer->input + lexer->start,
+					  .size = lexer->pos - lexer->start } };
+    arraylist_append(lexer->tokens, &token);
     lexer->start = lexer->pos;
 }
 
@@ -657,19 +655,22 @@ static void run(Lexer *lexer)
 	state = state.fn(lexer);
 }
 
-struct darr_t *lex(char *input, size_t input_size)
+struct arraylist_t *lex(char *input, size_t input_size)
 {
     struct hashmap_t keywords;
     keywords_init(&keywords);
+    struct arraylist_t *tokens = malloc(sizeof(struct arraylist_t));
+    arraylist_init(tokens, sizeof(Token));
+
 
     Lexer lexer = { .input = input,
 		    .input_size = input_size,
 		    .pos = 0,
 		    .start = 0,
-		    .tokens = darr_malloc(),
+		    .tokens = tokens,
 		    .keywords = &keywords };
     run(&lexer);
 
     hashmap_free(&keywords);
-    return lexer.tokens;
+    return tokens;
 }

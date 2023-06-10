@@ -23,6 +23,7 @@
 #define SAC_TYPEDEF
 #define SAC_IMPLEMENTATION
 #include "sac/sac.h"
+#define NICC_TYPEDEF
 #define NICC_IMPLEMENTATION
 #include "nicc/nicc.h"
 
@@ -54,13 +55,13 @@ int main(int argc, char **argv)
     input[--counter] = 0;
 
     /* lex */
-    struct darr_t *tokens = lex(input, counter + 1);
+    struct arraylist_t *tokens = lex(input, counter + 1);
     tokens_print(tokens);
 
     /* parse */
     Arena ast_arena;
     ast_arena_init(&ast_arena);
-    struct darr_t *stmts = parse(&ast_arena, tokens);
+    struct arraylist_t *stmts = parse(&ast_arena, tokens);
     ast_print(stmts);
 
     /* interpret */
@@ -69,6 +70,8 @@ int main(int argc, char **argv)
 
     /* clean up */
     ast_arena_release(&ast_arena);
-    darr_free(tokens);
-    darr_free(stmts);
+    arraylist_free(tokens);
+    free(tokens);
+    arraylist_free(stmts);
+    free(stmts);
 }

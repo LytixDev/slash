@@ -250,13 +250,13 @@ static void ast_print_stmt(Stmt *stmt)
     putchar('}');
 }
 
-void ast_print(struct darr_t *ast_heads)
+void ast_print(struct arraylist_t *ast_heads)
 {
     printf("--- AST ---\n");
 
     size_t size = ast_heads->size;
     for (size_t i = 0; i < size; i++) {
-	ast_print_stmt(darr_get(ast_heads, i));
+	ast_print_stmt(*(Stmt **)arraylist_get(ast_heads, i));
 	if (i != size)
 	    putchar('\n');
     }

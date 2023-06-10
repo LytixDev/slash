@@ -20,6 +20,9 @@
 #include <stdint.h>
 
 #include "interpreter/lang/slash_str.h"
+#ifndef NICC_TYPEDEF
+#define NICC_TYPEDEF
+#endif
 #include "nicc/nicc.h"
 
 #define STATE_FN(___state_fn) \
@@ -112,7 +115,7 @@ typedef struct {
     size_t input_size;
     size_t start; // start position of this token.
     size_t pos; // current position in the input.
-    struct darr_t *tokens;
+    struct arraylist_t *tokens;
     struct hashmap_t *keywords;
 } Lexer;
 
@@ -123,9 +126,9 @@ typedef struct func_wrap {
 
 
 /* functions */
-struct darr_t *lex(char *input, size_t input_size);
+struct arraylist_t *lex(char *input, size_t input_size);
 
-void tokens_print(struct darr_t *tokens);
+void tokens_print(struct arraylist_t *tokens);
 
 
 #endif /* LEXER_H */

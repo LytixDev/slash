@@ -175,14 +175,14 @@ static void exec(Interpreter *interpreter, Stmt *stmt)
 }
 
 
-int interpret(struct darr_t *statements)
+int interpret(struct arraylist_t *statements)
 {
     Interpreter interpreter = { 0 };
     scope_init(&interpreter.globals, NULL);
     interpreter.scope = &interpreter.globals;
 
     for (size_t i = 0; i < statements->size; i++)
-	exec(&interpreter, darr_get(statements, i));
+	exec(&interpreter, *(Stmt **)arraylist_get(statements, i));
 
     return interpreter.exit_code;
 }

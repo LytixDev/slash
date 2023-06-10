@@ -30,12 +30,12 @@
 /* util/helper functions */
 static Token *peek(Parser *parser)
 {
-    return darr_get(parser->tokens, parser->token_pos);
+    return arraylist_get(parser->tokens, parser->token_pos);
 }
 
 static Token *previous(Parser *parser)
 {
-    return darr_get(parser->tokens, parser->token_pos - 1);
+    return arraylist_get(parser->tokens, parser->token_pos - 1);
 }
 
 static bool is_at_end(Parser *parser)
@@ -54,8 +54,8 @@ static Token *advance(Parser *parser)
 
 static bool check_single(Parser *parser, TokenType type, int step)
 {
-    /* darr_get returns NULL if index out of bounds */
-    Token *token = darr_get(parser->tokens, parser->token_pos + step);
+    /* arraylist_get returns NULL if index out of bounds */
+    Token *token = arraylist_get(parser->tokens, parser->token_pos + step);
     if (token == NULL)
 	return false;
     return token->type == type;
@@ -432,12 +432,16 @@ static Expr *interpolation(Parser *parser)
     return (Expr *)expr;
 }
 
-struct darr_t *parse(Arena *ast_arena, struct darr_t *tokens)
+struct arraylist_t *parse(Arena *ast_arena, struct arraylist_t *tokens)
 {
     Parser parser = { .ast_arena = ast_arena, .tokens = tokens, .token_pos = 0 };
-    struct darr_t *statements = darr_malloc();
+    struct arraylist_t *statements = malloc(sizeof(struct arraylist_t));
+    arraylist_init(statements, sizeof(Stmt *));
+
     while (!check(&parser, t_eof)) {
-	darr_append(statements, declaration(&parser));
+	Stmt *stmt = declaration(&parser);
+	arraylist_append(statements, &stmt);
     }
+
     return statements;
 }

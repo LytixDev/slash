@@ -134,8 +134,6 @@ typedef struct {
 
 typedef struct {
     StmtType type;
-    // TODO: use a list data structure that operates on the ast_arena
-    // struct darr_t *statements;
     ArenaLL *statements;
 } BlockStmt;
 
@@ -144,7 +142,7 @@ typedef struct {
 Expr *expr_alloc(Arena *ast_arena, ExprType type);
 Stmt *stmt_alloc(Arena *ast_arena, StmtType type);
 
-void ast_print(struct darr_t *ast_heads);
+void ast_print(struct arraylist_t *ast_heads);
 
 void ast_arena_init(Arena *ast_arena);
 void ast_arena_release(Arena *ast_arena);
