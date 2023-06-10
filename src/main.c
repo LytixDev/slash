@@ -53,23 +53,21 @@ int main(int argc, char **argv)
     input[--counter] = 0;
 
     /* lex */
-    ArrayList *tokens = lex(input, counter + 1);
-    tokens_print(tokens);
+    ArrayList tokens = lex(input, counter + 1);
+    tokens_print(&tokens);
 
     /* parse */
     Arena ast_arena;
     ast_arena_init(&ast_arena);
-    ArrayList *stmts = parse(&ast_arena, tokens);
-    ast_print(stmts);
+    ArrayList stmts = parse(&ast_arena, &tokens);
+    ast_print(&stmts);
 
     /* interpret */
     printf("--- interpreter ---\n");
-    interpret(stmts);
+    interpret(&stmts);
 
     /* clean up */
     ast_arena_release(&ast_arena);
-    arraylist_free(tokens);
-    free(tokens);
-    arraylist_free(stmts);
-    free(stmts);
+    arraylist_free(&tokens);
+    arraylist_free(&stmts);
 }

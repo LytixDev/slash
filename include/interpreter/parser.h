@@ -31,7 +31,7 @@ typedef struct {
  * parses a list of tokens into a list of Stmt's.
  * the Stmt objects in the list are the first nodes in an AST.
  */
-ArrayList *parse(Arena *ast_arena, ArrayList *tokens);
+ArrayList parse(Arena *ast_arena, ArrayList *tokens);
 
 
 #endif /* PARSER_H */

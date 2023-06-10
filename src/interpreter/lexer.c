@@ -655,19 +655,19 @@ static void run(Lexer *lexer)
 	state = state.fn(lexer);
 }
 
-ArrayList *lex(char *input, size_t input_size)
+ArrayList lex(char *input, size_t input_size)
 {
     struct hashmap_t keywords;
     keywords_init(&keywords);
-    ArrayList *tokens = malloc(sizeof(ArrayList));
-    arraylist_init(tokens, sizeof(Token));
+    ArrayList tokens;
+    arraylist_init(&tokens, sizeof(Token));
 
 
     Lexer lexer = { .input = input,
 		    .input_size = input_size,
 		    .pos = 0,
 		    .start = 0,
-		    .tokens = tokens,
+		    .tokens = &tokens,
 		    .keywords = &keywords };
     run(&lexer);
 

@@ -123,7 +123,7 @@ typedef struct func_wrap {
 
 
 /* functions */
-ArrayList *lex(char *input, size_t input_size);
+ArrayList lex(char *input, size_t input_size);
 
 void tokens_print(ArrayList *tokens);
 

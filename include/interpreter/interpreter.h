@@ -25,7 +25,6 @@
 typedef struct {
     Scope globals;
     Scope *scope;
-    Arena arena;
     int exit_code;
 } Interpreter;
 

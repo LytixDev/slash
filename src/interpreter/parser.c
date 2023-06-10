@@ -432,15 +432,15 @@ static Expr *interpolation(Parser *parser)
     return (Expr *)expr;
 }
 
-ArrayList *parse(Arena *ast_arena, ArrayList *tokens)
+ArrayList parse(Arena *ast_arena, ArrayList *tokens)
 {
     Parser parser = { .ast_arena = ast_arena, .tokens = tokens, .token_pos = 0 };
-    ArrayList *statements = malloc(sizeof(ArrayList));
-    arraylist_init(statements, sizeof(Stmt *));
+    ArrayList statements;
+    arraylist_init(&statements, sizeof(Stmt *));
 
     while (!check(&parser, t_eof)) {
 	Stmt *stmt = declaration(&parser);
-	arraylist_append(statements, &stmt);
+	arraylist_append(&statements, &stmt);
     }
 
     return statements;
