@@ -20,9 +20,6 @@
 #include "arena_ll.h"
 #include "interpreter/lang/slash_value.h"
 #include "interpreter/lexer.h"
-#ifndef SAC_TYPEDEF
-#define SAC_TYPEDEF
-#endif
 #include "sac/sac.h"
 
 
@@ -142,7 +139,7 @@ typedef struct {
 Expr *expr_alloc(Arena *ast_arena, ExprType type);
 Stmt *stmt_alloc(Arena *ast_arena, StmtType type);
 
-void ast_print(struct arraylist_t *ast_heads);
+void ast_print(ArrayList *ast_heads);
 
 void ast_arena_init(Arena *ast_arena);
 void ast_arena_release(Arena *ast_arena);

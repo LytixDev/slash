@@ -175,7 +175,7 @@ static void exec(Interpreter *interpreter, Stmt *stmt)
 }
 
 
-int interpret(struct arraylist_t *statements)
+int interpret(ArrayList *statements)
 {
     Interpreter interpreter = { 0 };
     scope_init(&interpreter.globals, NULL);

@@ -250,7 +250,7 @@ static void ast_print_stmt(Stmt *stmt)
     putchar('}');
 }
 
-void ast_print(struct arraylist_t *ast_heads)
+void ast_print(ArrayList *ast_heads)
 {
     printf("--- AST ---\n");
 

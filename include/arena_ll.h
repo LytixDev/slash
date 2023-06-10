@@ -17,9 +17,6 @@
 #ifndef ARENA_LL
 #define ARENA_LL
 
-#ifndef SAC_TYPEDEF
-#define SAC_TYPEDEF
-#endif
 #include "sac/sac.h"
 
 /*

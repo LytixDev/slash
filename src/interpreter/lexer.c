@@ -152,7 +152,7 @@ static void keywords_init(struct hashmap_t *keywords)
 }
 
 
-void tokens_print(struct arraylist_t *tokens)
+void tokens_print(ArrayList *tokens)
 {
     printf("--- tokens ---\n");
 
@@ -655,11 +655,11 @@ static void run(Lexer *lexer)
 	state = state.fn(lexer);
 }
 
-struct arraylist_t *lex(char *input, size_t input_size)
+ArrayList *lex(char *input, size_t input_size)
 {
     struct hashmap_t keywords;
     keywords_init(&keywords);
-    struct arraylist_t *tokens = malloc(sizeof(struct arraylist_t));
+    ArrayList *tokens = malloc(sizeof(ArrayList));
     arraylist_init(tokens, sizeof(Token));
 
 

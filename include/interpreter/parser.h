@@ -18,15 +18,12 @@
 #define PARSER_H
 
 #include "nicc/nicc.h"
-#ifndef SAC_TYPEDEF
-#define SAC_TYPEDEF
-#endif
 #include "sac/sac.h"
 
 /* types */
 typedef struct {
     Arena *ast_arena;
-    struct arraylist_t *tokens;
+    ArrayList *tokens;
     size_t token_pos;
 } Parser;
 
@@ -34,7 +31,7 @@ typedef struct {
  * parses a list of tokens into a list of Stmt's.
  * the Stmt objects in the list are the first nodes in an AST.
  */
-struct arraylist_t *parse(Arena *ast_arena, struct arraylist_t *tokens);
+ArrayList *parse(Arena *ast_arena, ArrayList *tokens);
 
 
 #endif /* PARSER_H */

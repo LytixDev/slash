@@ -432,10 +432,10 @@ static Expr *interpolation(Parser *parser)
     return (Expr *)expr;
 }
 
-struct arraylist_t *parse(Arena *ast_arena, struct arraylist_t *tokens)
+ArrayList *parse(Arena *ast_arena, ArrayList *tokens)
 {
     Parser parser = { .ast_arena = ast_arena, .tokens = tokens, .token_pos = 0 };
-    struct arraylist_t *statements = malloc(sizeof(struct arraylist_t));
+    ArrayList *statements = malloc(sizeof(ArrayList));
     arraylist_init(statements, sizeof(Stmt *));
 
     while (!check(&parser, t_eof)) {

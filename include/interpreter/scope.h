@@ -20,6 +20,7 @@
 #include "interpreter/lang/slash_str.h"
 #include "interpreter/lang/slash_value.h"
 #include "nicc/nicc.h"
+#include "sac/sac.h"
 
 
 typedef struct scope_t Scope;

@@ -20,15 +20,17 @@
 
 #include "interpreter/scope.h"
 #include "nicc/nicc.h"
+#include "sac/sac.h"
 
 typedef struct {
     Scope globals;
     Scope *scope;
+    Arena arena;
     int exit_code;
 } Interpreter;
 
 
-int interpret(struct arraylist_t *statements);
+int interpret(ArrayList *statements);
 
 
 #endif /* INTERPRETER_H */
