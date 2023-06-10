@@ -16,6 +16,7 @@
  */
 #include <stdarg.h>
 
+#include "arena_ll.h"
 #include "common.h"
 #include "interpreter/ast.h"
 #include "interpreter/lang/slash_str.h"
@@ -244,10 +245,9 @@ static Stmt *block(Parser *parser)
 {
     /* came from '{' */
     BlockStmt *stmt = (BlockStmt *)stmt_alloc(parser->ast_arena, STMT_BLOCK);
-    stmt->statements = darr_malloc();
-
+    stmt->statements = arena_ll_alloc(parser->ast_arena);
     while (!check(parser, t_rbrace) && !is_at_end(parser))
-	darr_append(stmt->statements, declaration(parser));
+	arena_ll_append(stmt->statements, declaration(parser));
 
     consume(parser, t_rbrace, "Expected '}' after block");
     return (Stmt *)stmt;

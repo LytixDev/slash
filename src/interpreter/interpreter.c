@@ -15,6 +15,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "interpreter/interpreter.h"
+#include "arena_ll.h"
 #include "common.h"
 #include "interpreter/ast.h"
 #include "interpreter/lang/slash_str.h"
@@ -83,8 +84,11 @@ static void exec_if(Interpreter *interpreter, IfStmt *stmt)
 
 static void exec_block(Interpreter *interpreter, BlockStmt *stmt)
 {
-    for (size_t i = 0; i < stmt->statements->size; i++)
-	exec(interpreter, darr_get(stmt->statements, i));
+    LLItem *item;
+    ARENA_LL_FOR_EACH(stmt->statements, item)
+    {
+	exec(interpreter, item->p);
+    }
 }
 
 static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)

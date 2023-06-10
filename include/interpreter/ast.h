@@ -17,6 +17,7 @@
 #ifndef AST_H
 #define AST_H
 
+#include "arena_ll.h"
 #include "interpreter/lang/slash_value.h"
 #include "interpreter/lexer.h"
 #ifndef SAC_TYPEDEF
@@ -134,7 +135,8 @@ typedef struct {
 typedef struct {
     StmtType type;
     // TODO: use a list data structure that operates on the ast_arena
-    struct darr_t *statements;
+    // struct darr_t *statements;
+    ArenaLL *statements;
 } BlockStmt;
 
 
