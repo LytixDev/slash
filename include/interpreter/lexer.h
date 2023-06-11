@@ -112,7 +112,7 @@ typedef struct {
     size_t input_size;
     size_t start; // start position of this token.
     size_t pos; // current position in the input.
-    struct darr_t *tokens;
+    ArrayList *tokens;
     struct hashmap_t *keywords;
 } Lexer;
 
@@ -123,9 +123,9 @@ typedef struct func_wrap {
 
 
 /* functions */
-struct darr_t *lex(char *input, size_t input_size);
+ArrayList lex(char *input, size_t input_size);
 
-void tokens_print(struct darr_t *tokens);
+void tokens_print(ArrayList *tokens);
 
 
 #endif /* LEXER_H */

@@ -21,6 +21,7 @@
 #include "interpreter/lang/slash_str.h"
 #include "interpreter/lang/slash_value.h"
 #include "interpreter/lexer.h" //TODO: do not use types from the lexer. Tight coupling is le bad!!
+#include "sac/sac.h"
 
 
 /* following are the three musketeers of soydev functions */
@@ -60,9 +61,9 @@ bool is_truthy(SlashValue *value)
 // TODO: all of the following functions need reworking.
 //       this is just temporary to get things going
 //       turbo ugly
-static SlashValue slash_value_plus(SlashValue a, SlashValue b)
+static SlashValue slash_value_plus(Arena *arena, SlashValue a, SlashValue b)
 {
-    double *res = malloc(sizeof(double));
+    double *res = m_arena_alloc(arena, sizeof(double));
     switch (a.type) {
     case SVT_NUM:
 	*res = *(double *)a.p + *(double *)b.p;
@@ -72,9 +73,9 @@ static SlashValue slash_value_plus(SlashValue a, SlashValue b)
     }
 }
 
-static SlashValue slash_value_minus(SlashValue a, SlashValue b)
+static SlashValue slash_value_minus(Arena *arena, SlashValue a, SlashValue b)
 {
-    double *res = malloc(sizeof(double));
+    double *res = m_arena_alloc(arena, sizeof(double));
     switch (a.type) {
     case SVT_NUM:
 	*res = *(double *)a.p - *(double *)b.p;
@@ -84,9 +85,9 @@ static SlashValue slash_value_minus(SlashValue a, SlashValue b)
     }
 }
 
-static SlashValue slash_value_greater(SlashValue a, SlashValue b)
+static SlashValue slash_value_greater(Arena *arena, SlashValue a, SlashValue b)
 {
-    bool *res = malloc(sizeof(bool));
+    bool *res = m_arena_alloc(arena, sizeof(bool));
     switch (a.type) {
     case SVT_NUM:
 	*res = *(double *)a.p > *(double *)b.p;
@@ -96,9 +97,9 @@ static SlashValue slash_value_greater(SlashValue a, SlashValue b)
     }
 }
 
-static SlashValue slash_value_equal(SlashValue a, SlashValue b)
+static SlashValue slash_value_equal(Arena *arena, SlashValue a, SlashValue b)
 {
-    bool *res = malloc(sizeof(bool));
+    bool *res = m_arena_alloc(arena, sizeof(bool));
     switch (a.type) {
     case SVT_NUM:
 	*res = *(double *)a.p == *(double *)b.p;
@@ -108,9 +109,9 @@ static SlashValue slash_value_equal(SlashValue a, SlashValue b)
     }
 }
 
-static SlashValue slash_value_not_equal(SlashValue a, SlashValue b)
+static SlashValue slash_value_not_equal(Arena *arena, SlashValue a, SlashValue b)
 {
-    SlashValue value = slash_value_equal(a, b);
+    SlashValue value = slash_value_equal(arena, a, b);
     if (value.p == NULL)
 	return value;
 
@@ -121,7 +122,7 @@ static SlashValue slash_value_not_equal(SlashValue a, SlashValue b)
     return value;
 }
 
-SlashValue slash_value_cmp(SlashValue a, SlashValue b, TokenType operator)
+SlashValue slash_value_cmp(Arena *arena, SlashValue a, SlashValue b, TokenType operator)
 {
     // is this too conservative?
     // TODO: better error handling in cases like this
@@ -129,15 +130,15 @@ SlashValue slash_value_cmp(SlashValue a, SlashValue b, TokenType operator)
 	return (SlashValue){ .p = NULL, .type = SVT_NONE };
 
     if (operator== t_plus)
-	return slash_value_plus(a, b);
+	return slash_value_plus(arena, a, b);
     if (operator== t_minus)
-	return slash_value_minus(a, b);
+	return slash_value_minus(arena, a, b);
     if (operator== t_greater)
-	return slash_value_greater(a, b);
+	return slash_value_greater(arena, a, b);
     if (operator== t_equal_equal)
-	return slash_value_equal(a, b);
+	return slash_value_equal(arena, a, b);
     if (operator== t_bang_equal)
-	return slash_value_not_equal(a, b);
+	return slash_value_not_equal(arena, a, b);
 
     fprintf(stderr, "operator not supported, returning SVT_NONE");
     return (SlashValue){ .p = NULL, .type = SVT_NONE };

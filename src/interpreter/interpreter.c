@@ -15,6 +15,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "interpreter/interpreter.h"
+#include "arena_ll.h"
 #include "common.h"
 #include "interpreter/ast.h"
 #include "interpreter/lang/slash_str.h"
@@ -34,8 +35,8 @@ static SlashValue eval_unary(Interpreter *interpreter, UnaryExpr *expr)
 
 static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
 {
-    return slash_value_cmp(eval(interpreter, expr->left), eval(interpreter, expr->right),
-			   expr->operator_->type);
+    return slash_value_cmp(&interpreter->scope->value_arena, eval(interpreter, expr->left),
+			   eval(interpreter, expr->right), expr->operator_->type);
 }
 
 static SlashValue eval_arg(Interpreter *interpreter, ArgExpr *expr)
@@ -51,7 +52,10 @@ static SlashValue eval_literal(Interpreter *interpreter, LiteralExpr *expr)
 
 static SlashValue eval_interpolation(Interpreter *interpreter, InterpolationExpr *expr)
 {
-    return var_get(interpreter->scope, &expr->var_name->lexeme);
+    ScopeAndValue sv = var_get(interpreter->scope, &expr->var_name->lexeme);
+    if (sv.value != NULL)
+	return *sv.value;
+    return (SlashValue){ .p = NULL, .type = SVT_NONE };
 }
 
 static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
@@ -63,7 +67,7 @@ static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
 static void exec_var(Interpreter *interpreter, VarStmt *stmt)
 {
     SlashValue value = eval(interpreter, stmt->initializer);
-    var_set(interpreter->scope, &stmt->name->lexeme, &value);
+    var_define(interpreter->scope, &stmt->name->lexeme, &value);
 }
 
 static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
@@ -83,19 +87,31 @@ static void exec_if(Interpreter *interpreter, IfStmt *stmt)
 
 static void exec_block(Interpreter *interpreter, BlockStmt *stmt)
 {
-    for (size_t i = 0; i < stmt->statements->size; i++)
-	exec(interpreter, darr_get(stmt->statements, i));
+    Scope block_scope;
+    scope_init(&block_scope, interpreter->scope);
+    interpreter->scope = &block_scope;
+
+    LLItem *item;
+    ARENA_LL_FOR_EACH(stmt->statements, item)
+    {
+	exec(interpreter, item->p);
+    }
+
+    interpreter->scope = block_scope.enclosing;
+    scope_destroy(&block_scope);
 }
 
 static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
 {
-    SlashValue value = eval(interpreter, stmt->value);
+    SlashValue new_value = eval(interpreter, stmt->value);
     if (stmt->assignment_op->type != t_equal) {
-	SlashValue current = var_get(interpreter->scope, &stmt->name->lexeme);
-	value = slash_value_cmp(current, value,
-				stmt->assignment_op->type == t_plus_equal ? t_plus : t_minus);
+	ScopeAndValue current_value = var_get(interpreter->scope, &stmt->name->lexeme);
+	// TODO: if sv.value == NULL -> runtime error
+	new_value =
+	    slash_value_cmp(&current_value.scope->value_arena, *current_value.value, new_value,
+			    stmt->assignment_op->type == t_plus_equal ? t_plus : t_minus);
     }
-    var_set(interpreter->scope, &stmt->name->lexeme, &value);
+    var_assign(interpreter->scope, &stmt->name->lexeme, &new_value);
 }
 
 static void exec_loop(Interpreter *interpreter, LoopStmt *stmt)
@@ -171,14 +187,16 @@ static void exec(Interpreter *interpreter, Stmt *stmt)
 }
 
 
-int interpret(struct darr_t *statements)
+int interpret(ArrayList *statements)
 {
     Interpreter interpreter = { 0 };
     scope_init(&interpreter.globals, NULL);
     interpreter.scope = &interpreter.globals;
 
     for (size_t i = 0; i < statements->size; i++)
-	exec(&interpreter, darr_get(statements, i));
+	exec(&interpreter, *(Stmt **)arraylist_get(statements, i));
+
+    scope_destroy(&interpreter.globals);
 
     return interpreter.exit_code;
 }

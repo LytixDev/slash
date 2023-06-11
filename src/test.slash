@@ -1,23 +1,23 @@
-var name = "Alice"
+{
+    var block = "Tibo"
+    echo $block
+    # Change value of a variable from outer scope
+    if $block {
+        $block = "TiboPino"
+    }
+    echo $block
 
-if $name {
-    echo $name
+    {
+        # create variable with the same name as a variable from outer scope
+        var block = "Shadow"
+        echo $block
+    }
+
+    echo $block
+}
+
+if $block {
+    echo "what ... " 
 } else {
-    echo "what ..."
+    echo "$block variable not defined in this scope"
 }
-
-var i = 5
-loop $i > 0 {
-    echo $i
-    $i -= 1
-}
-
-# raw expressions are evaluted and printed out like in a REPL
-"echo is not needed"
-
-0xff + 1
-0.1 + 0.2
-10 - -1  # aha!
-
-1 == 1
-10 > 20

@@ -16,6 +16,7 @@
  */
 #include <stdio.h>
 
+#include "arena_ll.h"
 #include "common.h"
 #include "interpreter/ast.h"
 #include "interpreter/lang/slash_str.h"
@@ -154,9 +155,10 @@ static void ast_print_if(IfStmt *stmt)
 
 static void ast_print_block(BlockStmt *stmt)
 {
-    for (size_t i = 0; i < stmt->statements->size; i++) {
-	printf("\n\t");
-	ast_print_stmt(darr_get(stmt->statements, i));
+    LLItem *item;
+    ARENA_LL_FOR_EACH(stmt->statements, item)
+    {
+	ast_print_stmt(item->p);
     }
 }
 
@@ -248,13 +250,13 @@ static void ast_print_stmt(Stmt *stmt)
     putchar('}');
 }
 
-void ast_print(struct darr_t *ast_heads)
+void ast_print(ArrayList *ast_heads)
 {
     printf("--- AST ---\n");
 
     size_t size = ast_heads->size;
     for (size_t i = 0; i < size; i++) {
-	ast_print_stmt(darr_get(ast_heads, i));
+	ast_print_stmt(*(Stmt **)arraylist_get(ast_heads, i));
 	if (i != size)
 	    putchar('\n');
     }

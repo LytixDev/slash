@@ -14,32 +14,44 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef SLASH_VALUE_H
-#define SLASH_VALUE_H
+#include <assert.h>
 
-#include <stdbool.h>
-
-#include "interpreter/lexer.h"
+#include "arena_ll.h"
 #include "sac/sac.h"
 
 
-typedef enum {
-    SVT_BOOL = 0, // p = bool *
-    SVT_STR, // p = SlashStr *
-    SVT_NUM, // p = double *
-    SVT_SHLIT, // p = SlashStr *
-    SVT_NONE, // p = NULL
-} SlashValueType;
+void arena_ll_init(Arena *arena, ArenaLL *ll)
+{
+    assert(arena != NULL && ll != NULL);
+    ll->arena = arena;
+    ll->head = NULL;
+    ll->tail = NULL;
+}
 
-typedef struct {
-    void *p; // arena allocated (TODO: well, should be)
-    SlashValueType type;
-} SlashValue;
+ArenaLL *arena_ll_alloc(Arena *arena)
+{
+    assert(arena != NULL);
 
+    ArenaLL *ll = m_arena_alloc_struct(arena, ArenaLL);
+    arena_ll_init(arena, ll);
+    return ll;
+}
 
-bool is_truthy(SlashValue *value);
-// TODO: this is turbo ugly
-SlashValue slash_value_cmp(Arena *arena, SlashValue a, SlashValue b, TokenType operator);
-void slash_value_println(SlashValue sv);
+void arena_ll_append(ArenaLL *ll, void *p)
+{
+    LLItem *item = m_arena_alloc_struct(ll->arena, LLItem);
+    item->p = p;
+    item->next = NULL;
 
-#endif /* SLASH_VALUE_H */
+    /* base case */
+    if (ll->head == NULL) {
+	ll->head = item;
+	ll->tail = ll->head;
+	return;
+    }
+
+    assert(ll->tail != NULL);
+    LLItem *tail = ll->tail;
+    tail->next = item;
+    ll->tail = item;
+}

@@ -16,33 +16,70 @@
  */
 
 #include "interpreter/scope.h"
+#include "common.h"
 #include "interpreter/lang/slash_str.h"
 #include "interpreter/lang/slash_value.h"
 #include "nicc/nicc.h"
+#include "sac/sac.h"
 
-// TODO: actually create new scope when encountering a block
-// TODO: arena
+
 void scope_init(Scope *scope, Scope *enclosing)
 {
+    m_arena_init_dynamic(&scope->value_arena, SAC_DEFAULT_CAPACITY,
+			 enclosing == NULL ? 256 : KB_SIZE_T(4));
     scope->enclosing = enclosing;
     hashmap_init(&scope->values);
 }
 
-void var_set(Scope *scope, SlashStr *key, SlashValue *value)
+void scope_destroy(Scope *scope)
+{
+    m_arena_release(&scope->value_arena);
+    hashmap_free(&scope->values);
+}
+
+void var_define(Scope *scope, SlashStr *key, SlashValue *value)
 {
     // TODO: YOLO conversion to uint32_t
     hashmap_put(&scope->values, key->p, (uint32_t)key->size, value, sizeof(SlashValue), true);
 }
 
-SlashValue var_get(Scope *scope, SlashStr *key)
+void var_assign(Scope *scope, SlashStr *key, SlashValue *value)
+{
+    do {
+	SlashValue *current = hashmap_get(&scope->values, key->p, (uint32_t)key->size);
+	if (current != NULL) {
+	    hashmap_put(&scope->values, key->p, (uint32_t)key->size, value, sizeof(SlashValue),
+			true);
+	    return;
+	}
+	scope = scope->enclosing;
+    } while (scope != NULL);
+
+    slash_exit_interpreter_err("cannot assign a variable that is not defined");
+}
+
+Scope *get_scope_of_var(Scope *scope, SlashStr *key)
+{
+    do {
+	SlashValue *current = hashmap_get(&scope->values, key->p, (uint32_t)key->size);
+	if (current != NULL) {
+	    return scope;
+	}
+	scope = scope->enclosing;
+    } while (scope != NULL);
+
+    return NULL;
+}
+
+ScopeAndValue var_get(Scope *scope, SlashStr *key)
 {
     SlashValue *value = NULL;
     do {
 	value = hashmap_get(&scope->values, key->p, (uint32_t)key->size);
 	if (value != NULL)
-	    return *value;
+	    return (ScopeAndValue){ .scope = scope, .value = value };
 	scope = scope->enclosing;
     } while (value == NULL && scope != NULL);
 
-    return (SlashValue){ .p = NULL, .type = SVT_NONE };
+    return (ScopeAndValue){ .scope = NULL, .value = NULL };
 }

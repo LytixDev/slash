@@ -20,7 +20,6 @@
 #include "interpreter/interpreter.h"
 #include "interpreter/lexer.h"
 #include "interpreter/parser.h"
-#define SAC_TYPEDEF
 #define SAC_IMPLEMENTATION
 #include "sac/sac.h"
 #define NICC_IMPLEMENTATION
@@ -52,23 +51,24 @@ int main(int argc, char **argv)
     } while (c != EOF);
 
     input[--counter] = 0;
+    fclose(fp);
 
     /* lex */
-    struct darr_t *tokens = lex(input, counter + 1);
-    tokens_print(tokens);
+    ArrayList tokens = lex(input, counter + 1);
+    tokens_print(&tokens);
 
     /* parse */
     Arena ast_arena;
     ast_arena_init(&ast_arena);
-    struct darr_t *stmts = parse(&ast_arena, tokens);
-    ast_print(stmts);
+    ArrayList stmts = parse(&ast_arena, &tokens);
+    ast_print(&stmts);
 
     /* interpret */
     printf("--- interpreter ---\n");
-    interpret(stmts);
+    interpret(&stmts);
 
     /* clean up */
     ast_arena_release(&ast_arena);
-    darr_free(tokens);
-    darr_free(stmts);
+    arraylist_free(&tokens);
+    arraylist_free(&stmts);
 }

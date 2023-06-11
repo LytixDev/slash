@@ -19,6 +19,8 @@
 
 
 #include "interpreter/scope.h"
+#include "nicc/nicc.h"
+#include "sac/sac.h"
 
 typedef struct {
     Scope globals;
@@ -27,7 +29,7 @@ typedef struct {
 } Interpreter;
 
 
-int interpret(struct darr_t *statements);
+int interpret(ArrayList *statements);
 
 
 #endif /* INTERPRETER_H */

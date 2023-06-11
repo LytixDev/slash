@@ -17,11 +17,9 @@
 #ifndef AST_H
 #define AST_H
 
+#include "arena_ll.h"
 #include "interpreter/lang/slash_value.h"
 #include "interpreter/lexer.h"
-#ifndef SAC_TYPEDEF
-#define SAC_TYPEDEF
-#endif
 #include "sac/sac.h"
 
 
@@ -133,8 +131,7 @@ typedef struct {
 
 typedef struct {
     StmtType type;
-    // TODO: use a list data structure that operates on the ast_arena
-    struct darr_t *statements;
+    ArenaLL *statements;
 } BlockStmt;
 
 
@@ -142,7 +139,7 @@ typedef struct {
 Expr *expr_alloc(Arena *ast_arena, ExprType type);
 Stmt *stmt_alloc(Arena *ast_arena, StmtType type);
 
-void ast_print(struct darr_t *ast_heads);
+void ast_print(ArrayList *ast_heads);
 
 void ast_arena_init(Arena *ast_arena);
 void ast_arena_release(Arena *ast_arena);
