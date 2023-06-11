@@ -26,13 +26,21 @@
 typedef struct scope_t Scope;
 struct scope_t {
     Scope *enclosing;
+    Arena value_arena;
     struct hashmap_t values;
-    // every scope should have an arena where new or modified values data is stored;
 };
 
+typedef struct {
+    Scope *scope;
+    SlashValue *value;
+} ScopeAndValue;
+
 void scope_init(Scope *scope, Scope *enclosing);
-void var_set(Scope *scope, SlashStr *key, SlashValue *value);
-SlashValue var_get(Scope *scope, SlashStr *key);
+void scope_destroy(Scope *scope);
+
+void var_define(Scope *scope, SlashStr *key, SlashValue *value);
+void var_assign(Scope *scope, SlashStr *key, SlashValue *value);
+ScopeAndValue var_get(Scope *scope, SlashStr *key);
 
 
 #endif /* SCOPE_H */

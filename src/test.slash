@@ -1,23 +1,12 @@
-var name = "Alice"
-
-if $name {
-    echo $name
-} else {
-    echo "what ..."
-}
-
 var i = 5
 loop $i > 0 {
     echo $i
     $i -= 1
 }
 
-# raw expressions are evaluted and printed out like in a REPL
-"echo is not needed"
+{
+    var block = "hello"
+    echo $block
+}
 
-0xff + 1
-0.1 + 0.2
-10 - -1  # aha!
-
-1 == 1
-10 > 20
+echo $block

@@ -51,6 +51,7 @@ int main(int argc, char **argv)
     } while (c != EOF);
 
     input[--counter] = 0;
+    fclose(fp);
 
     /* lex */
     ArrayList tokens = lex(input, counter + 1);
