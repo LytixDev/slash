@@ -226,11 +226,11 @@ static Stmt *loop_stmt(Parser *parser)
 
 	/* wrap entire iter loop in a block */
 	// TODO: this could be "simulated" in the interpreter
-	BlockStmt *block = (BlockStmt *)stmt_alloc(parser->ast_arena, STMT_BLOCK);
-	block->statements = arena_ll_alloc(parser->ast_arena);
-	arena_ll_append(block->statements, iter_loop);
+	// BlockStmt *block = (BlockStmt *)stmt_alloc(parser->ast_arena, STMT_BLOCK);
+	// block->statements = arena_ll_alloc(parser->ast_arena);
+	// arena_ll_append(block->statements, iter_loop);
 
-	return (Stmt *)block;
+	return (Stmt *)iter_loop;
     }
 
     LoopStmt *stmt = (LoopStmt *)stmt_alloc(parser->ast_arena, STMT_LOOP);

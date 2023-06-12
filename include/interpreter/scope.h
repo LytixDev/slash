@@ -39,6 +39,7 @@ void scope_init(Scope *scope, Scope *enclosing);
 void scope_destroy(Scope *scope);
 
 void var_define(Scope *scope, SlashStr *key, SlashValue *value);
+void var_undefine(Scope *scope, SlashStr *key);
 void var_assign(Scope *scope, SlashStr *key, SlashValue *value);
 ScopeAndValue var_get(Scope *scope, SlashStr *key);
 

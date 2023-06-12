@@ -134,6 +134,7 @@ static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
     SlashStr current = { .p = iterable->p, .size = 1 };
     SlashValue iterator_value = { .p = &current, .type = SVT_STR };
 
+    /* define the loop variable that holds the current iterator value */
     var_define(interpreter->scope, &stmt->var_name->lexeme, &iterator_value);
 
     size_t pos = 0;
@@ -143,6 +144,9 @@ static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
 	pos++;
 	var_assign(interpreter->scope, &stmt->var_name->lexeme, &iterator_value);
     }
+
+    /* undefine the loop variable */
+    var_undefine(interpreter->scope, &stmt->var_name->lexeme);
 }
 
 // TODO: table better for this
