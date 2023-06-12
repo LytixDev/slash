@@ -508,7 +508,7 @@ StateFn lex_cmd(Lexer *lexer)
 // TODO: octal support?
 StateFn lex_number(Lexer *lexer)
 {
-    char *digits = "0123456789";
+    char *digits = "0123456789_";
 
     /* optional leading sign */
     if (consume(lexer, "+-")) {
