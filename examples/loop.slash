@@ -8,6 +8,15 @@ loop c in $name {
     echo $c
 }
 
+loop i in 0..5 {
+    echo $i
+}
+
+loop i in ..3 {
+    echo $i
+}
+
+
 # more classic for-loop
 var i = 5
 loop $i > 0 {

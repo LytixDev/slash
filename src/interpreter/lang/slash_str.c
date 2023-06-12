@@ -48,3 +48,11 @@ double slash_str_to_double(SlashStr s)
     str[s.size] = 0;
     return strtod(str, NULL);
 }
+
+int32_t slash_str_to_int(SlashStr s)
+{
+    char str[s.size + 1];
+    memcpy(str, s.p, s.size);
+    str[s.size] = 0;
+    return atoi(str);
+}

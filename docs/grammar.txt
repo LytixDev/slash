@@ -50,10 +50,14 @@ primary         -> STRING
                 |  SHLIT
                 |  bool_lit
                 |  number
-                |  interpolation ;
+                |  interpolation 
+                |  range ;
 
 bool_lit        -> "true" | "false ";
 
 number          -> NUMBER ;
 
 interpolation   -> INTERPOLATION ;
+
+//range           -> NUMBER? ".." NUMBER ;
+range           -> NUMBER ".." NUMBER ;

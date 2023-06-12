@@ -19,6 +19,7 @@
 #include "arena_ll.h"
 #include "common.h"
 #include "interpreter/ast.h"
+#include "interpreter/lang/slash_range.h"
 #include "interpreter/lang/slash_str.h"
 #include "interpreter/lang/slash_value.h"
 #include "interpreter/lexer.h"
@@ -90,6 +91,11 @@ static void ast_print_binary(BinaryExpr *expr)
     ast_print_expr(expr->right);
 }
 
+static void ast_print_range_literal(SlashRange *range)
+{
+    printf("range(%d -> %d)", range->start, range->end);
+}
+
 static void ast_print_literal(LiteralExpr *expr)
 {
     switch (expr->value.type) {
@@ -104,6 +110,10 @@ static void ast_print_literal(LiteralExpr *expr)
 
     case SVT_BOOL:
 	printf("%s", *(bool *)expr->value.p == true ? "true" : "false");
+	break;
+
+    case SVT_RANGE:
+	ast_print_range_literal(expr->value.p);
 	break;
 
     default:
@@ -166,7 +176,7 @@ static void ast_print_block(BlockStmt *stmt)
 static void ast_print_loop(LoopStmt *stmt)
 {
     ast_print_expr(stmt->condition);
-    ast_print_stmt(stmt->body);
+    ast_print_block(stmt->body_block);
 }
 
 static void ast_print_iter_loop(IterLoopStmt *stmt)
@@ -174,7 +184,7 @@ static void ast_print_iter_loop(IterLoopStmt *stmt)
     slash_str_print(stmt->var_name->lexeme);
     printf(" = iter.");
     ast_print_expr(stmt->underlying_iterable);
-    ast_print_stmt(stmt->loop_body);
+    ast_print_block(stmt->body_block);
 }
 
 static void ast_print_assign(AssignStmt *stmt)

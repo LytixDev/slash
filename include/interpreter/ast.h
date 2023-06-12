@@ -100,15 +100,20 @@ typedef struct {
 
 typedef struct {
     StmtType type;
+    ArenaLL *statements;
+} BlockStmt;
+
+typedef struct {
+    StmtType type;
     Expr *condition;
-    Stmt *body;
+    BlockStmt *body_block;
 } LoopStmt;
 
 typedef struct {
     StmtType type;
     Token *var_name;
     Expr *underlying_iterable;
-    Stmt *loop_body;
+    BlockStmt *body_block;
 } IterLoopStmt;
 
 typedef struct {
@@ -136,11 +141,6 @@ typedef struct {
     Token *assignment_op;
     Expr *value;
 } AssignStmt;
-
-typedef struct {
-    StmtType type;
-    ArenaLL *statements;
-} BlockStmt;
 
 
 /* functions */

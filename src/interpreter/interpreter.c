@@ -18,6 +18,7 @@
 #include "arena_ll.h"
 #include "common.h"
 #include "interpreter/ast.h"
+#include "interpreter/lang/slash_range.h"
 #include "interpreter/lang/slash_str.h"
 #include "interpreter/lang/slash_value.h"
 #include "interpreter/lexer.h"
@@ -85,17 +86,22 @@ static void exec_if(Interpreter *interpreter, IfStmt *stmt)
 	exec(interpreter, stmt->else_branch);
 }
 
+static void exec_loop_block(Interpreter *interpreter, BlockStmt *stmt)
+{
+    LLItem *item;
+    ARENA_LL_FOR_EACH(stmt->statements, item)
+    {
+	exec(interpreter, item->p);
+    }
+}
+
 static void exec_block(Interpreter *interpreter, BlockStmt *stmt)
 {
     Scope block_scope;
     scope_init(&block_scope, interpreter->scope);
     interpreter->scope = &block_scope;
 
-    LLItem *item;
-    ARENA_LL_FOR_EACH(stmt->statements, item)
-    {
-	exec(interpreter, item->p);
-    }
+    exec_loop_block(interpreter, stmt);
 
     interpreter->scope = block_scope.enclosing;
     scope_destroy(&block_scope);
@@ -116,21 +122,22 @@ static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
 
 static void exec_loop(Interpreter *interpreter, LoopStmt *stmt)
 {
+    Scope loop_scope;
+    scope_init(&loop_scope, interpreter->scope);
+    interpreter->scope = &loop_scope;
+
     SlashValue r = eval(interpreter, stmt->condition);
     while (is_truthy(&r)) {
-	exec(interpreter, stmt->body);
+	exec_loop_block(interpreter, stmt->body_block);
 	r = eval(interpreter, stmt->condition);
     }
+
+    interpreter->scope = loop_scope.enclosing;
+    scope_destroy(&loop_scope);
 }
 
-static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
+static void exec_iter_loop_str(Interpreter *interpreter, IterLoopStmt *stmt, SlashStr *iterable)
 {
-    SlashValue underlying = eval(interpreter, stmt->underlying_iterable);
-    if (underlying.type != SVT_STR) {
-	slash_exit_interpreter_err("only str type can be iterated over currently");
-    }
-
-    SlashStr *iterable = underlying.p;
     SlashStr current = { .p = iterable->p, .size = 1 };
     SlashValue iterator_value = { .p = &current, .type = SVT_STR };
 
@@ -139,14 +146,45 @@ static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
 
     size_t pos = 0;
     while (pos < iterable->size) {
-	exec(interpreter, stmt->loop_body);
+	exec_loop_block(interpreter, stmt->body_block);
 	current.p = current.p + 1;
 	pos++;
 	var_assign(interpreter->scope, &stmt->var_name->lexeme, &iterator_value);
     }
+}
 
-    /* undefine the loop variable */
-    var_undefine(interpreter->scope, &stmt->var_name->lexeme);
+static void exec_iter_loop_range(Interpreter *interpreter, IterLoopStmt *stmt, SlashRange *iterable)
+{
+    double current = iterable->start;
+    SlashValue iterator_value = { .p = &current, .type = SVT_NUM };
+
+    /* define the loop variable that holds the current iterator value */
+    var_define(interpreter->scope, &stmt->var_name->lexeme, &iterator_value);
+
+    while (current != iterable->end) {
+	exec_loop_block(interpreter, stmt->body_block);
+	current++;
+	var_assign(interpreter->scope, &stmt->var_name->lexeme, &iterator_value);
+    }
+}
+
+static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
+{
+    Scope loop_scope;
+    scope_init(&loop_scope, interpreter->scope);
+    interpreter->scope = &loop_scope;
+
+    SlashValue underlying = eval(interpreter, stmt->underlying_iterable);
+    if (underlying.type == SVT_STR) {
+	exec_iter_loop_str(interpreter, stmt, underlying.p);
+    } else if (underlying.type == SVT_RANGE) {
+	exec_iter_loop_range(interpreter, stmt, underlying.p);
+    } else {
+	slash_exit_interpreter_err("only str and range can be iterated over currently");
+    }
+
+    interpreter->scope = loop_scope.enclosing;
+    scope_destroy(&loop_scope);
 }
 
 // TODO: table better for this
