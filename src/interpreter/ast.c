@@ -64,7 +64,7 @@ Stmt *stmt_alloc(Arena *ast_arena, StmtType type)
 /* arena */
 void ast_arena_init(Arena *ast_arena)
 {
-    m_arena_init_dynamic(ast_arena, SAC_DEFAULT_CAPACITY, SAC_DEFAULT_COMMIT_SIZE);
+    m_arena_init_dynamic(ast_arena, 2, 32);
 }
 
 void ast_arena_release(Arena *ast_arena)
@@ -80,14 +80,14 @@ static void ast_print_stmt(Stmt *stmt);
 
 static void ast_print_unary(UnaryExpr *expr)
 {
-    printf("%s ", token_type_str_map[expr->operator_->type]);
+    printf("%s ", token_type_str_map[expr->operator_]);
     ast_print_expr(expr->right);
 }
 
 static void ast_print_binary(BinaryExpr *expr)
 {
     ast_print_expr(expr->left);
-    printf(" %s ", token_type_str_map[expr->operator_->type]);
+    printf(" %s ", token_type_str_map[expr->operator_]);
     ast_print_expr(expr->right);
 }
 
@@ -123,7 +123,7 @@ static void ast_print_literal(LiteralExpr *expr)
 
 static void ast_print_interpolation(InterpolationExpr *expr)
 {
-    slash_str_print(expr->var_name->lexeme);
+    slash_str_print(expr->var_name);
 }
 
 static void ast_print_expression(ExpressionStmt *stmt)
@@ -133,14 +133,14 @@ static void ast_print_expression(ExpressionStmt *stmt)
 
 static void ast_print_var(VarStmt *stmt)
 {
-    slash_str_print(stmt->name->lexeme);
+    slash_str_print(stmt->name);
     printf(" = ");
     ast_print_expr(stmt->initializer);
 }
 
 static void ast_print_cmd(CmdStmt *stmt)
 {
-    slash_str_print(stmt->cmd_name->lexeme);
+    slash_str_print(stmt->cmd_name);
     printf(", ");
     ArgExpr *arg = stmt->args_ll;
     while (arg != NULL) {
@@ -181,7 +181,7 @@ static void ast_print_loop(LoopStmt *stmt)
 
 static void ast_print_iter_loop(IterLoopStmt *stmt)
 {
-    slash_str_print(stmt->var_name->lexeme);
+    slash_str_print(stmt->var_name);
     printf(" = iter.");
     ast_print_expr(stmt->underlying_iterable);
     ast_print_block(stmt->body_block);
@@ -189,10 +189,10 @@ static void ast_print_iter_loop(IterLoopStmt *stmt)
 
 static void ast_print_assign(AssignStmt *stmt)
 {
-    slash_str_print(stmt->name->lexeme);
-    if (stmt->assignment_op->type == t_equal)
+    slash_str_print(stmt->name);
+    if (stmt->assignment_op == t_equal)
 	printf(" = ");
-    else if (stmt->assignment_op->type == t_plus_equal)
+    else if (stmt->assignment_op == t_plus_equal)
 	printf(" += ");
     else
 	printf(" -= ");

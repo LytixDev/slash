@@ -206,7 +206,7 @@ static Stmt *var_decl(Parser *parser)
     consume(parser, t_newline, "Expected line ending after variable definition");
 
     VarStmt *stmt = (VarStmt *)stmt_alloc(parser->ast_arena, STMT_VAR);
-    stmt->name = name;
+    stmt->name = name->lexeme;
     stmt->initializer = initializer;
     return (Stmt *)stmt;
 }
@@ -221,7 +221,7 @@ static Stmt *loop_stmt(Parser *parser)
 	Expr *iterable = expression(parser);
 
 	IterLoopStmt *iter_loop = (IterLoopStmt *)stmt_alloc(parser->ast_arena, STMT_ITER_LOOP);
-	iter_loop->var_name = var_name;
+	iter_loop->var_name = var_name->lexeme;
 	iter_loop->underlying_iterable = iterable;
 	consume(parser, t_lbrace, "expected '{' after loop condition");
 	iter_loop->body_block = (BlockStmt *)block(parser);
@@ -286,8 +286,8 @@ static Stmt *assignment_stmt(Parser *parser)
     Expr *value = expression(parser);
 
     AssignStmt *stmt = (AssignStmt *)stmt_alloc(parser->ast_arena, STMT_ASSIGN);
-    stmt->name = name;
-    stmt->assignment_op = assignment_op;
+    stmt->name = name->lexeme;
+    stmt->assignment_op = assignment_op->type;
     stmt->value = value;
     return (Stmt *)stmt;
 }
@@ -297,7 +297,7 @@ static Stmt *cmd_stmt(Parser *parser)
     Token *cmd_name = previous(parser);
 
     CmdStmt *stmt = (CmdStmt *)stmt_alloc(parser->ast_arena, STMT_CMD);
-    stmt->cmd_name = cmd_name;
+    stmt->cmd_name = cmd_name->lexeme;
     stmt->args_ll = (ArgExpr *)argument(parser);
     return (Stmt *)stmt;
 }
@@ -340,7 +340,7 @@ static Expr *equality(Parser *parser)
 
 	BinaryExpr *bin_expr = (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY);
 	bin_expr->left = expr;
-	bin_expr->operator_ = operator_;
+	bin_expr->operator_ = operator_->type;
 	bin_expr->right = right;
 	expr = (Expr *)bin_expr;
     }
@@ -358,7 +358,7 @@ static Expr *comparison(Parser *parser)
 
 	BinaryExpr *bin_expr = (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY);
 	bin_expr->left = expr;
-	bin_expr->operator_ = operator_;
+	bin_expr->operator_ = operator_->type;
 	bin_expr->right = right;
 	expr = (Expr *)bin_expr;
     }
@@ -376,7 +376,7 @@ static Expr *term(Parser *parser)
 
 	BinaryExpr *bin_expr = (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY);
 	bin_expr->left = expr;
-	bin_expr->operator_ = operator_;
+	bin_expr->operator_ = operator_->type;
 	bin_expr->right = right;
 	expr = (Expr *)bin_expr;
     }
@@ -451,10 +451,10 @@ static Expr *number(Parser *parser)
 
 static Expr *interpolation(Parser *parser)
 {
-    Token *token = previous(parser);
+    Token *var_name = previous(parser);
     InterpolationExpr *expr =
 	(InterpolationExpr *)expr_alloc(parser->ast_arena, EXPR_INTERPOLATION);
-    expr->var_name = token;
+    expr->var_name = var_name->lexeme;
     return (Expr *)expr;
 }
 

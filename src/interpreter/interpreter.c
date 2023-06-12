@@ -37,7 +37,7 @@ static SlashValue eval_unary(Interpreter *interpreter, UnaryExpr *expr)
 static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
 {
     return slash_value_cmp(&interpreter->scope->value_arena, eval(interpreter, expr->left),
-			   eval(interpreter, expr->right), expr->operator_->type);
+			   eval(interpreter, expr->right), expr->operator_);
 }
 
 static SlashValue eval_arg(Interpreter *interpreter, ArgExpr *expr)
@@ -53,7 +53,7 @@ static SlashValue eval_literal(Interpreter *interpreter, LiteralExpr *expr)
 
 static SlashValue eval_interpolation(Interpreter *interpreter, InterpolationExpr *expr)
 {
-    ScopeAndValue sv = var_get(interpreter->scope, &expr->var_name->lexeme);
+    ScopeAndValue sv = var_get(interpreter->scope, &expr->var_name);
     if (sv.value != NULL)
 	return *sv.value;
     return (SlashValue){ .p = NULL, .type = SVT_NONE };
@@ -68,7 +68,7 @@ static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
 static void exec_var(Interpreter *interpreter, VarStmt *stmt)
 {
     SlashValue value = eval(interpreter, stmt->initializer);
-    var_define(interpreter->scope, &stmt->name->lexeme, &value);
+    var_define(interpreter->scope, &stmt->name, &value);
 }
 
 static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
@@ -110,14 +110,14 @@ static void exec_block(Interpreter *interpreter, BlockStmt *stmt)
 static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
 {
     SlashValue new_value = eval(interpreter, stmt->value);
-    if (stmt->assignment_op->type != t_equal) {
-	ScopeAndValue current_value = var_get(interpreter->scope, &stmt->name->lexeme);
+    if (stmt->assignment_op != t_equal) {
+	ScopeAndValue current_value = var_get(interpreter->scope, &stmt->name);
 	// TODO: if sv.value == NULL -> runtime error
 	new_value =
 	    slash_value_cmp(&current_value.scope->value_arena, *current_value.value, new_value,
-			    stmt->assignment_op->type == t_plus_equal ? t_plus : t_minus);
+			    stmt->assignment_op == t_plus_equal ? t_plus : t_minus);
     }
-    var_assign(interpreter->scope, &stmt->name->lexeme, &new_value);
+    var_assign(interpreter->scope, &stmt->name, &new_value);
 }
 
 static void exec_loop(Interpreter *interpreter, LoopStmt *stmt)
@@ -142,14 +142,14 @@ static void exec_iter_loop_str(Interpreter *interpreter, IterLoopStmt *stmt, Sla
     SlashValue iterator_value = { .p = &current, .type = SVT_STR };
 
     /* define the loop variable that holds the current iterator value */
-    var_define(interpreter->scope, &stmt->var_name->lexeme, &iterator_value);
+    var_define(interpreter->scope, &stmt->var_name, &iterator_value);
 
     size_t pos = 0;
     while (pos < iterable->size) {
 	exec_loop_block(interpreter, stmt->body_block);
 	current.p = current.p + 1;
 	pos++;
-	var_assign(interpreter->scope, &stmt->var_name->lexeme, &iterator_value);
+	var_assign(interpreter->scope, &stmt->var_name, &iterator_value);
     }
 }
 
@@ -159,12 +159,12 @@ static void exec_iter_loop_range(Interpreter *interpreter, IterLoopStmt *stmt, S
     SlashValue iterator_value = { .p = &current, .type = SVT_NUM };
 
     /* define the loop variable that holds the current iterator value */
-    var_define(interpreter->scope, &stmt->var_name->lexeme, &iterator_value);
+    var_define(interpreter->scope, &stmt->var_name, &iterator_value);
 
     while (current != iterable->end) {
 	exec_loop_block(interpreter, stmt->body_block);
 	current++;
-	var_assign(interpreter->scope, &stmt->var_name->lexeme, &iterator_value);
+	var_assign(interpreter->scope, &stmt->var_name, &iterator_value);
     }
 }
 

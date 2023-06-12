@@ -18,6 +18,7 @@
 #define AST_H
 
 #include "arena_ll.h"
+#include "interpreter/lang/slash_str.h"
 #include "interpreter/lang/slash_value.h"
 #include "interpreter/lexer.h"
 #include "sac/sac.h"
@@ -63,14 +64,14 @@ typedef struct {
 /* expressions */
 typedef struct {
     ExprType type;
-    Token *operator_;
+    TokenType operator_;
     Expr *right;
 } UnaryExpr;
 
 typedef struct {
     ExprType type;
     Expr *left;
-    Token *operator_;
+    TokenType operator_;
     Expr *right;
 } BinaryExpr;
 
@@ -81,7 +82,7 @@ typedef struct {
 
 typedef struct {
     ExprType type;
-    Token *var_name;
+    SlashStr var_name;
 } InterpolationExpr;
 
 typedef struct arg_expr_t ArgExpr;
@@ -111,14 +112,14 @@ typedef struct {
 
 typedef struct {
     StmtType type;
-    Token *var_name;
+    SlashStr var_name;
     Expr *underlying_iterable;
     BlockStmt *body_block;
 } IterLoopStmt;
 
 typedef struct {
     StmtType type;
-    Token *name;
+    SlashStr name;
     Expr *initializer;
 } VarStmt;
 
@@ -131,14 +132,14 @@ typedef struct {
 
 typedef struct {
     StmtType type;
-    Token *cmd_name;
+    SlashStr cmd_name;
     ArgExpr *args_ll; // NULL terminated linked list
 } CmdStmt;
 
 typedef struct {
     StmtType type;
-    Token *name;
-    Token *assignment_op;
+    SlashStr name;
+    TokenType assignment_op;
     Expr *value;
 } AssignStmt;
 

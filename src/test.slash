@@ -1,3 +1,6 @@
-loop i in 5..10 {
-    echo $i
+var sum = 0
+loop i in ..10000 {
+    $sum += $i
 }
+
+echo $sum

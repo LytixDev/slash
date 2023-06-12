@@ -24,7 +24,7 @@ You want to do the same in POSIX sh? That would look something like:
 ```sh
 echo $((0xff + 1))  # prints 256
 ```
-This verbosity is really annoying and makes the POSIX shell a poor choice for quick mafs. One major goal for Slash is empowering (buzzy buzzy) the user to do simple and more complex calculations ergonomically.
+This verbosity is really annoying and makes the POSIX shell a poor choice for quick mafs. One major goal for Slash is empowering (buzzy buzzy) the user to do simple and more complex calculations ergonomically (buzzy buzzy).
 ### C-style, but no parentheses or semicolons
 ``` 
 var system = (uname)  # '(...)' is exactly the same as the POSIX '$(...)' 
@@ -44,8 +44,8 @@ loop c in "Alice" {
 }
 ```
 ```
-loop i in 1..10 {
-    echo $c
+loop i in 3..5 {
+    echo $i
 }
 ```
 ```
@@ -90,7 +90,7 @@ The lexer is heavily influenced by [this brilliant talk](https://www.youtube.com
 - Have fun writing C code :-)
 
 ## Status
-Currently variable assignment, basic arihtmetic, if-elif-else and loops* work. That's about it.
+Currently variable assignment, basic arihtmetic, if-elif-else and loops work. That's about it.
 
 ## Contact
 mail to nicolahb at stud dot ntnu dot no

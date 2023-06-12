@@ -25,8 +25,13 @@
 
 void scope_init(Scope *scope, Scope *enclosing)
 {
-    m_arena_init_dynamic(&scope->value_arena, SAC_DEFAULT_CAPACITY,
-			 enclosing == NULL ? 256 : KB_SIZE_T(4));
+    // TODO: capacity could be larger
+    if (enclosing == NULL) {
+	m_arena_init_dynamic(&scope->value_arena, 1, 16384);
+    } else {
+	m_arena_init_dynamic(&scope->value_arena, 1, 4096);
+    }
+
     scope->enclosing = enclosing;
     hashmap_init(&scope->values);
 }
