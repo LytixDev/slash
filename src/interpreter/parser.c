@@ -211,14 +211,32 @@ static Stmt *var_decl(Parser *parser)
 
 static Stmt *loop_stmt(Parser *parser)
 {
+    if (match(parser, t_identifier)) {
+	/* loop IDENTIFIER in iterable { ... } */
+	Token *var_name = previous(parser);
+	consume(parser, t_in, "Expected 'in' keyword in loop");
+	/* Throw runtime error if expression can not be iterated over */
+	Expr *iterable = expression(parser);
+
+	IterLoopStmt *iter_loop = (IterLoopStmt *)stmt_alloc(parser->ast_arena, STMT_ITER_LOOP);
+	iter_loop->var_name = var_name;
+	iter_loop->underlying_iterable = iterable;
+	consume(parser, t_lbrace, "expected '{' after loop condition");
+	iter_loop->loop_body = block(parser);
+
+	/* wrap entire iter loop in a block */
+	// TODO: this could be "simulated" in the interpreter
+	BlockStmt *block = (BlockStmt *)stmt_alloc(parser->ast_arena, STMT_BLOCK);
+	block->statements = arena_ll_alloc(parser->ast_arena);
+	arena_ll_append(block->statements, iter_loop);
+
+	return (Stmt *)block;
+    }
+
     LoopStmt *stmt = (LoopStmt *)stmt_alloc(parser->ast_arena, STMT_LOOP);
     stmt->condition = expression(parser);
-    if (match(parser, t_lbrace)) {
-	stmt->body = block(parser);
-    } else {
-	// TODO: continue with 'in ITERABLE' syntax
-	consume(parser, t_identifier, "Expected either an identifier or '{' after loop keyword");
-    }
+    consume(parser, t_lbrace, "expected '{' after loop condition");
+    stmt->body = block(parser);
     return (Stmt *)stmt;
 }
 
