@@ -19,6 +19,7 @@
 #include "arena_ll.h"
 #include "common.h"
 #include "interpreter/ast.h"
+#include "interpreter/lang/slash_range.h"
 #include "interpreter/lang/slash_str.h"
 #include "interpreter/lang/slash_value.h"
 #include "interpreter/lexer.h"
@@ -148,6 +149,7 @@ static Expr *primary(Parser *parser);
 static Expr *bool_lit(Parser *parser);
 static Expr *number(Parser *parser);
 static Expr *interpolation(Parser *parser);
+static Expr *range(Parser *parser);
 
 static Stmt *declaration(Parser *parser)
 {
@@ -211,14 +213,32 @@ static Stmt *var_decl(Parser *parser)
 
 static Stmt *loop_stmt(Parser *parser)
 {
+    if (match(parser, t_identifier)) {
+	/* loop IDENTIFIER in iterable { ... } */
+	Token *var_name = previous(parser);
+	consume(parser, t_in, "Expected 'in' keyword in loop");
+	/* Throw runtime error if expression can not be iterated over */
+	Expr *iterable = expression(parser);
+
+	IterLoopStmt *iter_loop = (IterLoopStmt *)stmt_alloc(parser->ast_arena, STMT_ITER_LOOP);
+	iter_loop->var_name = var_name;
+	iter_loop->underlying_iterable = iterable;
+	consume(parser, t_lbrace, "expected '{' after loop condition");
+	iter_loop->body_block = (BlockStmt *)block(parser);
+
+	/* wrap entire iter loop in a block */
+	// TODO: this could be "simulated" in the interpreter
+	// BlockStmt *block = (BlockStmt *)stmt_alloc(parser->ast_arena, STMT_BLOCK);
+	// block->statements = arena_ll_alloc(parser->ast_arena);
+	// arena_ll_append(block->statements, iter_loop);
+
+	return (Stmt *)iter_loop;
+    }
+
     LoopStmt *stmt = (LoopStmt *)stmt_alloc(parser->ast_arena, STMT_LOOP);
     stmt->condition = expression(parser);
-    if (match(parser, t_lbrace)) {
-	stmt->body = block(parser);
-    } else {
-	// TODO: continue with 'in ITERABLE' syntax
-	consume(parser, t_identifier, "Expected either an identifier or '{' after loop keyword");
-    }
+    consume(parser, t_lbrace, "expected '{' after loop condition");
+    stmt->body_block = (BlockStmt *)block(parser);
     return (Stmt *)stmt;
 }
 
@@ -381,8 +401,14 @@ static Expr *primary(Parser *parser)
     if (match(parser, t_interpolation))
 	return interpolation(parser);
 
-    if (match(parser, dt_num))
+    if (check(parser, t_dot_dot))
+	return range(parser);
+
+    if (match(parser, dt_num)) {
+	if (check(parser, t_dot_dot))
+	    return range(parser);
 	return number(parser);
+    }
 
     if (!match(parser, dt_str, dt_shlit))
 	slash_exit_parse_err("not a valid primary type");
@@ -444,4 +470,25 @@ ArrayList parse(Arena *ast_arena, ArrayList *tokens)
     }
 
     return statements;
+}
+
+static Expr *range(Parser *parser)
+{
+    SlashRange *range = m_arena_alloc_struct(parser->ast_arena, SlashRange);
+
+    Token *start_num_or_any = previous(parser);
+    if (start_num_or_any->type != dt_num)
+	range->start = 0;
+    else
+	range->start = slash_str_to_int(start_num_or_any->lexeme);
+
+    consume(parser, t_dot_dot, "will only enter here if t_dot_dot was found");
+    consume(parser, dt_num, "Expected end number in range expression");
+    Token *end_num = previous(parser);
+    range->end = slash_str_to_int(end_num->lexeme);
+
+    LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
+    expr->value.p = range;
+    expr->value.type = SVT_RANGE;
+    return (Expr *)expr;
 }

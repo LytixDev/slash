@@ -1,0 +1,25 @@
+# idiomatic for-each-esque loop
+loop my_var in "Eilor" {
+    echo $my_var
+}
+
+var name = "Eilor"
+loop c in $name {
+    echo $c
+}
+
+loop i in 0..5 {
+    echo $i
+}
+
+loop i in ..3 {
+    echo $i
+}
+
+
+# more classic for-loop
+var i = 5
+loop $i > 0 {
+    echo $i
+    $i -= 1
+}

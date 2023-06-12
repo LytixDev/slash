@@ -19,6 +19,7 @@
 #include "arena_ll.h"
 #include "common.h"
 #include "interpreter/ast.h"
+#include "interpreter/lang/slash_range.h"
 #include "interpreter/lang/slash_str.h"
 #include "interpreter/lang/slash_value.h"
 #include "interpreter/lexer.h"
@@ -30,16 +31,17 @@ const size_t expr_size_table[] = {
     sizeof(InterpolationExpr), sizeof(ArgExpr),
 };
 
-const size_t stmt_size_table[] = { sizeof(ExpressionStmt), sizeof(VarStmt), sizeof(LoopStmt),
-				   sizeof(IfStmt),	   sizeof(CmdStmt), sizeof(AssignStmt),
-				   sizeof(BlockStmt) };
+const size_t stmt_size_table[] = { sizeof(ExpressionStmt), sizeof(VarStmt),  sizeof(LoopStmt),
+				   sizeof(IterLoopStmt),   sizeof(IfStmt),   sizeof(CmdStmt),
+				   sizeof(AssignStmt),	   sizeof(BlockStmt) };
 
 char *expr_type_str_map[EXPR_ENUM_COUNT] = {
     "EXPR_UNARY", "EXPR_BINARY", "EXPR_LITERAL", "EXPR_INTERPOLATION", "EXPR_ARG",
 };
 
 char *stmt_type_str_map[STMT_ENUM_COUNT] = {
-    "STMT_EXPRESSION", "STMT_VAR", "STMT_LOOP", "STMT_IF", "STMT_CMD", "STMT_ASSIGN", "STMT_BLOCK",
+    "STMT_EXPRESSION", "STMT_VAR", "STMT_LOOP",	  "STMT_ITER_LOOP",
+    "STMT_IF",	       "STMT_CMD", "STMT_ASSIGN", "STMT_BLOCK",
 };
 
 Expr *expr_alloc(Arena *ast_arena, ExprType type)
@@ -89,6 +91,11 @@ static void ast_print_binary(BinaryExpr *expr)
     ast_print_expr(expr->right);
 }
 
+static void ast_print_range_literal(SlashRange *range)
+{
+    printf("range(%d -> %d)", range->start, range->end);
+}
+
 static void ast_print_literal(LiteralExpr *expr)
 {
     switch (expr->value.type) {
@@ -103,6 +110,10 @@ static void ast_print_literal(LiteralExpr *expr)
 
     case SVT_BOOL:
 	printf("%s", *(bool *)expr->value.p == true ? "true" : "false");
+	break;
+
+    case SVT_RANGE:
+	ast_print_range_literal(expr->value.p);
 	break;
 
     default:
@@ -165,7 +176,15 @@ static void ast_print_block(BlockStmt *stmt)
 static void ast_print_loop(LoopStmt *stmt)
 {
     ast_print_expr(stmt->condition);
-    ast_print_stmt(stmt->body);
+    ast_print_block(stmt->body_block);
+}
+
+static void ast_print_iter_loop(IterLoopStmt *stmt)
+{
+    slash_str_print(stmt->var_name->lexeme);
+    printf(" = iter.");
+    ast_print_expr(stmt->underlying_iterable);
+    ast_print_block(stmt->body_block);
 }
 
 static void ast_print_assign(AssignStmt *stmt)
@@ -203,7 +222,7 @@ static void ast_print_expr(Expr *expr)
 	break;
 
     default:
-	printf("ast type not handled");
+	printf("ast-expr type not handled");
     }
 
     putchar(']');
@@ -235,6 +254,10 @@ static void ast_print_stmt(Stmt *stmt)
 	ast_print_loop((LoopStmt *)stmt);
 	break;
 
+    case STMT_ITER_LOOP:
+	ast_print_iter_loop((IterLoopStmt *)stmt);
+	break;
+
     case STMT_IF:
 	ast_print_if((IfStmt *)stmt);
 	break;
@@ -244,7 +267,7 @@ static void ast_print_stmt(Stmt *stmt)
 	break;
 
     default:
-	printf("ast type not handled");
+	printf("ast-stmt type not handled");
     }
 
     putchar('}');

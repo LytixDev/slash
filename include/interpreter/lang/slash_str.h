@@ -33,5 +33,6 @@ void slash_str_print(SlashStr s);
 void slash_str_println(SlashStr s);
 
 double slash_str_to_double(SlashStr s);
+int32_t slash_str_to_int(SlashStr s);
 
 #endif /* SLASH_STR_H */

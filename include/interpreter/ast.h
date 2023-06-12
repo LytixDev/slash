@@ -37,6 +37,7 @@ typedef enum {
     STMT_EXPRESSION = 0,
     STMT_VAR,
     STMT_LOOP,
+    STMT_ITER_LOOP,
     STMT_IF,
     STMT_CMD,
     STMT_ASSIGN,
@@ -99,9 +100,21 @@ typedef struct {
 
 typedef struct {
     StmtType type;
+    ArenaLL *statements;
+} BlockStmt;
+
+typedef struct {
+    StmtType type;
     Expr *condition;
-    Stmt *body;
+    BlockStmt *body_block;
 } LoopStmt;
+
+typedef struct {
+    StmtType type;
+    Token *var_name;
+    Expr *underlying_iterable;
+    BlockStmt *body_block;
+} IterLoopStmt;
 
 typedef struct {
     StmtType type;
@@ -128,11 +141,6 @@ typedef struct {
     Token *assignment_op;
     Expr *value;
 } AssignStmt;
-
-typedef struct {
-    StmtType type;
-    ArenaLL *statements;
-} BlockStmt;
 
 
 /* functions */

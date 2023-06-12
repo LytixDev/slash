@@ -28,6 +28,7 @@ typedef enum {
     SVT_STR, // p = SlashStr *
     SVT_NUM, // p = double *
     SVT_SHLIT, // p = SlashStr *
+    SVT_RANGE, // p = SlashRange *
     SVT_NONE, // p = NULL
 } SlashValueType;
 

@@ -18,6 +18,7 @@
 #include "arena_ll.h"
 #include "common.h"
 #include "interpreter/ast.h"
+#include "interpreter/lang/slash_range.h"
 #include "interpreter/lang/slash_str.h"
 #include "interpreter/lang/slash_value.h"
 #include "interpreter/lexer.h"
@@ -85,17 +86,22 @@ static void exec_if(Interpreter *interpreter, IfStmt *stmt)
 	exec(interpreter, stmt->else_branch);
 }
 
+static void exec_loop_block(Interpreter *interpreter, BlockStmt *stmt)
+{
+    LLItem *item;
+    ARENA_LL_FOR_EACH(stmt->statements, item)
+    {
+	exec(interpreter, item->p);
+    }
+}
+
 static void exec_block(Interpreter *interpreter, BlockStmt *stmt)
 {
     Scope block_scope;
     scope_init(&block_scope, interpreter->scope);
     interpreter->scope = &block_scope;
 
-    LLItem *item;
-    ARENA_LL_FOR_EACH(stmt->statements, item)
-    {
-	exec(interpreter, item->p);
-    }
+    exec_loop_block(interpreter, stmt);
 
     interpreter->scope = block_scope.enclosing;
     scope_destroy(&block_scope);
@@ -116,11 +122,69 @@ static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
 
 static void exec_loop(Interpreter *interpreter, LoopStmt *stmt)
 {
+    Scope loop_scope;
+    scope_init(&loop_scope, interpreter->scope);
+    interpreter->scope = &loop_scope;
+
     SlashValue r = eval(interpreter, stmt->condition);
     while (is_truthy(&r)) {
-	exec(interpreter, stmt->body);
+	exec_loop_block(interpreter, stmt->body_block);
 	r = eval(interpreter, stmt->condition);
     }
+
+    interpreter->scope = loop_scope.enclosing;
+    scope_destroy(&loop_scope);
+}
+
+static void exec_iter_loop_str(Interpreter *interpreter, IterLoopStmt *stmt, SlashStr *iterable)
+{
+    SlashStr current = { .p = iterable->p, .size = 1 };
+    SlashValue iterator_value = { .p = &current, .type = SVT_STR };
+
+    /* define the loop variable that holds the current iterator value */
+    var_define(interpreter->scope, &stmt->var_name->lexeme, &iterator_value);
+
+    size_t pos = 0;
+    while (pos < iterable->size) {
+	exec_loop_block(interpreter, stmt->body_block);
+	current.p = current.p + 1;
+	pos++;
+	var_assign(interpreter->scope, &stmt->var_name->lexeme, &iterator_value);
+    }
+}
+
+static void exec_iter_loop_range(Interpreter *interpreter, IterLoopStmt *stmt, SlashRange *iterable)
+{
+    double current = iterable->start;
+    SlashValue iterator_value = { .p = &current, .type = SVT_NUM };
+
+    /* define the loop variable that holds the current iterator value */
+    var_define(interpreter->scope, &stmt->var_name->lexeme, &iterator_value);
+
+    while (current != iterable->end) {
+	exec_loop_block(interpreter, stmt->body_block);
+	current++;
+	var_assign(interpreter->scope, &stmt->var_name->lexeme, &iterator_value);
+    }
+}
+
+static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
+{
+    Scope loop_scope;
+    scope_init(&loop_scope, interpreter->scope);
+    interpreter->scope = &loop_scope;
+
+    SlashValue underlying = eval(interpreter, stmt->underlying_iterable);
+    if (underlying.type == SVT_STR) {
+	exec_iter_loop_str(interpreter, stmt, underlying.p);
+    } else if (underlying.type == SVT_RANGE) {
+	exec_iter_loop_range(interpreter, stmt, underlying.p);
+    } else {
+	slash_exit_interpreter_err("only str and range can be iterated over currently");
+    }
+
+    interpreter->scope = loop_scope.enclosing;
+    scope_destroy(&loop_scope);
 }
 
 // TODO: table better for this
@@ -143,7 +207,7 @@ static SlashValue eval(Interpreter *interpreter, Expr *expr)
 	return eval_arg(interpreter, (ArgExpr *)expr);
 
     default:
-	slash_exit_internal_err("expr enum count wtf");
+	slash_exit_internal_err("interpreter: expr type not handled");
 	/* will never happen, but lets make the compiler happy */
 	return (SlashValue){ 0 };
     }
@@ -168,6 +232,10 @@ static void exec(Interpreter *interpreter, Stmt *stmt)
 	exec_loop(interpreter, (LoopStmt *)stmt);
 	break;
 
+    case STMT_ITER_LOOP:
+	exec_iter_loop(interpreter, (IterLoopStmt *)stmt);
+	break;
+
     case STMT_IF:
 	exec_if(interpreter, (IfStmt *)stmt);
 	break;
@@ -182,7 +250,7 @@ static void exec(Interpreter *interpreter, Stmt *stmt)
 
 
     default:
-	slash_exit_internal_err("stmt enum count wtf");
+	slash_exit_internal_err("interpreter: stmt type not handled");
     }
 }
 

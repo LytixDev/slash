@@ -14,34 +14,16 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef SCOPE_H
-#define SCOPE_H
+#ifndef SLASH_RANGE_H
+#define SLASH_RANGE_H
 
-#include "interpreter/lang/slash_str.h"
-#include "interpreter/lang/slash_value.h"
-#include "nicc/nicc.h"
-#include "sac/sac.h"
+#include <stdint.h>
 
-
-typedef struct scope_t Scope;
-struct scope_t {
-    Scope *enclosing;
-    Arena value_arena;
-    struct hashmap_t values;
-};
 
 typedef struct {
-    Scope *scope;
-    SlashValue *value;
-} ScopeAndValue;
-
-void scope_init(Scope *scope, Scope *enclosing);
-void scope_destroy(Scope *scope);
-
-void var_define(Scope *scope, SlashStr *key, SlashValue *value);
-void var_undefine(Scope *scope, SlashStr *key);
-void var_assign(Scope *scope, SlashStr *key, SlashValue *value);
-ScopeAndValue var_get(Scope *scope, SlashStr *key);
+    int32_t start;
+    int32_t end;
+} SlashRange;
 
 
-#endif /* SCOPE_H */
+#endif /* SLASH_RANGE_H */

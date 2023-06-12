@@ -43,6 +43,11 @@ void var_define(Scope *scope, SlashStr *key, SlashValue *value)
     hashmap_put(&scope->values, key->p, (uint32_t)key->size, value, sizeof(SlashValue), true);
 }
 
+void var_undefine(Scope *scope, SlashStr *key)
+{
+    hashmap_rm(&scope->values, key->p, (uint32_t)key->size);
+}
+
 void var_assign(Scope *scope, SlashStr *key, SlashValue *value)
 {
     do {
