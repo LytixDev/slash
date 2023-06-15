@@ -14,13 +14,14 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "interpreter/lang/slash_str.h"
-#include "interpreter/lang/slash_value.h"
+#include "interpreter/types/slash_str.h"
+#include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
 
 
@@ -55,4 +56,19 @@ int32_t slash_str_to_int(SlashStr s)
     memcpy(str, s.p, s.size);
     str[s.size] = 0;
     return atoi(str);
+}
+
+bool slash_str_eq(SlashStr a, SlashStr b)
+{
+    if (a.size != b.size)
+	return false;
+
+    char *A = a.p;
+    char *B = b.p;
+    for (size_t i = 0; i < a.size; i++) {
+	if (A[i] != B[i])
+	    return false;
+    }
+
+    return true;
 }

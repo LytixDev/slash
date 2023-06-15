@@ -18,8 +18,8 @@
 #include <string.h>
 
 #include "common.h"
-#include "interpreter/lang/slash_str.h"
 #include "interpreter/lexer.h"
+#include "interpreter/types/slash_str.h"
 #include "nicc/nicc.h"
 
 static void lex_panic(Lexer *lexer, char *err_msg);
@@ -27,7 +27,7 @@ static void run_until(Lexer *lexer, StateFn start_state, StateFn end_state);
 static void emit(Lexer *lexer, TokenType type);
 StateFn lex_any(Lexer *lexer);
 StateFn lex_end(Lexer *lexer);
-StateFn lex_cmd(Lexer *lexer);
+StateFn lex_argument(Lexer *lexer);
 StateFn lex_number(Lexer *lexer);
 StateFn lex_string(Lexer *lexer);
 StateFn lex_identifier(Lexer *lexer);
@@ -456,7 +456,7 @@ StateFn lex_end(Lexer *lexer)
     return STATE_FN(NULL);
 }
 
-StateFn lex_cmd(Lexer *lexer)
+StateFn lex_argument(Lexer *lexer)
 {
     /* previous token was a shell literal */
 
@@ -561,7 +561,7 @@ StateFn lex_identifier(Lexer *lexer)
     }
 
     emit(lexer, dt_shlit);
-    return STATE_FN(lex_cmd);
+    return STATE_FN(lex_argument);
 }
 
 StateFn lex_interpolation(Lexer *lexer)
@@ -615,7 +615,7 @@ StateFn lex_comment(Lexer *lexer)
 StateFn lex_subshell_start(Lexer *lexer)
 {
     emit(lexer, t_lparen);
-    run_until(lexer, STATE_FN(lex_any), STATE_FN(lex_subshell_end));
+    run_until(lexer, STATE_FN(lex_argument), STATE_FN(lex_subshell_end));
     StateFn next = lex_subshell_end(lexer);
     return next;
 }

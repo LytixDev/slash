@@ -14,34 +14,27 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef SCOPE_H
-#define SCOPE_H
+#ifndef SLASH_STR_H
+#define SLASH_STR_H
 
-#include "interpreter/types/slash_str.h"
-#include "interpreter/types/slash_value.h"
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+
 #include "nicc/nicc.h"
-#include "sac/sac.h"
-
-
-typedef struct scope_t Scope;
-struct scope_t {
-    Scope *enclosing;
-    Arena value_arena;
-    struct hashmap_t values;
-};
 
 typedef struct {
-    Scope *scope;
-    SlashValue *value;
-} ScopeAndValue;
-
-void scope_init(Scope *scope, Scope *enclosing);
-void scope_destroy(Scope *scope);
-
-void var_define(Scope *scope, SlashStr *key, SlashValue *value);
-void var_undefine(Scope *scope, SlashStr *key);
-void var_assign(Scope *scope, SlashStr *key, SlashValue *value);
-ScopeAndValue var_get(Scope *scope, SlashStr *key);
+    char *p; // pointer into some memory in an arena
+    size_t size;
+} SlashStr;
 
 
-#endif /* SCOPE_H */
+void slash_str_print(SlashStr s);
+void slash_str_println(SlashStr s);
+
+double slash_str_to_double(SlashStr s);
+int32_t slash_str_to_int(SlashStr s);
+
+bool slash_str_eq(SlashStr a, SlashStr b);
+
+#endif /* SLASH_STR_H */

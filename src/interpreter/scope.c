@@ -17,8 +17,8 @@
 
 #include "interpreter/scope.h"
 #include "common.h"
-#include "interpreter/lang/slash_str.h"
-#include "interpreter/lang/slash_value.h"
+#include "interpreter/types/slash_str.h"
+#include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
 #include "sac/sac.h"
 

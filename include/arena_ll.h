@@ -33,6 +33,7 @@ typedef struct {
     Arena *arena;
     LLItem *head; // always keep a pointer to the head for convenience
     LLItem *tail;
+    size_t size; // for convenience
 } ArenaLL;
 
 

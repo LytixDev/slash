@@ -18,9 +18,9 @@
 #define AST_H
 
 #include "arena_ll.h"
-#include "interpreter/lang/slash_str.h"
-#include "interpreter/lang/slash_value.h"
 #include "interpreter/lexer.h"
+#include "interpreter/types/slash_str.h"
+#include "interpreter/types/slash_value.h"
 #include "sac/sac.h"
 
 
@@ -30,7 +30,7 @@ typedef enum {
     EXPR_BINARY,
     EXPR_LITERAL,
     EXPR_INTERPOLATION,
-    EXPR_ARG,
+    EXPR_SUBSHELL,
     EXPR_ENUM_COUNT
 } ExprType;
 
@@ -85,12 +85,10 @@ typedef struct {
     SlashStr var_name;
 } InterpolationExpr;
 
-typedef struct arg_expr_t ArgExpr;
-struct arg_expr_t {
+typedef struct {
     ExprType type;
-    Expr *this;
-    ArgExpr *next;
-};
+    Stmt *stmt;
+} SubshellExpr;
 
 
 /* statements */
@@ -133,7 +131,7 @@ typedef struct {
 typedef struct {
     StmtType type;
     SlashStr cmd_name;
-    ArgExpr *args_ll; // NULL terminated linked list
+    ArenaLL *arg_exprs;
 } CmdStmt;
 
 typedef struct {

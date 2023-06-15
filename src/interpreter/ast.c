@@ -19,16 +19,16 @@
 #include "arena_ll.h"
 #include "common.h"
 #include "interpreter/ast.h"
-#include "interpreter/lang/slash_range.h"
-#include "interpreter/lang/slash_str.h"
-#include "interpreter/lang/slash_value.h"
 #include "interpreter/lexer.h"
+#include "interpreter/types/slash_range.h"
+#include "interpreter/types/slash_str.h"
+#include "interpreter/types/slash_value.h"
 #include "sac/sac.h"
 
 
 const size_t expr_size_table[] = {
-    sizeof(UnaryExpr),	       sizeof(BinaryExpr), sizeof(LiteralExpr),
-    sizeof(InterpolationExpr), sizeof(ArgExpr),
+    sizeof(UnaryExpr),	       sizeof(BinaryExpr),   sizeof(LiteralExpr),
+    sizeof(InterpolationExpr), sizeof(SubshellExpr),
 };
 
 const size_t stmt_size_table[] = { sizeof(ExpressionStmt), sizeof(VarStmt),  sizeof(LoopStmt),
@@ -36,7 +36,7 @@ const size_t stmt_size_table[] = { sizeof(ExpressionStmt), sizeof(VarStmt),  siz
 				   sizeof(AssignStmt),	   sizeof(BlockStmt) };
 
 char *expr_type_str_map[EXPR_ENUM_COUNT] = {
-    "EXPR_UNARY", "EXPR_BINARY", "EXPR_LITERAL", "EXPR_INTERPOLATION", "EXPR_ARG",
+    "EXPR_UNARY", "EXPR_BINARY", "EXPR_LITERAL", "EXPR_INTERPOLATION", "EXPR_SUBSHELL",
 };
 
 char *stmt_type_str_map[STMT_ENUM_COUNT] = {
@@ -141,13 +141,14 @@ static void ast_print_var(VarStmt *stmt)
 static void ast_print_cmd(CmdStmt *stmt)
 {
     slash_str_print(stmt->cmd_name);
+    if (stmt->arg_exprs == NULL)
+	return;
+
     printf(", ");
-    ArgExpr *arg = stmt->args_ll;
-    while (arg != NULL) {
-	ast_print_expr(arg->this);
-	arg = arg->next;
-	if (arg != NULL)
-	    printf(", ");
+    LLItem *item;
+    ARENA_LL_FOR_EACH(stmt->arg_exprs, item)
+    {
+	ast_print_expr(item->p);
     }
 }
 
@@ -219,6 +220,10 @@ static void ast_print_expr(Expr *expr)
 
     case EXPR_INTERPOLATION:
 	ast_print_interpolation((InterpolationExpr *)expr);
+	break;
+
+    case EXPR_SUBSHELL:
+	ast_print_stmt(((SubshellExpr *)expr)->stmt);
 	break;
 
     default:

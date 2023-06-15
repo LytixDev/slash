@@ -18,9 +18,9 @@
 #include <stdio.h>
 
 #include "common.h"
-#include "interpreter/lang/slash_str.h"
-#include "interpreter/lang/slash_value.h"
 #include "interpreter/lexer.h" //TODO: do not use types from the lexer. Tight coupling is le bad!!
+#include "interpreter/types/slash_str.h"
+#include "interpreter/types/slash_value.h"
 #include "sac/sac.h"
 
 
@@ -142,6 +142,27 @@ SlashValue slash_value_cmp(Arena *arena, SlashValue a, SlashValue b, TokenType o
 
     fprintf(stderr, "operator not supported, returning SVT_NONE");
     return (SlashValue){ .p = NULL, .type = SVT_NONE };
+}
+
+void slash_value_print(SlashValue sv)
+{
+    switch (sv.type) {
+    case SVT_STR:
+    case SVT_SHLIT:
+	slash_str_print(*(SlashStr *)sv.p);
+	break;
+
+    case SVT_BOOL:
+	printf("%s", *(bool *)sv.p ? "true" : "false");
+	break;
+
+    case SVT_NUM:
+	printf("%f", *(double *)sv.p);
+	break;
+
+    default:
+	break;
+    }
 }
 
 void slash_value_println(SlashValue sv)

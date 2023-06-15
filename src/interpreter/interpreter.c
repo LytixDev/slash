@@ -18,17 +18,71 @@
 #include "arena_ll.h"
 #include "common.h"
 #include "interpreter/ast.h"
-#include "interpreter/lang/slash_range.h"
-#include "interpreter/lang/slash_str.h"
-#include "interpreter/lang/slash_value.h"
+#include "interpreter/core/exec.h"
 #include "interpreter/lexer.h"
 #include "interpreter/scope.h"
+#include "interpreter/types/slash_range.h"
+#include "interpreter/types/slash_str.h"
+#include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
 
 
 static SlashValue eval(Interpreter *interpreter, Expr *expr);
 static void exec(Interpreter *interpreter, Stmt *stmt);
 
+/*
+ * helpers
+ */
+// TODO: this is temporary
+static char **cmd_args_fmt(Interpreter *interpreter, CmdStmt *stmt)
+{
+    size_t argc = 1;
+    if (stmt->arg_exprs != NULL)
+	argc += stmt->arg_exprs->size;
+
+    char **argv = malloc(sizeof(char *) * (argc + 1));
+
+    char *cmd_name = m_arena_alloc(&interpreter->scope->value_arena, stmt->cmd_name.size + 6);
+    // TODO: 'which' builtin or something
+    memcpy(cmd_name, "/bin/", 5);
+    memcpy(cmd_name + 5, stmt->cmd_name.p, stmt->cmd_name.size);
+    cmd_name[stmt->cmd_name.size + 5] = 0;
+    argv[0] = cmd_name;
+
+    if (stmt->arg_exprs == NULL) {
+	argv[argc] = NULL;
+	return argv;
+    }
+
+    size_t i = 1;
+    LLItem *item;
+    ARENA_LL_FOR_EACH(stmt->arg_exprs, item)
+    {
+	SlashValue v = eval(interpreter, item->p);
+	// TODO .if value is not str then shit wont work
+	SlashStr *s = v.p;
+	char *str = m_arena_alloc(&interpreter->scope->value_arena, s->size + 1);
+	memcpy(str, s->p, s->size);
+	str[s->size] = 0;
+	argv[i] = str;
+	i++;
+    }
+
+    argv[argc] = NULL;
+    return argv;
+}
+
+static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt)
+{
+    char **argv = cmd_args_fmt(interpreter, stmt);
+    exec_program(argv);
+    free(argv);
+}
+
+
+/*
+ * expresseion evaluation functions
+ */
 static SlashValue eval_unary(Interpreter *interpreter, UnaryExpr *expr)
 {
     return (SlashValue){ 0 };
@@ -38,11 +92,6 @@ static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
 {
     return slash_value_cmp(&interpreter->scope->value_arena, eval(interpreter, expr->left),
 			   eval(interpreter, expr->right), expr->operator_);
-}
-
-static SlashValue eval_arg(Interpreter *interpreter, ArgExpr *expr)
-{
-    return (SlashValue){ 0 };
 }
 
 
@@ -59,6 +108,33 @@ static SlashValue eval_interpolation(Interpreter *interpreter, InterpolationExpr
     return (SlashValue){ .p = NULL, .type = SVT_NONE };
 }
 
+static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
+{
+    // TODO: dynamic buffer
+    char buffer[1024];
+    // TODO: currently assuming expr->stmt is of type CmdStmt
+    char **argv = cmd_args_fmt(interpreter, (CmdStmt *)expr->stmt);
+    exec_capture(argv, buffer);
+    free(argv);
+
+    /* create SlashStr from result of buffer */
+    // TODO: this is ugly!
+    size_t size = strlen(buffer);
+    char *str_p = m_arena_alloc(&interpreter->scope->value_arena, size);
+    strncpy(str_p, buffer, size);
+
+    // TODO: arena alloc scope->value_arena could be a macro or helper func: scope_alloc
+    SlashStr *str = m_arena_alloc(&interpreter->scope->value_arena, size);
+    str->p = str_p;
+    str->size = size;
+
+    return (SlashValue){ .p = str, .type = SVT_STR };
+}
+
+
+/*
+ * statment execution functions
+ */
 static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
 {
     SlashValue value = eval(interpreter, stmt->expression);
@@ -71,10 +147,29 @@ static void exec_var(Interpreter *interpreter, VarStmt *stmt)
     var_define(interpreter->scope, &stmt->name, &value);
 }
 
+static void exec_echo_temporary(Interpreter *interpreter, ArenaLL *args)
+{
+    // TODO: echo builtin, or something better than this at least
+#include <stdio.h>
+    LLItem *item;
+    ARENA_LL_FOR_EACH(args, item)
+    {
+	SlashValue v = eval(interpreter, item->p);
+	slash_value_print(v);
+	putchar(' ');
+    }
+
+    putchar('\n');
+}
+
 static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
 {
-    SlashValue value = eval(interpreter, stmt->args_ll->this);
-    slash_value_println(value);
+    if (slash_str_eq(stmt->cmd_name, (SlashStr){ .p = "echo", .size = 4 })) {
+	exec_echo_temporary(interpreter, stmt->arg_exprs);
+	return;
+    }
+
+    exec_program_stub(interpreter, stmt);
 }
 
 static void exec_if(Interpreter *interpreter, IfStmt *stmt)
@@ -203,8 +298,8 @@ static SlashValue eval(Interpreter *interpreter, Expr *expr)
     case EXPR_INTERPOLATION:
 	return eval_interpolation(interpreter, (InterpolationExpr *)expr);
 
-    case EXPR_ARG:
-	return eval_arg(interpreter, (ArgExpr *)expr);
+    case EXPR_SUBSHELL:
+	return eval_subshell(interpreter, (SubshellExpr *)expr);
 
     default:
 	slash_exit_internal_err("interpreter: expr type not handled");

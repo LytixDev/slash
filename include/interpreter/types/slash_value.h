@@ -39,8 +39,9 @@ typedef struct {
 
 
 bool is_truthy(SlashValue *value);
-// TODO: this is turbo ugly
+// TODO: all of these functions are turbo ugly
 SlashValue slash_value_cmp(Arena *arena, SlashValue a, SlashValue b, TokenType operator);
+void slash_value_print(SlashValue sv);
 void slash_value_println(SlashValue sv);
 
 #endif /* SLASH_VALUE_H */
