@@ -42,6 +42,11 @@ void scope_destroy(Scope *scope)
     hashmap_free(&scope->values);
 }
 
+void *scope_alloc(Scope *scope, size_t size)
+{
+    return m_arena_alloc(&scope->value_arena, size);
+}
+
 void var_define(Scope *scope, SlashStr *key, SlashValue *value)
 {
     // TODO: YOLO conversion to uint32_t

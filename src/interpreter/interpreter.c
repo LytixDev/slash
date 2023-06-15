@@ -42,7 +42,7 @@ static char **cmd_args_fmt(Interpreter *interpreter, CmdStmt *stmt)
 
     char **argv = malloc(sizeof(char *) * (argc + 1));
 
-    char *cmd_name = m_arena_alloc(&interpreter->scope->value_arena, stmt->cmd_name.size + 6);
+    char *cmd_name = scope_alloc(interpreter->scope, stmt->cmd_name.size + 6);
     // TODO: 'which' builtin or something
     memcpy(cmd_name, "/bin/", 5);
     memcpy(cmd_name + 5, stmt->cmd_name.p, stmt->cmd_name.size);
@@ -61,7 +61,7 @@ static char **cmd_args_fmt(Interpreter *interpreter, CmdStmt *stmt)
 	SlashValue v = eval(interpreter, item->p);
 	// TODO .if value is not str then shit wont work
 	SlashStr *s = v.p;
-	char *str = m_arena_alloc(&interpreter->scope->value_arena, s->size + 1);
+	char *str = scope_alloc(interpreter->scope, s->size + 1);
 	memcpy(str, s->p, s->size);
 	str[s->size] = 0;
 	argv[i] = str;
@@ -120,11 +120,10 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
     /* create SlashStr from result of buffer */
     // TODO: this is ugly!
     size_t size = strlen(buffer);
-    char *str_p = m_arena_alloc(&interpreter->scope->value_arena, size);
+    char *str_p = scope_alloc(interpreter->scope, size);
     strncpy(str_p, buffer, size);
 
-    // TODO: arena alloc scope->value_arena could be a macro or helper func: scope_alloc
-    SlashStr *str = m_arena_alloc(&interpreter->scope->value_arena, size);
+    SlashStr *str = scope_alloc(interpreter->scope, size);
     str->p = str_p;
     str->size = size;
 
