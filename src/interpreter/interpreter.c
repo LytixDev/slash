@@ -21,6 +21,7 @@
 #include "interpreter/core/exec.h"
 #include "interpreter/lexer.h"
 #include "interpreter/scope.h"
+#include "interpreter/types/slash_list.h"
 #include "interpreter/types/slash_range.h"
 #include "interpreter/types/slash_str.h"
 #include "interpreter/types/slash_value.h"
@@ -128,6 +129,11 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
     str->size = size;
 
     return (SlashValue){ .p = str, .type = SVT_STR };
+}
+
+static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
+{
+    // SlashList *list;
 }
 
 
@@ -299,6 +305,9 @@ static SlashValue eval(Interpreter *interpreter, Expr *expr)
 
     case EXPR_SUBSHELL:
 	return eval_subshell(interpreter, (SubshellExpr *)expr);
+
+    case EXPR_LIST:
+	return eval_list(interpreter, (ListExpr *)expr);
 
     default:
 	slash_exit_internal_err("interpreter: expr type not handled");

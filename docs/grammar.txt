@@ -1,6 +1,6 @@
 /* context-free expression grammar */
 
-program         -> (declaration "\n"?* )* EOF ;
+program         -> (declaration "\n"*? )* EOF ;
 
 declaration     -> var_declaration
                 |  statement ;
@@ -54,7 +54,9 @@ primary         -> STRING
                 |  bool_lit
                 |  number
                 |  interpolation 
-                |  range ;
+                |  range 
+                |  list 
+                |  list ;
 
 bool_lit        -> "true" | "false ";
 
@@ -63,3 +65,5 @@ number          -> NUMBER ;
 interpolation   -> INTERPOLATION ;
 
 range           -> NUMBER? ".." NUMBER ;
+
+list            -> "[" ( expression )*? "]" ;

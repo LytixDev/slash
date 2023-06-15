@@ -97,6 +97,7 @@ char *token_type_str_map[t_enum_count] = {
     "dt_range",
     "dt_bool",
     "dt_shlit",
+    "dt_none",
 
     "t_interpolation",
     "t_identifier",

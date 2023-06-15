@@ -28,7 +28,7 @@
 
 const size_t expr_size_table[] = {
     sizeof(UnaryExpr),	       sizeof(BinaryExpr),   sizeof(LiteralExpr),
-    sizeof(InterpolationExpr), sizeof(SubshellExpr),
+    sizeof(InterpolationExpr), sizeof(SubshellExpr), sizeof(ListExpr),
 };
 
 const size_t stmt_size_table[] = { sizeof(ExpressionStmt), sizeof(VarStmt),  sizeof(LoopStmt),
@@ -36,7 +36,7 @@ const size_t stmt_size_table[] = { sizeof(ExpressionStmt), sizeof(VarStmt),  siz
 				   sizeof(AssignStmt),	   sizeof(BlockStmt) };
 
 char *expr_type_str_map[EXPR_ENUM_COUNT] = {
-    "EXPR_UNARY", "EXPR_BINARY", "EXPR_LITERAL", "EXPR_INTERPOLATION", "EXPR_SUBSHELL",
+    "EXPR_UNARY", "EXPR_BINARY", "EXPR_LITERAL", "EXPR_INTERPOLATION", "EXPR_SUBSHELL", "EXPR_LIST",
 };
 
 char *stmt_type_str_map[STMT_ENUM_COUNT] = {
@@ -124,6 +124,19 @@ static void ast_print_literal(LiteralExpr *expr)
 static void ast_print_interpolation(InterpolationExpr *expr)
 {
     slash_str_print(expr->var_name);
+}
+
+static void ast_print_list(ListExpr *expr)
+{
+    if (expr->exprs == NULL)
+	return;
+
+    LLItem *item;
+    ARENA_LL_FOR_EACH(expr->exprs, item)
+    {
+	ast_print_expr(item->p);
+	printf(", ");
+    }
 }
 
 static void ast_print_expression(ExpressionStmt *stmt)
@@ -224,6 +237,10 @@ static void ast_print_expr(Expr *expr)
 
     case EXPR_SUBSHELL:
 	ast_print_stmt(((SubshellExpr *)expr)->stmt);
+	break;
+
+    case EXPR_LIST:
+	ast_print_list((ListExpr *)expr);
 	break;
 
     default:

@@ -88,6 +88,7 @@ typedef enum {
     dt_range,
     dt_bool,
     dt_shlit,
+    dt_none,
 
     /* */
     t_interpolation,

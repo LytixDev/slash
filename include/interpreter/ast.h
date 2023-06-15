@@ -31,6 +31,7 @@ typedef enum {
     EXPR_LITERAL,
     EXPR_INTERPOLATION,
     EXPR_SUBSHELL,
+    EXPR_LIST,
     EXPR_ENUM_COUNT
 } ExprType;
 
@@ -89,6 +90,11 @@ typedef struct {
     ExprType type;
     Stmt *stmt;
 } SubshellExpr;
+
+typedef struct {
+    ExprType type;
+    ArenaLL *exprs;
+} ListExpr;
 
 
 /* statements */

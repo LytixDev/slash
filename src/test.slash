@@ -1,2 +1,5 @@
-var ls_result = (ls -l)
-echo $ls_result
+# initialize a list
+var pear = "pear"
+var fruits = ["apple", "banana", "orange", $pear]
+
+echo $fruits

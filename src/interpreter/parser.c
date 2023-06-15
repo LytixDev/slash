@@ -153,6 +153,7 @@ static Expr *bool_lit(Parser *parser);
 static Expr *number(Parser *parser);
 static Expr *interpolation(Parser *parser);
 static Expr *range(Parser *parser);
+static Expr *list(Parser *parser);
 
 static Stmt *declaration(Parser *parser)
 {
@@ -410,6 +411,9 @@ static Expr *primary(Parser *parser)
 	return number(parser);
     }
 
+    if (match(parser, t_lbracket))
+	return list(parser);
+
     if (!match(parser, dt_str, dt_shlit))
 	slash_exit_parse_err("not a valid primary type");
 
@@ -490,5 +494,27 @@ static Expr *range(Parser *parser)
     LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
     expr->value.p = range;
     expr->value.type = SVT_RANGE;
+    return (Expr *)expr;
+}
+
+static Expr *list(Parser *parser)
+{
+    /* came from '[' */
+    ListExpr *expr = (ListExpr *)expr_alloc(parser->ast_arena, EXPR_LIST);
+
+    /* edge case: empty list */
+    if (match(parser, t_rbracket)) {
+	expr->exprs = NULL;
+	return (Expr *)expr;
+    }
+
+    expr->exprs = arena_ll_alloc(parser->ast_arena);
+    do {
+	arena_ll_append(expr->exprs, expression(parser));
+	/* "ignore" single trailing comma */
+	match(parser, t_comma);
+    } while (!check(parser, t_rbracket));
+
+    consume(parser, t_rbracket, "Expected ']' to terminate list");
     return (Expr *)expr;
 }

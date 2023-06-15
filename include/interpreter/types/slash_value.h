@@ -29,7 +29,9 @@ typedef enum {
     SVT_NUM, // p = double *
     SVT_SHLIT, // p = SlashStr *
     SVT_RANGE, // p = SlashRange *
+    SVT_LIST, // p = SlashList *
     SVT_NONE, // p = NULL
+    SVT_ANY, // p = NULL
 } SlashValueType;
 
 typedef struct {
