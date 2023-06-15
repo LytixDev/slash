@@ -25,7 +25,7 @@ loop_stmt       -> "loop" ( IDENTIFIER "in" )? expression block
 
 if_stmt         -> "if" expression block (( "elif" expression block ) | ( "else" block ))? ;
 
-cmd_stmt        -> SHLIT ( argument* );
+cmd_stmt        -> SHLIT ( argument* )? ;
 
 assignment_stmt -> INTERPOLATION ("=" | "+=" | "-=") expression ;
 
@@ -38,7 +38,10 @@ block           -> "{" statement* "}" ;
 
 argument        -> expression ;
 
-expression      -> equality ;
+expression      -> equality
+                |  subshell ;
+
+subshell        -> "(" cmd_stmt ")" ;
 
 equality        -> comparison (( "!=" | "==" ) comparison )* ;
 comparison      -> term (( ">" | ">=" | "<" | "<=" ) term )* ;

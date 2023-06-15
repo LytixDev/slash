@@ -26,6 +26,7 @@ void arena_ll_init(Arena *arena, ArenaLL *ll)
     ll->arena = arena;
     ll->head = NULL;
     ll->tail = NULL;
+    ll->size = 0;
 }
 
 ArenaLL *arena_ll_alloc(Arena *arena)
@@ -39,6 +40,7 @@ ArenaLL *arena_ll_alloc(Arena *arena)
 
 void arena_ll_append(ArenaLL *ll, void *p)
 {
+    ll->size++;
     LLItem *item = m_arena_alloc_struct(ll->arena, LLItem);
     item->p = p;
     item->next = NULL;

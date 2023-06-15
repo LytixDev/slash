@@ -19,7 +19,7 @@
 
 #include <stdint.h>
 
-#include "interpreter/lang/slash_str.h"
+#include "interpreter/types/slash_str.h"
 #include "nicc/nicc.h"
 
 #define STATE_FN(___state_fn) \

@@ -19,11 +19,11 @@
 #include "arena_ll.h"
 #include "common.h"
 #include "interpreter/ast.h"
-#include "interpreter/lang/slash_range.h"
-#include "interpreter/lang/slash_str.h"
-#include "interpreter/lang/slash_value.h"
 #include "interpreter/lexer.h"
 #include "interpreter/parser.h"
+#include "interpreter/types/slash_range.h"
+#include "interpreter/types/slash_str.h"
+#include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
 #include "sac/sac.h"
 
@@ -82,6 +82,8 @@ static bool check_either(Parser *parser, int step, unsigned int n, ...)
 #define check(parser, ...) check_either(parser, 0, VA_NUMBER_OF_ARGS(__VA_ARGS__), __VA_ARGS__)
 #define check_ahead(parser, n, ...) \
     check_either(parser, n, VA_NUMBER_OF_ARGS(__VA_ARGS__), __VA_ARGS__)
+#define check_arg_end(parser) \
+    check(parser, t_newline, t_eof, t_pipe, t_pipe_pipe, t_anp, t_anp_anp, t_rparen)
 
 static Token *consume(Parser *parser, TokenType expected, char *err_msg)
 {
@@ -140,6 +142,7 @@ static Stmt *block(Parser *parser);
 
 static Expr *argument(Parser *parser);
 static Expr *expression(Parser *parser);
+static Expr *subshell(Parser *parser);
 static Expr *equality(Parser *parser);
 static Expr *comparison(Parser *parser);
 static Expr *term(Parser *parser);
@@ -206,7 +209,7 @@ static Stmt *var_decl(Parser *parser)
     consume(parser, t_newline, "Expected line ending after variable definition");
 
     VarStmt *stmt = (VarStmt *)stmt_alloc(parser->ast_arena, STMT_VAR);
-    stmt->name = name;
+    stmt->name = name->lexeme;
     stmt->initializer = initializer;
     return (Stmt *)stmt;
 }
@@ -221,16 +224,10 @@ static Stmt *loop_stmt(Parser *parser)
 	Expr *iterable = expression(parser);
 
 	IterLoopStmt *iter_loop = (IterLoopStmt *)stmt_alloc(parser->ast_arena, STMT_ITER_LOOP);
-	iter_loop->var_name = var_name;
+	iter_loop->var_name = var_name->lexeme;
 	iter_loop->underlying_iterable = iterable;
 	consume(parser, t_lbrace, "expected '{' after loop condition");
 	iter_loop->body_block = (BlockStmt *)block(parser);
-
-	/* wrap entire iter loop in a block */
-	// TODO: this could be "simulated" in the interpreter
-	// BlockStmt *block = (BlockStmt *)stmt_alloc(parser->ast_arena, STMT_BLOCK);
-	// block->statements = arena_ll_alloc(parser->ast_arena);
-	// arena_ll_append(block->statements, iter_loop);
 
 	return (Stmt *)iter_loop;
     }
@@ -286,48 +283,51 @@ static Stmt *assignment_stmt(Parser *parser)
     Expr *value = expression(parser);
 
     AssignStmt *stmt = (AssignStmt *)stmt_alloc(parser->ast_arena, STMT_ASSIGN);
-    stmt->name = name;
-    stmt->assignment_op = assignment_op;
+    stmt->name = name->lexeme;
+    stmt->assignment_op = assignment_op->type;
     stmt->value = value;
     return (Stmt *)stmt;
 }
 
 static Stmt *cmd_stmt(Parser *parser)
 {
+    /* came from dt_shlit */
     Token *cmd_name = previous(parser);
 
     CmdStmt *stmt = (CmdStmt *)stmt_alloc(parser->ast_arena, STMT_CMD);
-    stmt->cmd_name = cmd_name;
-    stmt->args_ll = (ArgExpr *)argument(parser);
+    stmt->cmd_name = cmd_name->lexeme;
+    if (check_arg_end(parser)) {
+	stmt->arg_exprs = NULL;
+	return (Stmt *)stmt;
+    }
+
+    stmt->arg_exprs = arena_ll_alloc(parser->ast_arena);
+    while (!check_arg_end(parser)) {
+	arena_ll_append(stmt->arg_exprs, argument(parser));
+    }
     return (Stmt *)stmt;
 }
 
 static Expr *argument(Parser *parser)
 {
-    if (check(parser, t_newline, t_eof))
-	return NULL;
-
-    ArgExpr *args_ll = (ArgExpr *)expr_alloc(parser->ast_arena, EXPR_ARG);
-    args_ll->next = NULL;
-
-    // TODO: bruh kanke være nødvendig
-    ArgExpr **arg = &args_ll;
-    while (!check(parser, t_newline, t_eof)) {
-	if (*arg == NULL) {
-	    *arg = (ArgExpr *)expr_alloc(parser->ast_arena, EXPR_ARG);
-	    (*arg)->next = NULL;
-	}
-
-	(*arg)->this = expression(parser);
-	arg = &(*arg)->next;
-    }
-
-    return (Expr *)args_ll;
+    return expression(parser);
 }
 
 static Expr *expression(Parser *parser)
 {
+    if (match(parser, t_lparen))
+	return subshell(parser);
     return equality(parser);
+}
+
+static Expr *subshell(Parser *parser)
+{
+    /* came from '(' */
+    consume(parser, dt_shlit, "Expected shell literal after '('");
+    SubshellExpr *expr = (SubshellExpr *)expr_alloc(parser->ast_arena, EXPR_SUBSHELL);
+    expr->stmt = cmd_stmt(parser);
+    consume(parser, t_rparen, "Expected ')' after subshell");
+    return (Expr *)expr;
 }
 
 static Expr *equality(Parser *parser)
@@ -340,7 +340,7 @@ static Expr *equality(Parser *parser)
 
 	BinaryExpr *bin_expr = (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY);
 	bin_expr->left = expr;
-	bin_expr->operator_ = operator_;
+	bin_expr->operator_ = operator_->type;
 	bin_expr->right = right;
 	expr = (Expr *)bin_expr;
     }
@@ -358,7 +358,7 @@ static Expr *comparison(Parser *parser)
 
 	BinaryExpr *bin_expr = (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY);
 	bin_expr->left = expr;
-	bin_expr->operator_ = operator_;
+	bin_expr->operator_ = operator_->type;
 	bin_expr->right = right;
 	expr = (Expr *)bin_expr;
     }
@@ -376,7 +376,7 @@ static Expr *term(Parser *parser)
 
 	BinaryExpr *bin_expr = (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY);
 	bin_expr->left = expr;
-	bin_expr->operator_ = operator_;
+	bin_expr->operator_ = operator_->type;
 	bin_expr->right = right;
 	expr = (Expr *)bin_expr;
     }
@@ -451,10 +451,10 @@ static Expr *number(Parser *parser)
 
 static Expr *interpolation(Parser *parser)
 {
-    Token *token = previous(parser);
+    Token *var_name = previous(parser);
     InterpolationExpr *expr =
 	(InterpolationExpr *)expr_alloc(parser->ast_arena, EXPR_INTERPOLATION);
-    expr->var_name = token;
+    expr->var_name = var_name->lexeme;
     return (Expr *)expr;
 }
 

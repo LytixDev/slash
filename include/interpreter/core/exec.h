@@ -14,25 +14,11 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef SLASH_STR_H
-#define SLASH_STR_H
+#ifndef CORE_EXEC_H
+#define CORE_EXEC_H
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdlib.h>
+int exec_program(char **argv);
 
-#include "nicc/nicc.h"
+int exec_capture(char **argv, char buffer[1024]);
 
-typedef struct {
-    char *p; // pointer into some memory in an arena
-    size_t size;
-} SlashStr;
-
-
-void slash_str_print(SlashStr s);
-void slash_str_println(SlashStr s);
-
-double slash_str_to_double(SlashStr s);
-int32_t slash_str_to_int(SlashStr s);
-
-#endif /* SLASH_STR_H */
+#endif /* CORE_EXEC_H */

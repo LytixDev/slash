@@ -17,16 +17,21 @@
 
 #include "interpreter/scope.h"
 #include "common.h"
-#include "interpreter/lang/slash_str.h"
-#include "interpreter/lang/slash_value.h"
+#include "interpreter/types/slash_str.h"
+#include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
 #include "sac/sac.h"
 
 
 void scope_init(Scope *scope, Scope *enclosing)
 {
-    m_arena_init_dynamic(&scope->value_arena, SAC_DEFAULT_CAPACITY,
-			 enclosing == NULL ? 256 : KB_SIZE_T(4));
+    // TODO: capacity could be larger
+    if (enclosing == NULL) {
+	m_arena_init_dynamic(&scope->value_arena, 1, 16384);
+    } else {
+	m_arena_init_dynamic(&scope->value_arena, 1, 4096);
+    }
+
     scope->enclosing = enclosing;
     hashmap_init(&scope->values);
 }
@@ -35,6 +40,11 @@ void scope_destroy(Scope *scope)
 {
     m_arena_release(&scope->value_arena);
     hashmap_free(&scope->values);
+}
+
+void *scope_alloc(Scope *scope, size_t size)
+{
+    return m_arena_alloc(&scope->value_arena, size);
 }
 
 void var_define(Scope *scope, SlashStr *key, SlashValue *value)
