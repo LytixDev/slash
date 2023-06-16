@@ -1,2 +1,1 @@
-var ls_result = (ls -l)
-echo $ls_result
+10 + 2

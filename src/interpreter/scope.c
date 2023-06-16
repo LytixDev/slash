@@ -49,10 +49,7 @@ void *scope_alloc(Scope *scope, size_t size)
 
 void var_define(Scope *scope, StrView *key, SlashValue *value)
 {
-    // TODO: YOLO conversion to uint32_t
-    uint32_t value_size = slash_value_size_table[value->type];
-    // TODO: last param can be false??
-    hashmap_put(&scope->values, key->view, (uint32_t)key->size, value, value_size, false);
+    hashmap_put(&scope->values, key->view, (uint32_t)key->size, value, sizeof(SlashValue), true);
 }
 
 void var_undefine(Scope *scope, StrView *key)
@@ -62,11 +59,11 @@ void var_undefine(Scope *scope, StrView *key)
 
 void var_assign(Scope *scope, StrView *key, SlashValue *value)
 {
-    uint32_t value_size = slash_value_size_table[value->type];
     do {
 	SlashValue *current = hashmap_get(&scope->values, key->view, (uint32_t)key->size);
 	if (current != NULL) {
-	    hashmap_put(&scope->values, key->view, (uint32_t)key->size, value, value_size, false);
+	    hashmap_put(&scope->values, key->view, (uint32_t)key->size, value, sizeof(SlashValue),
+			true);
 	    return;
 	}
 	scope = scope->enclosing;

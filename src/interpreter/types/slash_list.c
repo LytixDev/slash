@@ -21,7 +21,7 @@
 void slash_list_init(SlashList *list)
 {
     arraylist_init(&list->underlying, sizeof(SlashValue *));
-    list->underlying_T = SLASH_NONE;
+    // list->underlying_T = SLASH_NONE;
 }
 
 bool slash_list_append(SlashList *list, SlashValue *val)

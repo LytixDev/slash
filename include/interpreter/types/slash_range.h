@@ -19,11 +19,8 @@
 
 #include <stdint.h>
 
-#include "interpreter/types/slash_value.h"
-
 
 typedef struct {
-    SlashValueType type;
     int32_t start;
     int32_t end;
 } SlashRange;

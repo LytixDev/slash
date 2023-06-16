@@ -19,7 +19,6 @@
 
 #include "arena_ll.h"
 #include "interpreter/lexer.h"
-#include "interpreter/types/slash_str.h"
 #include "interpreter/types/slash_value.h"
 #include "sac/sac.h"
 
@@ -78,7 +77,7 @@ typedef struct {
 
 typedef struct {
     ExprType type;
-    SlashValue *value;
+    SlashValue value;
 } LiteralExpr;
 
 typedef struct {

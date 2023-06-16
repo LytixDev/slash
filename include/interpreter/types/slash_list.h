@@ -17,8 +17,10 @@
 #ifndef SLASH_LIST_H
 #define SLASH_LIST_H
 
-#include "interpreter/types/slash_value.h"
+// #include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
+
+typedef struct slash_value_t SlashValue; // Forward declaration of SlashValue
 
 /*
  * The SlashList is just a wrapper over the dynamic ArrayList impl I wrote for nicc.
@@ -28,9 +30,8 @@
  * compare-function.
  */
 typedef struct {
-    SlashValueType type;
     ArrayList underlying;
-    SlashValueType underlying_T;
+    // SlashValueType underlying_T;
 } SlashList;
 
 void slash_list_init(SlashList *list);

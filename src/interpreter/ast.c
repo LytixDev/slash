@@ -20,7 +20,7 @@
 #include "common.h"
 #include "interpreter/ast.h"
 #include "interpreter/lexer.h"
-#include "interpreter/types/slash_value_all.h"
+#include "interpreter/types/slash_value.h"
 #include "sac/sac.h"
 #include "str_view.h"
 
@@ -97,22 +97,22 @@ static void ast_print_range_literal(SlashRange *range)
 
 static void ast_print_literal(LiteralExpr *expr)
 {
-    switch (expr->value->type) {
+    switch (expr->value.type) {
     case SLASH_STR:
     case SLASH_SHLIT:
-	str_view_print(((SlashStr *)expr->value)->str);
+	str_view_print(expr->value.str);
 	break;
 
     case SLASH_NUM:
-	printf("%f", ((SlashNum *)expr->value)->num);
+	printf("%f", expr->value.num);
 	break;
 
     case SLASH_BOOL:
-	printf("%s", ((SlashBool *)expr->value)->value == true ? "true" : "false");
+	printf("%s", expr->value.boolean == true ? "true" : "false");
 	break;
 
     case SLASH_RANGE:
-	ast_print_range_literal((SlashRange *)expr->value);
+	ast_print_range_literal(&expr->value.range);
 	break;
 
     default:

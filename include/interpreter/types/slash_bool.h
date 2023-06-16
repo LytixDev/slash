@@ -11,7 +11,7 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
+ *  You should have received a
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #ifndef SLASH_BOOL_H
@@ -19,11 +19,8 @@
 
 #include <stdbool.h>
 
-#include "interpreter/types/slash_value.h"
-
 
 typedef struct {
-    SlashValueType type;
     bool value;
 } SlashBool;
 

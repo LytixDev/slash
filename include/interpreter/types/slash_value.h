@@ -20,6 +20,8 @@
 #include <stdbool.h>
 
 #include "interpreter/lexer.h"
+#include "interpreter/types/slash_list.h"
+#include "interpreter/types/slash_range.h"
 #include "sac/sac.h"
 
 
@@ -34,21 +36,23 @@ typedef enum {
     SLASH_ANY,
 } SlashValueType;
 
-/* same evil trick to get some sort of polymorphism as used in the AST */
-typedef struct {
+
+typedef struct slash_value_t {
     SlashValueType type;
+    union {
+	StrView str;
+	bool boolean;
+	double num;
+	SlashRange range;
+	SlashList list;
+    };
 } SlashValue;
 
-extern const size_t slash_value_size_table[];
 
 SlashValue *slash_value_arena_alloc(Arena *arena, SlashValueType type);
 
 bool is_truthy(SlashValue *value);
 
 void slash_value_print(SlashValue *value);
-//// TODO: all of these functions are turbo ugly
-// SlashValue slash_value_cmp(Arena *arena, SlashValue a, SlashValue b, TokenType operator);
-// void slash_value_print(SlashValue sv);
-// void slash_value_println(SlashValue sv);
 
 #endif /* SLASH_VALUE_H */
