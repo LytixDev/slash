@@ -17,10 +17,10 @@
 
 #include "interpreter/scope.h"
 #include "common.h"
-#include "interpreter/types/slash_str.h"
 #include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
 #include "sac/sac.h"
+#include "str_view.h"
 
 
 void scope_init(Scope *scope, Scope *enclosing)
@@ -47,24 +47,26 @@ void *scope_alloc(Scope *scope, size_t size)
     return m_arena_alloc(&scope->value_arena, size);
 }
 
-void var_define(Scope *scope, SlashStr *key, SlashValue *value)
+void var_define(Scope *scope, StrView *key, SlashValue *value)
 {
     // TODO: YOLO conversion to uint32_t
-    hashmap_put(&scope->values, key->p, (uint32_t)key->size, value, sizeof(SlashValue), true);
+    uint32_t value_size = slash_value_size_table[value->type];
+    // TODO: last param can be false??
+    hashmap_put(&scope->values, key->view, (uint32_t)key->size, value, value_size, false);
 }
 
-void var_undefine(Scope *scope, SlashStr *key)
+void var_undefine(Scope *scope, StrView *key)
 {
-    hashmap_rm(&scope->values, key->p, (uint32_t)key->size);
+    hashmap_rm(&scope->values, key->view, (uint32_t)key->size);
 }
 
-void var_assign(Scope *scope, SlashStr *key, SlashValue *value)
+void var_assign(Scope *scope, StrView *key, SlashValue *value)
 {
+    uint32_t value_size = slash_value_size_table[value->type];
     do {
-	SlashValue *current = hashmap_get(&scope->values, key->p, (uint32_t)key->size);
+	SlashValue *current = hashmap_get(&scope->values, key->view, (uint32_t)key->size);
 	if (current != NULL) {
-	    hashmap_put(&scope->values, key->p, (uint32_t)key->size, value, sizeof(SlashValue),
-			true);
+	    hashmap_put(&scope->values, key->view, (uint32_t)key->size, value, value_size, false);
 	    return;
 	}
 	scope = scope->enclosing;
@@ -73,10 +75,10 @@ void var_assign(Scope *scope, SlashStr *key, SlashValue *value)
     slash_exit_interpreter_err("cannot assign a variable that is not defined");
 }
 
-Scope *get_scope_of_var(Scope *scope, SlashStr *key)
+Scope *get_scope_of_var(Scope *scope, StrView *key)
 {
     do {
-	SlashValue *current = hashmap_get(&scope->values, key->p, (uint32_t)key->size);
+	SlashValue *current = hashmap_get(&scope->values, key->view, (uint32_t)key->size);
 	if (current != NULL) {
 	    return scope;
 	}
@@ -86,11 +88,11 @@ Scope *get_scope_of_var(Scope *scope, SlashStr *key)
     return NULL;
 }
 
-ScopeAndValue var_get(Scope *scope, SlashStr *key)
+ScopeAndValue var_get(Scope *scope, StrView *key)
 {
     SlashValue *value = NULL;
     do {
-	value = hashmap_get(&scope->values, key->p, (uint32_t)key->size);
+	value = hashmap_get(&scope->values, key->view, (uint32_t)key->size);
 	if (value != NULL)
 	    return (ScopeAndValue){ .scope = scope, .value = value };
 	scope = scope->enclosing;

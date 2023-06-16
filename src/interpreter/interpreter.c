@@ -14,21 +14,21 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "interpreter/interpreter.h"
+// TODO: temporary
+#include <stdio.h>
+
 #include "arena_ll.h"
 #include "common.h"
 #include "interpreter/ast.h"
 #include "interpreter/core/exec.h"
+#include "interpreter/interpreter.h"
 #include "interpreter/lexer.h"
 #include "interpreter/scope.h"
-#include "interpreter/types/slash_list.h"
-#include "interpreter/types/slash_range.h"
-#include "interpreter/types/slash_str.h"
-#include "interpreter/types/slash_value.h"
+#include "interpreter/types/slash_value_all.h"
 #include "nicc/nicc.h"
 
 
-static SlashValue eval(Interpreter *interpreter, Expr *expr);
+static SlashValue *eval(Interpreter *interpreter, Expr *expr);
 static void exec(Interpreter *interpreter, Stmt *stmt);
 
 /*
@@ -46,7 +46,7 @@ static char **cmd_args_fmt(Interpreter *interpreter, CmdStmt *stmt)
     char *cmd_name = scope_alloc(interpreter->scope, stmt->cmd_name.size + 6);
     // TODO: 'which' builtin or something
     memcpy(cmd_name, "/bin/", 5);
-    memcpy(cmd_name + 5, stmt->cmd_name.p, stmt->cmd_name.size);
+    memcpy(cmd_name + 5, stmt->cmd_name.view, stmt->cmd_name.size);
     cmd_name[stmt->cmd_name.size + 5] = 0;
     argv[0] = cmd_name;
 
@@ -59,12 +59,14 @@ static char **cmd_args_fmt(Interpreter *interpreter, CmdStmt *stmt)
     LLItem *item;
     ARENA_LL_FOR_EACH(stmt->arg_exprs, item)
     {
-	SlashValue v = eval(interpreter, item->p);
-	// TODO .if value is not str then shit wont work
-	SlashStr *s = v.p;
-	char *str = scope_alloc(interpreter->scope, s->size + 1);
-	memcpy(str, s->p, s->size);
-	str[s->size] = 0;
+	SlashValue *v = eval(interpreter, item->p);
+	if (!(v->type == SLASH_STR || v->type == SLASH_SHLIT))
+	    slash_exit_interpreter_err("only support evaluing str args");
+
+	SlashStr *s = (SlashStr *)v;
+	char *str = scope_alloc(interpreter->scope, s->str.size + 1);
+	memcpy(str, s->str.view, s->str.size);
+	str[s->str.size] = 0;
 	argv[i] = str;
 	i++;
     }
@@ -80,36 +82,67 @@ static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt)
     free(argv);
 }
 
+static void check_num_operands(SlashValue *left, SlashValue *right)
+{
+    if (!(left->type == SLASH_NUM && right->type == SLASH_NUM))
+	slash_exit_interpreter_err("only support operations on numbers");
+}
+
 
 /*
  * expresseion evaluation functions
  */
-static SlashValue eval_unary(Interpreter *interpreter, UnaryExpr *expr)
+static SlashValue *eval_unary(Interpreter *interpreter, UnaryExpr *expr)
 {
-    return (SlashValue){ 0 };
+    return NULL;
 }
 
-static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
+static SlashValue *eval_binary(Interpreter *interpreter, BinaryExpr *expr)
 {
-    return slash_value_cmp(&interpreter->scope->value_arena, eval(interpreter, expr->left),
-			   eval(interpreter, expr->right), expr->operator_);
+    SlashValue *left = eval(interpreter, expr->left);
+    SlashValue *right = eval(interpreter, expr->right);
+    check_num_operands(left, right);
+
+    SlashNum *a = (SlashNum *)left;
+    SlashNum *b = (SlashNum *)right;
+    SlashBool *result = scope_alloc(interpreter->scope, sizeof(SlashBool));
+    result->type = SLASH_BOOL;
+
+    switch (expr->operator_) {
+    case t_greater:
+	result->value = a->num > b->num;
+	break;
+    case t_greater_equal:
+	result->value = a->num >= b->num;
+	break;
+
+    default:
+	// TODO: remove
+	slash_exit_interpreter_err("binary operator not supported");
+
+	// TODO: assert unreachable
+	return NULL;
+    }
+
+    return (SlashValue *)result;
 }
 
 
-static SlashValue eval_literal(Interpreter *interpreter, LiteralExpr *expr)
+static SlashValue *eval_literal(Interpreter *interpreter, LiteralExpr *expr)
 {
     return expr->value;
 }
 
-static SlashValue eval_interpolation(Interpreter *interpreter, InterpolationExpr *expr)
+static SlashValue *eval_interpolation(Interpreter *interpreter, InterpolationExpr *expr)
 {
     ScopeAndValue sv = var_get(interpreter->scope, &expr->var_name);
     if (sv.value != NULL)
-	return *sv.value;
-    return (SlashValue){ .p = NULL, .type = SVT_NONE };
+	return sv.value;
+    // return (SlashValue){ .p = NULL, .type = SVT_NONE };
+    return NULL;
 }
 
-static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
+static SlashValue *eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
 {
     // TODO: dynamic buffer
     char buffer[1024];
@@ -124,14 +157,13 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
     char *str_p = scope_alloc(interpreter->scope, size);
     strncpy(str_p, buffer, size);
 
-    SlashStr *str = scope_alloc(interpreter->scope, size);
-    str->p = str_p;
-    str->size = size;
-
-    return (SlashValue){ .p = str, .type = SVT_STR };
+    SlashStr *str = scope_alloc(interpreter->scope, sizeof(SlashStr));
+    str->type = SLASH_STR;
+    str->str = (StrView){ .view = str_p, .size = size };
+    return (SlashValue *)str;
 }
 
-static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
+static SlashValue *eval_list(Interpreter *interpreter, ListExpr *expr)
 {
     // SlashList *list;
 }
@@ -142,24 +174,24 @@ static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
  */
 static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
 {
-    SlashValue value = eval(interpreter, stmt->expression);
-    slash_value_println(value);
+    SlashValue *value = eval(interpreter, stmt->expression);
+    slash_value_print(value);
+    putchar('\n');
 }
 
 static void exec_var(Interpreter *interpreter, VarStmt *stmt)
 {
-    SlashValue value = eval(interpreter, stmt->initializer);
-    var_define(interpreter->scope, &stmt->name, &value);
+    SlashValue *value = eval(interpreter, stmt->initializer);
+    var_define(interpreter->scope, &stmt->name, (SlashValue *)value);
 }
 
 static void exec_echo_temporary(Interpreter *interpreter, ArenaLL *args)
 {
     // TODO: echo builtin, or something better than this at least
-#include <stdio.h>
     LLItem *item;
     ARENA_LL_FOR_EACH(args, item)
     {
-	SlashValue v = eval(interpreter, item->p);
+	SlashValue *v = eval(interpreter, item->p);
 	slash_value_print(v);
 	putchar(' ');
     }
@@ -169,7 +201,7 @@ static void exec_echo_temporary(Interpreter *interpreter, ArenaLL *args)
 
 static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
 {
-    if (slash_str_eq(stmt->cmd_name, (SlashStr){ .p = "echo", .size = 4 })) {
+    if (str_view_eq(stmt->cmd_name, (StrView){ .view = "echo", .size = 4 })) {
 	exec_echo_temporary(interpreter, stmt->arg_exprs);
 	return;
     }
@@ -179,8 +211,8 @@ static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
 
 static void exec_if(Interpreter *interpreter, IfStmt *stmt)
 {
-    SlashValue r = eval(interpreter, stmt->condition);
-    if (is_truthy(&r))
+    SlashValue *r = eval(interpreter, stmt->condition);
+    if (is_truthy(r))
 	exec(interpreter, stmt->then_branch);
     else if (stmt->else_branch != NULL)
 	exec(interpreter, stmt->else_branch);
@@ -209,15 +241,26 @@ static void exec_block(Interpreter *interpreter, BlockStmt *stmt)
 
 static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
 {
-    SlashValue new_value = eval(interpreter, stmt->value);
-    if (stmt->assignment_op != t_equal) {
-	ScopeAndValue current_value = var_get(interpreter->scope, &stmt->name);
-	// TODO: if sv.value == NULL -> runtime error
-	new_value =
-	    slash_value_cmp(&current_value.scope->value_arena, *current_value.value, new_value,
-			    stmt->assignment_op == t_plus_equal ? t_plus : t_minus);
+    SlashValue *new_value = eval(interpreter, stmt->value);
+    if (stmt->assignment_op == t_equal) {
+	var_assign(interpreter->scope, &stmt->name, new_value);
+	return;
     }
-    var_assign(interpreter->scope, &stmt->name, &new_value);
+
+    ScopeAndValue current_value = var_get(interpreter->scope, &stmt->name);
+    // TODO: support += operator for str and list
+    check_num_operands(new_value, current_value.value);
+
+    SlashNum *new_num_value = (SlashNum *)new_value;
+    SlashNum *current_num_value = (SlashNum *)current_value.value;
+    if (stmt->assignment_op == t_plus_equal)
+	current_num_value->num += new_num_value->num;
+    else
+	current_num_value->num -= new_num_value->num;
+    // TODO: since the hasmap currently only holds pointers, could we just update the pointer
+    // directly
+    //  and remove all calls to assign?
+    // var_assign(interpreter->scope, &stmt->name, (SlashValue *)new_num_value);
 }
 
 static void exec_loop(Interpreter *interpreter, LoopStmt *stmt)
@@ -226,8 +269,8 @@ static void exec_loop(Interpreter *interpreter, LoopStmt *stmt)
     scope_init(&loop_scope, interpreter->scope);
     interpreter->scope = &loop_scope;
 
-    SlashValue r = eval(interpreter, stmt->condition);
-    while (is_truthy(&r)) {
+    SlashValue *r = eval(interpreter, stmt->condition);
+    while (is_truthy(r)) {
 	exec_loop_block(interpreter, stmt->body_block);
 	r = eval(interpreter, stmt->condition);
     }
@@ -236,36 +279,36 @@ static void exec_loop(Interpreter *interpreter, LoopStmt *stmt)
     scope_destroy(&loop_scope);
 }
 
-static void exec_iter_loop_str(Interpreter *interpreter, IterLoopStmt *stmt, SlashStr *iterable)
+static void exec_iter_loop_str(Interpreter *interpreter, IterLoopStmt *stmt, StrView iterable)
 {
-    SlashStr current = { .p = iterable->p, .size = 1 };
-    SlashValue iterator_value = { .p = &current, .type = SVT_STR };
+    StrView current = { .view = iterable.view, .size = 1 };
+    SlashStr iterator_value = { .type = SLASH_STR, .str = current };
 
     /* define the loop variable that holds the current iterator value */
-    var_define(interpreter->scope, &stmt->var_name, &iterator_value);
+    var_define(interpreter->scope, &stmt->var_name, (SlashValue *)&iterator_value);
 
-    size_t pos = 0;
-    while (pos < iterable->size) {
+    /* increase while the mem addr of view is less than the final mem addr of the iterable */
+    while (iterator_value.str.view < iterable.view + iterable.size) {
 	exec_loop_block(interpreter, stmt->body_block);
-	current.p = current.p + 1;
-	pos++;
-	var_assign(interpreter->scope, &stmt->var_name, &iterator_value);
+	iterator_value.str.view++;
     }
+
+    /* don't need to undefine the iterator value as the scope will be destroyed imminently */
 }
 
 static void exec_iter_loop_range(Interpreter *interpreter, IterLoopStmt *stmt, SlashRange *iterable)
 {
-    double current = iterable->start;
-    SlashValue iterator_value = { .p = &current, .type = SVT_NUM };
+    SlashNum iterator_value = { .type = SLASH_NUM, .num = iterable->start };
 
     /* define the loop variable that holds the current iterator value */
-    var_define(interpreter->scope, &stmt->var_name, &iterator_value);
+    var_define(interpreter->scope, &stmt->var_name, (SlashValue *)&iterator_value);
 
-    while (current != iterable->end) {
+    while (iterator_value.num != iterable->end) {
 	exec_loop_block(interpreter, stmt->body_block);
-	current++;
-	var_assign(interpreter->scope, &stmt->var_name, &iterator_value);
+	iterator_value.num++;
     }
+
+    /* don't need to undefine the iterator value as the scope will be destroyed imminently */
 }
 
 static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
@@ -274,11 +317,11 @@ static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
     scope_init(&loop_scope, interpreter->scope);
     interpreter->scope = &loop_scope;
 
-    SlashValue underlying = eval(interpreter, stmt->underlying_iterable);
-    if (underlying.type == SVT_STR) {
-	exec_iter_loop_str(interpreter, stmt, underlying.p);
-    } else if (underlying.type == SVT_RANGE) {
-	exec_iter_loop_range(interpreter, stmt, underlying.p);
+    SlashValue *underlying = eval(interpreter, stmt->underlying_iterable);
+    if (underlying->type == SLASH_STR) {
+	exec_iter_loop_str(interpreter, stmt, ((SlashStr *)underlying)->str);
+    } else if (underlying->type == SLASH_RANGE) {
+	exec_iter_loop_range(interpreter, stmt, (SlashRange *)underlying);
     } else {
 	slash_exit_interpreter_err("only str and range can be iterated over currently");
     }
@@ -288,7 +331,7 @@ static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
 }
 
 // TODO: table better for this
-static SlashValue eval(Interpreter *interpreter, Expr *expr)
+static SlashValue *eval(Interpreter *interpreter, Expr *expr)
 {
     switch (expr->type) {
     case EXPR_UNARY:
@@ -312,7 +355,7 @@ static SlashValue eval(Interpreter *interpreter, Expr *expr)
     default:
 	slash_exit_internal_err("interpreter: expr type not handled");
 	/* will never happen, but lets make the compiler happy */
-	return (SlashValue){ 0 };
+	return NULL;
     }
 }
 

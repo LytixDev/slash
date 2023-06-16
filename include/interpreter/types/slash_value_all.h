@@ -14,17 +14,16 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#ifndef SLASH_VALUE_ALL_H
+#define SLASH_VALUE_ALL_H
+
+#include "interpreter/types/slash_bool.h"
 #include "interpreter/types/slash_list.h"
+#include "interpreter/types/slash_num.h"
+#include "interpreter/types/slash_range.h"
+#include "interpreter/types/slash_shlit.h"
+#include "interpreter/types/slash_str.h"
 #include "interpreter/types/slash_value.h"
-#include "nicc/nicc.h"
 
-void slash_list_init(SlashList *list)
-{
-    arraylist_init(&list->underlying, sizeof(SlashValue *));
-    list->underlying_T = SLASH_NONE;
-}
 
-bool slash_list_append(SlashList *list, SlashValue *val)
-{
-    return arraylist_append(&list->underlying, val);
-}
+#endif /* SLASH_STR_H */

@@ -28,8 +28,9 @@
  * compare-function.
  */
 typedef struct {
+    SlashValueType type;
     ArrayList underlying;
-    SlashValueType T;
+    SlashValueType underlying_T;
 } SlashList;
 
 void slash_list_init(SlashList *list);

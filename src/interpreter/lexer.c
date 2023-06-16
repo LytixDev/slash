@@ -19,8 +19,8 @@
 
 #include "common.h"
 #include "interpreter/lexer.h"
-#include "interpreter/types/slash_str.h"
 #include "nicc/nicc.h"
+#include "str_view.h"
 
 static void lex_panic(Lexer *lexer, char *err_msg);
 static void run_until(Lexer *lexer, StateFn start_state, StateFn end_state);
@@ -106,9 +106,9 @@ char *token_type_str_map[t_enum_count] = {
     "t_error",
 };
 
-static void keyword_set(struct hashmap_t *keywords, SlashStr key, TokenType val)
+static void keyword_set(struct hashmap_t *keywords, StrView key, TokenType val)
 {
-    hashmap_put(keywords, key.p, key.size, &val, sizeof(TokenType), true);
+    hashmap_put(keywords, key.view, key.size, &val, sizeof(TokenType), true);
 }
 
 static TokenType *keyword_get_from_start(Lexer *lexer)
@@ -122,25 +122,25 @@ static void keywords_init(struct hashmap_t *keywords)
     hashmap_init(keywords);
 
     /* hardcoding the sizes because strlen is demonic */
-    SlashStr keys[keywords_len] = {
-	{ .p = "var", .size = sizeof("var") - 1 },
-	{ .p = "func", .size = sizeof("func") - 1 },
-	{ .p = "return", .size = sizeof("return") - 1 },
-	{ .p = "if", .size = sizeof("if") - 1 },
-	{ .p = "elif", .size = sizeof("elif") - 1 },
-	{ .p = "else", .size = sizeof("else") - 1 },
-	{ .p = "loop", .size = sizeof("loop") - 1 },
-	{ .p = "in", .size = sizeof("in") - 1 },
-	{ .p = "true", .size = sizeof("true") - 1 },
-	{ .p = "false", .size = sizeof("false") - 1 },
-	{ .p = "as", .size = sizeof("as") - 1 },
-	{ .p = "and", .size = sizeof("and") - 1 },
-	{ .p = "or", .size = sizeof("or") - 1 },
-	{ .p = "not", .size = sizeof("not") - 1 },
-	{ .p = "str", .size = sizeof("str") - 1 },
-	{ .p = "num", .size = sizeof("num") - 1 },
-	{ .p = "bool", .size = sizeof("bool") - 1 },
-	{ .p = "none", .size = sizeof("none") - 1 },
+    StrView keys[keywords_len] = {
+	{ .view = "var", .size = sizeof("var") - 1 },
+	{ .view = "func", .size = sizeof("func") - 1 },
+	{ .view = "return", .size = sizeof("return") - 1 },
+	{ .view = "if", .size = sizeof("if") - 1 },
+	{ .view = "elif", .size = sizeof("elif") - 1 },
+	{ .view = "else", .size = sizeof("else") - 1 },
+	{ .view = "loop", .size = sizeof("loop") - 1 },
+	{ .view = "in", .size = sizeof("in") - 1 },
+	{ .view = "true", .size = sizeof("true") - 1 },
+	{ .view = "false", .size = sizeof("false") - 1 },
+	{ .view = "as", .size = sizeof("as") - 1 },
+	{ .view = "and", .size = sizeof("and") - 1 },
+	{ .view = "or", .size = sizeof("or") - 1 },
+	{ .view = "not", .size = sizeof("not") - 1 },
+	{ .view = "str", .size = sizeof("str") - 1 },
+	{ .view = "num", .size = sizeof("num") - 1 },
+	{ .view = "bool", .size = sizeof("bool") - 1 },
+	{ .view = "none", .size = sizeof("none") - 1 },
     };
 
     TokenType vals[keywords_len] = {
@@ -161,7 +161,7 @@ void tokens_print(ArrayList *tokens)
 	Token *token = arraylist_get(tokens, i);
 	printf("[%zu] (%s) ", i, token_type_str_map[token->type]);
 	if (token->type != t_newline)
-	    slash_str_print(token->lexeme);
+	    str_view_print(token->lexeme);
 	putchar('\n');
     }
 }
@@ -634,8 +634,8 @@ StateFn lex_subshell_end(Lexer *lexer)
 static void emit(Lexer *lexer, TokenType type)
 {
     Token token = { .type = type,
-		    .lexeme = (SlashStr){ .p = lexer->input + lexer->start,
-					  .size = lexer->pos - lexer->start } };
+		    .lexeme = (StrView){ .view = lexer->input + lexer->start,
+					 .size = lexer->pos - lexer->start } };
     arraylist_append(lexer->tokens, &token);
     lexer->start = lexer->pos;
 }

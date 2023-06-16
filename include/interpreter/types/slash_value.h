@@ -24,26 +24,31 @@
 
 
 typedef enum {
-    SVT_BOOL = 0, // p = bool *
-    SVT_STR, // p = SlashStr *
-    SVT_NUM, // p = double *
-    SVT_SHLIT, // p = SlashStr *
-    SVT_RANGE, // p = SlashRange *
-    SVT_LIST, // p = SlashList *
-    SVT_NONE, // p = NULL
-    SVT_ANY, // p = NULL
+    SLASH_BOOL = 0,
+    SLASH_STR,
+    SLASH_NUM,
+    SLASH_SHLIT,
+    SLASH_RANGE,
+    SLASH_LIST,
+    SLASH_NONE,
+    SLASH_ANY,
 } SlashValueType;
 
+/* same evil trick to get some sort of polymorphism as used in the AST */
 typedef struct {
-    void *p; // arena allocated (TODO: well, should be)
     SlashValueType type;
 } SlashValue;
 
+extern const size_t slash_value_size_table[];
+
+SlashValue *slash_value_arena_alloc(Arena *arena, SlashValueType type);
 
 bool is_truthy(SlashValue *value);
-// TODO: all of these functions are turbo ugly
-SlashValue slash_value_cmp(Arena *arena, SlashValue a, SlashValue b, TokenType operator);
-void slash_value_print(SlashValue sv);
-void slash_value_println(SlashValue sv);
+
+void slash_value_print(SlashValue *value);
+//// TODO: all of these functions are turbo ugly
+// SlashValue slash_value_cmp(Arena *arena, SlashValue a, SlashValue b, TokenType operator);
+// void slash_value_print(SlashValue sv);
+// void slash_value_println(SlashValue sv);
 
 #endif /* SLASH_VALUE_H */

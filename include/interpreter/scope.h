@@ -17,10 +17,10 @@
 #ifndef SCOPE_H
 #define SCOPE_H
 
-#include "interpreter/types/slash_str.h"
 #include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
 #include "sac/sac.h"
+#include "str_view.h"
 
 
 typedef struct scope_t Scope;
@@ -39,10 +39,10 @@ void scope_init(Scope *scope, Scope *enclosing);
 void scope_destroy(Scope *scope);
 
 void *scope_alloc(Scope *scope, size_t size);
-void var_define(Scope *scope, SlashStr *key, SlashValue *value);
-void var_undefine(Scope *scope, SlashStr *key);
-void var_assign(Scope *scope, SlashStr *key, SlashValue *value);
-ScopeAndValue var_get(Scope *scope, SlashStr *key);
+void var_define(Scope *scope, StrView *key, SlashValue *value);
+void var_undefine(Scope *scope, StrView *key);
+void var_assign(Scope *scope, StrView *key, SlashValue *value);
+ScopeAndValue var_get(Scope *scope, StrView *key);
 
 
 #endif /* SCOPE_H */

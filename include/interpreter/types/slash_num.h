@@ -14,17 +14,16 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "interpreter/types/slash_list.h"
+#ifndef SLASH_NUM_H
+#define SLASH_NUM_H
+
 #include "interpreter/types/slash_value.h"
-#include "nicc/nicc.h"
 
-void slash_list_init(SlashList *list)
-{
-    arraylist_init(&list->underlying, sizeof(SlashValue *));
-    list->underlying_T = SLASH_NONE;
-}
 
-bool slash_list_append(SlashList *list, SlashValue *val)
-{
-    return arraylist_append(&list->underlying, val);
-}
+typedef struct {
+    SlashValueType type;
+    double num;
+} SlashNum;
+
+
+#endif /* SLASH_NUM_H */

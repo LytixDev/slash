@@ -19,8 +19,8 @@
 
 #include <stdint.h>
 
-#include "interpreter/types/slash_str.h"
 #include "nicc/nicc.h"
+#include "str_view.h"
 
 #define STATE_FN(___state_fn) \
     (StateFn)                 \
@@ -105,7 +105,7 @@ extern char *token_type_str_map[t_enum_count];
 
 typedef struct {
     TokenType type;
-    SlashStr lexeme;
+    StrView lexeme;
 } Token;
 
 typedef struct {

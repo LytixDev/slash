@@ -78,12 +78,12 @@ typedef struct {
 
 typedef struct {
     ExprType type;
-    SlashValue value;
+    SlashValue *value;
 } LiteralExpr;
 
 typedef struct {
     ExprType type;
-    SlashStr var_name;
+    StrView var_name;
 } InterpolationExpr;
 
 typedef struct {
@@ -116,14 +116,14 @@ typedef struct {
 
 typedef struct {
     StmtType type;
-    SlashStr var_name;
+    StrView var_name;
     Expr *underlying_iterable;
     BlockStmt *body_block;
 } IterLoopStmt;
 
 typedef struct {
     StmtType type;
-    SlashStr name;
+    StrView name;
     Expr *initializer;
 } VarStmt;
 
@@ -136,13 +136,13 @@ typedef struct {
 
 typedef struct {
     StmtType type;
-    SlashStr cmd_name;
+    StrView cmd_name;
     ArenaLL *arg_exprs;
 } CmdStmt;
 
 typedef struct {
     StmtType type;
-    SlashStr name;
+    StrView name;
     TokenType assignment_op;
     Expr *value;
 } AssignStmt;

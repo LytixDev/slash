@@ -21,11 +21,10 @@
 #include "interpreter/ast.h"
 #include "interpreter/lexer.h"
 #include "interpreter/parser.h"
-#include "interpreter/types/slash_range.h"
-#include "interpreter/types/slash_str.h"
-#include "interpreter/types/slash_value.h"
+#include "interpreter/types/slash_value_all.h"
 #include "nicc/nicc.h"
 #include "sac/sac.h"
+#include "str_view.h"
 
 
 /* util/helper functions */
@@ -420,8 +419,11 @@ static Expr *primary(Parser *parser)
     /* str or shlit */
     Token *token = previous(parser);
     LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
-    expr->value =
-	(SlashValue){ .type = token->type == dt_str ? SVT_STR : SVT_SHLIT, .p = &token->lexeme };
+
+    SlashStr *str = (SlashStr *)slash_value_arena_alloc(
+	parser->ast_arena, token->type == dt_str ? SLASH_STR : SLASH_SHLIT);
+    str->str = token->lexeme;
+    expr->value = (SlashValue *)str;
     return (Expr *)expr;
 }
 
@@ -430,12 +432,10 @@ static Expr *bool_lit(Parser *parser)
     Token *token = previous(parser);
     LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
 
-    SlashValue value;
-    value.type = SVT_BOOL;
-    value.p = m_arena_alloc(parser->ast_arena, sizeof(bool));
-    *(bool *)value.p = token->type == t_true ? true : false;
+    SlashBool *value = (SlashBool *)slash_value_arena_alloc(parser->ast_arena, SLASH_BOOL);
+    value->value = token->type == t_true ? true : false;
 
-    expr->value = value;
+    expr->value = (SlashValue *)value;
     return (Expr *)expr;
 }
 
@@ -444,12 +444,10 @@ static Expr *number(Parser *parser)
     Token *token = previous(parser);
     LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
 
-    SlashValue value;
-    value.type = SVT_NUM;
-    value.p = m_arena_alloc(parser->ast_arena, sizeof(double));
-    *(double *)value.p = slash_str_to_double(token->lexeme);
+    SlashNum *value = (SlashNum *)slash_value_arena_alloc(parser->ast_arena, SLASH_NUM);
+    value->num = str_view_to_double(token->lexeme);
 
-    expr->value = value;
+    expr->value = (SlashValue *)value;
     return (Expr *)expr;
 }
 
@@ -478,22 +476,20 @@ ArrayList parse(Arena *ast_arena, ArrayList *tokens)
 
 static Expr *range(Parser *parser)
 {
-    SlashRange *range = m_arena_alloc_struct(parser->ast_arena, SlashRange);
-
+    SlashRange *range = (SlashRange *)slash_value_arena_alloc(parser->ast_arena, SLASH_RANGE);
     Token *start_num_or_any = previous(parser);
     if (start_num_or_any->type != dt_num)
 	range->start = 0;
     else
-	range->start = slash_str_to_int(start_num_or_any->lexeme);
+	range->start = str_view_to_int(start_num_or_any->lexeme);
 
-    consume(parser, t_dot_dot, "will only enter here if t_dot_dot was found");
+    consume(parser, t_dot_dot, "unreachable");
     consume(parser, dt_num, "Expected end number in range expression");
     Token *end_num = previous(parser);
-    range->end = slash_str_to_int(end_num->lexeme);
+    range->end = str_view_to_int(end_num->lexeme);
 
     LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
-    expr->value.p = range;
-    expr->value.type = SVT_RANGE;
+    expr->value = (SlashValue *)range;
     return (Expr *)expr;
 }
 

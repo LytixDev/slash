@@ -14,17 +14,25 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "interpreter/types/slash_list.h"
-#include "interpreter/types/slash_value.h"
-#include "nicc/nicc.h"
+#ifndef STR_VIEW_H
+#define STR_VIEW_H
 
-void slash_list_init(SlashList *list)
-{
-    arraylist_init(&list->underlying, sizeof(SlashValue *));
-    list->underlying_T = SLASH_NONE;
-}
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
 
-bool slash_list_append(SlashList *list, SlashValue *val)
-{
-    return arraylist_append(&list->underlying, val);
-}
+
+typedef struct {
+    char *view; // pointer into some memory in an arena
+    size_t size;
+} StrView;
+
+
+void str_view_print(StrView s);
+void str_view_println(StrView s);
+double str_view_to_double(StrView s);
+int32_t str_view_to_int(StrView s);
+bool str_view_eq(StrView a, StrView b);
+
+
+#endif /* STR_VIEW_H */

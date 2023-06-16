@@ -20,10 +20,9 @@
 #include "common.h"
 #include "interpreter/ast.h"
 #include "interpreter/lexer.h"
-#include "interpreter/types/slash_range.h"
-#include "interpreter/types/slash_str.h"
-#include "interpreter/types/slash_value.h"
+#include "interpreter/types/slash_value_all.h"
 #include "sac/sac.h"
+#include "str_view.h"
 
 
 const size_t expr_size_table[] = {
@@ -98,22 +97,22 @@ static void ast_print_range_literal(SlashRange *range)
 
 static void ast_print_literal(LiteralExpr *expr)
 {
-    switch (expr->value.type) {
-    case SVT_STR:
-    case SVT_SHLIT:
-	slash_str_print(*(SlashStr *)expr->value.p);
+    switch (expr->value->type) {
+    case SLASH_STR:
+    case SLASH_SHLIT:
+	str_view_print(((SlashStr *)expr->value)->str);
 	break;
 
-    case SVT_NUM:
-	printf("%f", *(double *)expr->value.p);
+    case SLASH_NUM:
+	printf("%f", ((SlashNum *)expr->value)->num);
 	break;
 
-    case SVT_BOOL:
-	printf("%s", *(bool *)expr->value.p == true ? "true" : "false");
+    case SLASH_BOOL:
+	printf("%s", ((SlashBool *)expr->value)->value == true ? "true" : "false");
 	break;
 
-    case SVT_RANGE:
-	ast_print_range_literal(expr->value.p);
+    case SLASH_RANGE:
+	ast_print_range_literal((SlashRange *)expr->value);
 	break;
 
     default:
@@ -123,7 +122,7 @@ static void ast_print_literal(LiteralExpr *expr)
 
 static void ast_print_interpolation(InterpolationExpr *expr)
 {
-    slash_str_print(expr->var_name);
+    str_view_print(expr->var_name);
 }
 
 static void ast_print_list(ListExpr *expr)
@@ -146,14 +145,14 @@ static void ast_print_expression(ExpressionStmt *stmt)
 
 static void ast_print_var(VarStmt *stmt)
 {
-    slash_str_print(stmt->name);
+    str_view_print(stmt->name);
     printf(" = ");
     ast_print_expr(stmt->initializer);
 }
 
 static void ast_print_cmd(CmdStmt *stmt)
 {
-    slash_str_print(stmt->cmd_name);
+    str_view_print(stmt->cmd_name);
     if (stmt->arg_exprs == NULL)
 	return;
 
@@ -195,7 +194,7 @@ static void ast_print_loop(LoopStmt *stmt)
 
 static void ast_print_iter_loop(IterLoopStmt *stmt)
 {
-    slash_str_print(stmt->var_name);
+    str_view_print(stmt->var_name);
     printf(" = iter.");
     ast_print_expr(stmt->underlying_iterable);
     ast_print_block(stmt->body_block);
@@ -203,7 +202,7 @@ static void ast_print_iter_loop(IterLoopStmt *stmt)
 
 static void ast_print_assign(AssignStmt *stmt)
 {
-    slash_str_print(stmt->name);
+    str_view_print(stmt->name);
     if (stmt->assignment_op == t_equal)
 	printf(" = ");
     else if (stmt->assignment_op == t_plus_equal)
