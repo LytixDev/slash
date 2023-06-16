@@ -21,7 +21,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-
+/*
+ * the main string implementation used throughout the interpreter
+ * the char *view is a view into some memory and will most likely not be null terminated,
+ */
 typedef struct {
     char *view; // pointer into some memory in an arena
     size_t size;

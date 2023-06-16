@@ -110,7 +110,7 @@ typedef struct {
 
 typedef struct {
     char *input; // the input string being scanned.
-    size_t input_size;
+    size_t input_size; // size of input in bytes.
     size_t start; // start position of this token.
     size_t pos; // current position in the input.
     ArrayList *tokens;

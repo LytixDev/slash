@@ -23,28 +23,29 @@
 #include "str_view.h"
 
 
+void scope_init_global(Scope *scope, Arena *arena)
+{
+    scope->arena_tmp = m_arena_tmp_init(arena);
+    scope->enclosing = NULL;
+    hashmap_init(&scope->values);
+}
+
 void scope_init(Scope *scope, Scope *enclosing)
 {
-    // TODO: capacity could be larger
-    if (enclosing == NULL) {
-	m_arena_init_dynamic(&scope->value_arena, 1, 16384);
-    } else {
-	m_arena_init_dynamic(&scope->value_arena, 1, 4096);
-    }
-
+    scope->arena_tmp = m_arena_tmp_init(enclosing->arena_tmp.arena);
     scope->enclosing = enclosing;
     hashmap_init(&scope->values);
 }
 
 void scope_destroy(Scope *scope)
 {
-    m_arena_release(&scope->value_arena);
+    m_arena_tmp_release(scope->arena_tmp);
     hashmap_free(&scope->values);
 }
 
 void *scope_alloc(Scope *scope, size_t size)
 {
-    return m_arena_alloc(&scope->value_arena, size);
+    return m_arena_alloc(scope->arena_tmp.arena, size);
 }
 
 void var_define(Scope *scope, StrView *key, SlashValue *value)

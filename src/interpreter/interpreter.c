@@ -40,7 +40,7 @@ static void exec_loop_block(Interpreter *interpreter, BlockStmt *stmt)
     LLItem *item;
     ARENA_LL_FOR_EACH(stmt->statements, item)
     {
-	exec(interpreter, item->p);
+	exec(interpreter, item->view);
     }
 }
 
@@ -69,7 +69,7 @@ static char **cmd_args_fmt(Interpreter *interpreter, CmdStmt *stmt)
     LLItem *item;
     ARENA_LL_FOR_EACH(stmt->arg_exprs, item)
     {
-	SlashValue v = eval(interpreter, item->p);
+	SlashValue v = eval(interpreter, item->view);
 	if (!(v.type == SLASH_STR || v.type == SLASH_SHLIT))
 	    slash_exit_interpreter_err("only support evaluing str args");
 
@@ -86,9 +86,9 @@ static char **cmd_args_fmt(Interpreter *interpreter, CmdStmt *stmt)
 
 static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt)
 {
-    char **argv = cmd_args_fmt(interpreter, stmt);
-    exec_program(argv);
-    free(argv);
+    char **argv_owning = cmd_args_fmt(interpreter, stmt);
+    exec_program(argv_owning);
+    free(argv_owning);
 }
 
 static void check_num_operands(SlashValue *left, SlashValue *right)
@@ -165,9 +165,9 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
     // TODO: dynamic buffer
     char buffer[1024];
     // TODO: currently assuming expr->stmt is of type CmdStmt
-    char **argv = cmd_args_fmt(interpreter, (CmdStmt *)expr->stmt);
-    exec_capture(argv, buffer);
-    free(argv);
+    char **argv_owning = cmd_args_fmt(interpreter, (CmdStmt *)expr->stmt);
+    exec_capture(argv_owning, buffer);
+    free(argv_owning);
 
     /* create SlashStr from result of buffer */
     // TODO: this is ugly!
@@ -206,7 +206,7 @@ static void exec_echo_temporary(Interpreter *interpreter, ArenaLL *args)
     LLItem *item;
     ARENA_LL_FOR_EACH(args, item)
     {
-	SlashValue v = eval(interpreter, item->p);
+	SlashValue v = eval(interpreter, item->view);
 	slash_value_print(&v);
 	putchar(' ');
     }
@@ -408,7 +408,9 @@ static void exec(Interpreter *interpreter, Stmt *stmt)
 int interpret(ArrayList *statements)
 {
     Interpreter interpreter = { 0 };
-    scope_init(&interpreter.globals, NULL);
+    m_arena_init_dynamic(&interpreter.arena, 1, 16384);
+
+    scope_init_global(&interpreter.globals, &interpreter.arena);
     interpreter.scope = &interpreter.globals;
 
     for (size_t i = 0; i < statements->size; i++)
