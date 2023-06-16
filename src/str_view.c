@@ -15,7 +15,6 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <stdbool.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 

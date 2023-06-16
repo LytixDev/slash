@@ -21,7 +21,6 @@
 #include "interpreter/ast.h"
 #include "interpreter/lexer.h"
 #include "interpreter/parser.h"
-#include "interpreter/types/slash_list.h"
 #include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
 #include "sac/sac.h"

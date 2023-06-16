@@ -24,7 +24,6 @@
 #include "interpreter/interpreter.h"
 #include "interpreter/lexer.h"
 #include "interpreter/scope.h"
-#include "interpreter/types/slash_list.h"
 #include "interpreter/types/slash_range.h"
 #include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
