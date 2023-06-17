@@ -17,6 +17,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#include "interpreter/types/slash_list.h"
 #include "interpreter/types/slash_value.h"
 #include "sac/sac.h"
 #include "str_view.h"
@@ -62,6 +63,10 @@ void slash_value_print(SlashValue *sv)
 
     case SLASH_NUM:
 	printf("%f", sv->num);
+	break;
+
+    case SLASH_LIST:
+	slash_list_print(&sv->list);
 	break;
 
     default:

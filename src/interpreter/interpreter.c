@@ -24,6 +24,7 @@
 #include "interpreter/interpreter.h"
 #include "interpreter/lexer.h"
 #include "interpreter/scope.h"
+#include "interpreter/types/slash_list.h"
 #include "interpreter/types/slash_range.h"
 #include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
@@ -40,7 +41,7 @@ static void exec_loop_block(Interpreter *interpreter, BlockStmt *stmt)
     LLItem *item;
     ARENA_LL_FOR_EACH(stmt->statements, item)
     {
-	exec(interpreter, item->view);
+	exec(interpreter, item->value);
     }
 }
 
@@ -69,7 +70,7 @@ static char **cmd_args_fmt(Interpreter *interpreter, CmdStmt *stmt)
     LLItem *item;
     ARENA_LL_FOR_EACH(stmt->arg_exprs, item)
     {
-	SlashValue v = eval(interpreter, item->view);
+	SlashValue v = eval(interpreter, item->value);
 	if (!(v.type == SLASH_STR || v.type == SLASH_SHLIT))
 	    slash_exit_interpreter_err("only support evaluing str args");
 
@@ -180,7 +181,17 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
 
 static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
 {
-    // SlashList *list;
+    SlashValue value = { .type = SLASH_LIST };
+    slash_list_init(&value.list);
+
+    LLItem *item;
+    ARENA_LL_FOR_EACH(expr->exprs, item)
+    {
+	SlashValue element_value = eval(interpreter, item->value);
+	slash_list_append(&value.list, element_value);
+    }
+
+    return value;
 }
 
 
@@ -206,7 +217,7 @@ static void exec_echo_temporary(Interpreter *interpreter, ArenaLL *args)
     LLItem *item;
     ARENA_LL_FOR_EACH(args, item)
     {
-	SlashValue v = eval(interpreter, item->view);
+	SlashValue v = eval(interpreter, item->value);
 	slash_value_print(&v);
 	putchar(' ');
     }
@@ -281,13 +292,26 @@ static void exec_loop(Interpreter *interpreter, LoopStmt *stmt)
     scope_destroy(&loop_scope);
 }
 
+static void exec_iter_loop_list(Interpreter *interpreter, IterLoopStmt *stmt, SlashList iterable)
+{
+    /* define the loop variable that holds the current iterator value */
+    var_define(interpreter->scope, &stmt->var_name, NULL);
+
+    SlashValue *iterator_value;
+    for (size_t i = 0; i < iterable.underlying.size; i++) {
+	iterator_value = slash_list_get(&iterable, i);
+	var_assign(interpreter->scope, &stmt->var_name, iterator_value);
+	exec_loop_block(interpreter, stmt->body_block);
+    }
+}
+
 static void exec_iter_loop_str(Interpreter *interpreter, IterLoopStmt *stmt, StrView iterable)
 {
     StrView str = { .view = iterable.view, .size = 1 };
     SlashValue iterator_value = { .type = SLASH_STR, .str = str };
 
     /* define the loop variable that holds the current iterator value */
-    var_define(interpreter->scope, &stmt->var_name, (SlashValue *)&iterator_value);
+    var_define(interpreter->scope, &stmt->var_name, &iterator_value);
 
     /* increase while the mem addr of view is less than the final mem addr of the iterable */
     while (iterator_value.str.view < iterable.view + iterable.size) {
@@ -327,6 +351,8 @@ static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
 	exec_iter_loop_str(interpreter, stmt, underlying.str);
     } else if (underlying.type == SLASH_RANGE) {
 	exec_iter_loop_range(interpreter, stmt, &underlying.range);
+    } else if (underlying.type == SLASH_LIST) {
+	exec_iter_loop_list(interpreter, stmt, underlying.list);
     } else {
 	slash_exit_interpreter_err("only str and range can be iterated over currently");
     }

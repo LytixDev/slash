@@ -3,7 +3,7 @@ var pear = "pear"
 var fruits = ["apple", "banana", "orange", $pear]
 
 # iterate over the list
-for fruit in $fruits {
+loop fruit in $fruits {
     echo $fruit
 }
 

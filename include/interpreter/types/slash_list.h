@@ -37,6 +37,10 @@ typedef struct {
 void slash_list_init(SlashList *list);
 // void slash_list_copy(SlashList *list);
 
-bool slash_list_append(SlashList *list, SlashValue *val);
+bool slash_list_append(SlashList *list, SlashValue val);
+
+SlashValue *slash_list_get(SlashList *list, size_t idx);
+
+void slash_list_print(SlashList *list);
 
 #endif /* SLASH_LIST_H */

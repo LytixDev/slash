@@ -14,17 +14,36 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <stdio.h>
+
 #include "interpreter/types/slash_list.h"
 #include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
 
+
 void slash_list_init(SlashList *list)
 {
-    arraylist_init(&list->underlying, sizeof(SlashValue *));
+    arraylist_init(&list->underlying, sizeof(SlashValue));
     // list->underlying_T = SLASH_NONE;
 }
 
-bool slash_list_append(SlashList *list, SlashValue *val)
+bool slash_list_append(SlashList *list, SlashValue val)
 {
-    return arraylist_append(&list->underlying, val);
+    return arraylist_append(&list->underlying, &val);
+}
+
+SlashValue *slash_list_get(SlashList *list, size_t idx)
+{
+    return arraylist_get(&list->underlying, idx);
+}
+
+void slash_list_print(SlashList *list)
+{
+    putchar('[');
+    for (size_t i = 0; i < list->underlying.size; i++) {
+	slash_value_print(arraylist_get(&list->underlying, i));
+	if (i != list->underlying.size - 1)
+	    printf(", ");
+    }
+    putchar(']');
 }

@@ -83,6 +83,7 @@ typedef struct {
 typedef struct {
     ExprType type;
     StrView var_name;
+    int index; // optional
 } InterpolationExpr;
 
 typedef struct {

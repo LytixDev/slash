@@ -42,7 +42,10 @@ void scope_init(Scope *scope, Scope *enclosing);
 void scope_destroy(Scope *scope);
 void *scope_alloc(Scope *scope, size_t size);
 
-/* copies the SlashValue object into the hashmap */
+/*
+ * copies the SlashValue object into the hashmap
+ * if value is NULL then the variable is defined as SLASH_NONE
+ */
 void var_define(Scope *scope, StrView *key, SlashValue *value);
 void var_undefine(Scope *scope, StrView *key);
 /*

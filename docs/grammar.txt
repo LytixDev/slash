@@ -62,7 +62,7 @@ bool_lit        -> "true" | "false ";
 
 number          -> NUMBER ;
 
-interpolation   -> INTERPOLATION ;
+interpolation   -> INTERPOLATION ( "[" NUMBER "]" )? ;
 
 range           -> NUMBER? ".." NUMBER ;
 

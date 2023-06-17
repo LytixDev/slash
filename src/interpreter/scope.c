@@ -50,6 +50,13 @@ void *scope_alloc(Scope *scope, size_t size)
 
 void var_define(Scope *scope, StrView *key, SlashValue *value)
 {
+    /* define value to SLASH_NONE */
+    if (value == NULL) {
+	SlashValue none = { .type = SLASH_NONE };
+	hashmap_put(&scope->values, key->view, (uint32_t)key->size, &none, sizeof(SlashValue),
+		    true);
+	return;
+    }
     hashmap_put(&scope->values, key->view, (uint32_t)key->size, value, sizeof(SlashValue), true);
 }
 

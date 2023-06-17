@@ -42,7 +42,7 @@ void arena_ll_append(ArenaLL *ll, void *p)
 {
     ll->size++;
     LLItem *item = m_arena_alloc_struct(ll->arena, LLItem);
-    item->view = p;
+    item->value = p;
     item->next = NULL;
 
     /* base case */

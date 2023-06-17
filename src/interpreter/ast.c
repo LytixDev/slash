@@ -132,7 +132,7 @@ static void ast_print_list(ListExpr *expr)
     LLItem *item;
     ARENA_LL_FOR_EACH(expr->exprs, item)
     {
-	ast_print_expr(item->view);
+	ast_print_expr(item->value);
 	printf(", ");
     }
 }
@@ -159,7 +159,7 @@ static void ast_print_cmd(CmdStmt *stmt)
     LLItem *item;
     ARENA_LL_FOR_EACH(stmt->arg_exprs, item)
     {
-	ast_print_expr(item->view);
+	ast_print_expr(item->value);
     }
 }
 
@@ -181,7 +181,7 @@ static void ast_print_block(BlockStmt *stmt)
     LLItem *item;
     ARENA_LL_FOR_EACH(stmt->statements, item)
     {
-	ast_print_stmt(item->view);
+	ast_print_stmt(item->value);
     }
 }
 

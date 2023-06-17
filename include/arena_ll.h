@@ -25,7 +25,7 @@
 
 typedef struct arena_ll_item_t LLItem;
 struct arena_ll_item_t {
-    void *view; // a view into some memory in the arena
+    void *value; // a view into some memory in the arena
     LLItem *next;
 };
 
