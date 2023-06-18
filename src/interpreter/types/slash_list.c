@@ -32,6 +32,11 @@ bool slash_list_append(SlashList *list, SlashValue val)
     return arraylist_append(&list->underlying, &val);
 }
 
+bool slash_list_set(SlashList *list, SlashValue val, size_t idx)
+{
+    return arraylist_set(&list->underlying, &val, idx);
+}
+
 SlashValue *slash_list_get(SlashList *list, size_t idx)
 {
     return arraylist_get(&list->underlying, idx);

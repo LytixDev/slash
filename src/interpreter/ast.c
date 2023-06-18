@@ -25,8 +25,8 @@
 
 
 const size_t expr_size_table[] = {
-    sizeof(UnaryExpr),	       sizeof(BinaryExpr),   sizeof(LiteralExpr),
-    sizeof(InterpolationExpr), sizeof(SubshellExpr), sizeof(ListExpr),
+    sizeof(UnaryExpr),	sizeof(BinaryExpr),   sizeof(LiteralExpr),
+    sizeof(AccessExpr), sizeof(SubshellExpr), sizeof(ListExpr),
 };
 
 const size_t stmt_size_table[] = { sizeof(ExpressionStmt), sizeof(VarStmt),  sizeof(LoopStmt),
@@ -34,7 +34,7 @@ const size_t stmt_size_table[] = { sizeof(ExpressionStmt), sizeof(VarStmt),  siz
 				   sizeof(AssignStmt),	   sizeof(BlockStmt) };
 
 char *expr_type_str_map[EXPR_ENUM_COUNT] = {
-    "EXPR_UNARY", "EXPR_BINARY", "EXPR_LITERAL", "EXPR_INTERPOLATION", "EXPR_SUBSHELL", "EXPR_LIST",
+    "EXPR_UNARY", "EXPR_BINARY", "EXPR_LITERAL", "EXPR_ACCESS", "EXPR_SUBSHELL", "EXPR_LIST",
 };
 
 char *stmt_type_str_map[STMT_ENUM_COUNT] = {
@@ -119,9 +119,11 @@ static void ast_print_literal(LiteralExpr *expr)
     }
 }
 
-static void ast_print_interpolation(InterpolationExpr *expr)
+static void ast_print_access(AccessExpr *expr)
 {
     str_view_print(expr->var_name);
+    if (expr->index != -1)
+	printf(".get(%d)", expr->index);
 }
 
 static void ast_print_list(ListExpr *expr)
@@ -201,7 +203,7 @@ static void ast_print_iter_loop(IterLoopStmt *stmt)
 
 static void ast_print_assign(AssignStmt *stmt)
 {
-    str_view_print(stmt->name);
+    ast_print_expr(stmt->variable_name);
     if (stmt->assignment_op == t_equal)
 	printf(" = ");
     else if (stmt->assignment_op == t_plus_equal)
@@ -229,8 +231,8 @@ static void ast_print_expr(Expr *expr)
 	ast_print_literal((LiteralExpr *)expr);
 	break;
 
-    case EXPR_INTERPOLATION:
-	ast_print_interpolation((InterpolationExpr *)expr);
+    case EXPR_ACCESS:
+	ast_print_access((AccessExpr *)expr);
 	break;
 
     case EXPR_SUBSHELL:
@@ -300,7 +302,10 @@ void ast_print(ArrayList *ast_heads)
     size_t size = ast_heads->size;
     for (size_t i = 0; i < size; i++) {
 	ast_print_stmt(*(Stmt **)arraylist_get(ast_heads, i));
-	if (i != size)
-	    putchar('\n');
+	if (i != size - 1) {
+	    printf("\n\n");
+	} else {
+	    printf("\n");
+	}
     }
 }

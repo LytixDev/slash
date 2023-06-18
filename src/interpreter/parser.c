@@ -147,10 +147,10 @@ static Expr *comparison(Parser *parser);
 static Expr *term(Parser *parser);
 static Expr *factor(Parser *parser);
 static Expr *unary(Parser *parser);
+static Expr *access(Parser *parser);
 static Expr *primary(Parser *parser);
 static Expr *bool_lit(Parser *parser);
 static Expr *number(Parser *parser);
-static Expr *interpolation(Parser *parser);
 static Expr *range(Parser *parser);
 static Expr *list(Parser *parser);
 
@@ -179,16 +179,14 @@ static Stmt *statement(Parser *parser)
     if (match(parser, t_if))
 	return if_stmt(parser);
 
-    if (match(parser, t_interpolation))
-	return assignment_stmt(parser);
-
     if (match(parser, t_lbrace))
 	return block(parser);
 
     if (match(parser, dt_shlit))
 	return cmd_stmt(parser);
 
-    return expr_stmt(parser);
+    /* returns expr_stmt if following tokens is not a valid assignment */
+    return assignment_stmt(parser);
 }
 
 static Stmt *expr_stmt(Parser *parser)
@@ -272,18 +270,24 @@ static Stmt *block(Parser *parser)
 
 static Stmt *assignment_stmt(Parser *parser)
 {
-    /* came from t_interpolation */
-    Token *name = previous(parser);
-    // TODO: consume_any
+    if (!check(parser, t_access))
+	return expr_stmt(parser);
+
+    AccessExpr *name = (AccessExpr *)access(parser);
     if (!match(parser, t_equal, t_plus_equal, t_minus_equal)) {
-	slash_exit_parse_err("Expected '=', '+=' or '-='");
+	/* access not part of assignment statement, so treat it as expression statement */
+	consume(parser, t_newline, "Expected newline after expression statement");
+	ExpressionStmt *stmt = (ExpressionStmt *)stmt_alloc(parser->ast_arena, STMT_EXPRESSION);
+	stmt->expression = (Expr *)name;
+	return (Stmt *)stmt;
     }
 
+    /* access part of assignment */
     Token *assignment_op = previous(parser);
     Expr *value = expression(parser);
 
     AssignStmt *stmt = (AssignStmt *)stmt_alloc(parser->ast_arena, STMT_ASSIGN);
-    stmt->name = name->lexeme;
+    stmt->variable_name = name;
     stmt->assignment_op = assignment_op->type;
     stmt->value = value;
     return (Stmt *)stmt;
@@ -390,16 +394,35 @@ static Expr *factor(Parser *parser)
 
 static Expr *unary(Parser *parser)
 {
-    return primary(parser);
+    return access(parser);
+}
+
+static Expr *access(Parser *parser)
+{
+    if (!match(parser, t_access))
+	return primary(parser);
+
+    Token *variable_name = previous(parser);
+    AccessExpr *expr = (AccessExpr *)expr_alloc(parser->ast_arena, EXPR_ACCESS);
+    expr->var_name = variable_name->lexeme;
+
+    /* optional list/str element access "[num]" */
+    if (match(parser, t_lbracket)) {
+	consume(parser, dt_num, "expected number after indexing");
+	Token *idx = previous(parser);
+	expr->index = str_view_to_int(idx->lexeme);
+	consume(parser, t_rbracket, "expected ']' after indexing");
+    } else {
+	expr->index = -1;
+    }
+
+    return (Expr *)expr;
 }
 
 static Expr *primary(Parser *parser)
 {
     if (match(parser, t_true, t_false))
 	return bool_lit(parser);
-
-    if (match(parser, t_interpolation))
-	return interpolation(parser);
 
     if (check(parser, t_dot_dot))
 	return range(parser);
@@ -440,15 +463,6 @@ static Expr *number(Parser *parser)
     Token *token = previous(parser);
     LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
     expr->value = (SlashValue){ .type = SLASH_NUM, .num = str_view_to_double(token->lexeme) };
-    return (Expr *)expr;
-}
-
-static Expr *interpolation(Parser *parser)
-{
-    Token *var_name = previous(parser);
-    InterpolationExpr *expr =
-	(InterpolationExpr *)expr_alloc(parser->ast_arena, EXPR_INTERPOLATION);
-    expr->var_name = var_name->lexeme;
     return (Expr *)expr;
 }
 

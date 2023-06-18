@@ -31,7 +31,7 @@ StateFn lex_argument(Lexer *lexer);
 StateFn lex_number(Lexer *lexer);
 StateFn lex_string(Lexer *lexer);
 StateFn lex_identifier(Lexer *lexer);
-StateFn lex_interpolation(Lexer *lexer);
+StateFn lex_access(Lexer *lexer);
 StateFn lex_comment(Lexer *lexer);
 StateFn lex_subshell_start(Lexer *lexer);
 StateFn lex_subshell_end(Lexer *lexer);
@@ -99,7 +99,7 @@ char *token_type_str_map[t_enum_count] = {
     "dt_shlit",
     "dt_none",
 
-    "t_interpolation",
+    "t_access",
     "t_identifier",
     "t_newline",
     "t_eof",
@@ -420,7 +420,7 @@ StateFn lex_any(Lexer *lexer)
 	    return STATE_FN(lex_number);
 
 	case '$':
-	    return STATE_FN(lex_interpolation);
+	    return STATE_FN(lex_access);
 
 	case '"':
 	    return STATE_FN(lex_string);
@@ -482,7 +482,7 @@ StateFn lex_argument(Lexer *lexer)
 	case '$':
 	    shlit_seperate(lexer);
 	    next(lexer);
-	    lex_interpolation(lexer);
+	    lex_access(lexer);
 	    break;
 
 	case '"':
@@ -565,7 +565,7 @@ StateFn lex_identifier(Lexer *lexer)
     return STATE_FN(lex_argument);
 }
 
-StateFn lex_interpolation(Lexer *lexer)
+StateFn lex_access(Lexer *lexer)
 {
     /* came from '$' which we want to ignore */
     ignore(lexer);
@@ -574,7 +574,18 @@ StateFn lex_interpolation(Lexer *lexer)
     while (is_valid_identifier(next(lexer)))
 	;
     backup(lexer);
-    emit(lexer, t_interpolation);
+    emit(lexer, t_access);
+
+    if (!match(lexer, '[')) {
+	return STATE_FN(lex_any);
+    }
+
+    /* consume '[' any number ']' */
+    emit(lexer, t_lbracket);
+    lex_number(lexer);
+    if (!match(lexer, ']'))
+	slash_exit_lex_err("expected ']' after variable access");
+    emit(lexer, t_rbracket);
 
     return STATE_FN(lex_any);
 }

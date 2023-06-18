@@ -3,3 +3,9 @@ var fruits = ["apple", "banana", "orange", $pear]
 
 # modify the element of a list
 $fruits[1] = "strawberry"
+
+$fruits[1]
+
+loop c in $fruits[1] {
+    echo $c
+}

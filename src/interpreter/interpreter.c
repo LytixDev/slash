@@ -153,12 +153,23 @@ static SlashValue eval_literal(Interpreter *interpreter, LiteralExpr *expr)
     return expr->value;
 }
 
-static SlashValue eval_interpolation(Interpreter *interpreter, InterpolationExpr *expr)
+static SlashValue eval_access(Interpreter *interpreter, AccessExpr *expr)
 {
     ScopeAndValue sv = var_get(interpreter->scope, &expr->var_name);
-    if (sv.value != NULL)
+    /* If variable is not defined, then return None. Same behaviour as POSIX sh I think */
+    if (sv.value == NULL)
+	return (SlashValue){ .type = SLASH_NONE };
+
+    /* index != -1 means we are not doing a variable access */
+    if (expr->index == -1)
 	return *sv.value;
-    return (SlashValue){ .type = SLASH_NONE };
+
+    /* variable access only defined for list */
+    if (sv.value->type != SLASH_LIST)
+	slash_exit_interpreter_err("variable access only supported for list");
+
+    /* returns a copy */
+    return *slash_list_get(&sv.value->list, expr->index);
 }
 
 static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
@@ -258,22 +269,35 @@ static void exec_block(Interpreter *interpreter, BlockStmt *stmt)
 
 static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
 {
+    StrView variable_name = ((AccessExpr *)stmt->variable_name)->var_name;
+    ScopeAndValue current_value = var_get(interpreter->scope, &variable_name);
+    if (current_value.value == NULL)
+	slash_exit_interpreter_err("cannot modify undefined variable");
+
     SlashValue new_value = eval(interpreter, stmt->value);
-    if (stmt->assignment_op == t_equal) {
-	var_assign(interpreter->scope, &stmt->name, &new_value);
-	return;
+
+    /* no index access */
+    if (stmt->variable_name->index == -1) {
+	if (stmt->assignment_op == t_equal) {
+	    var_assign(interpreter->scope, &variable_name, &new_value);
+	    return;
+	}
+
+	// TODO: list and str
+	check_num_operands(&new_value, current_value.value);
+	if (stmt->assignment_op == t_plus_equal)
+	    new_value.num += current_value.value->num;
+	else
+	    new_value.num -= current_value.value->num;
+	var_assign(interpreter->scope, &variable_name, current_value.value);
     }
 
-    // TODO: have a function that gets a mutable reference to a variable?
-    ScopeAndValue current_value = var_get(interpreter->scope, &stmt->name);
-    // TODO: support += operator for str and list
-    check_num_operands(&new_value, current_value.value);
-    if (stmt->assignment_op == t_plus_equal)
-	current_value.value->num += new_value.num;
-    else
-	current_value.value->num -= new_value.num;
+    // TODO: str
+    if (current_value.value->type != SLASH_LIST)
+	slash_exit_interpreter_err("can only access element of list");
 
-    var_assign(interpreter->scope, &stmt->name, current_value.value);
+    slash_list_set(&current_value.value->list, new_value, stmt->variable_name->index);
+    var_assign(interpreter->scope, &variable_name, current_value.value);
 }
 
 static void exec_loop(Interpreter *interpreter, LoopStmt *stmt)
@@ -373,8 +397,8 @@ static SlashValue eval(Interpreter *interpreter, Expr *expr)
     case EXPR_LITERAL:
 	return eval_literal(interpreter, (LiteralExpr *)expr);
 
-    case EXPR_INTERPOLATION:
-	return eval_interpolation(interpreter, (InterpolationExpr *)expr);
+    case EXPR_ACCESS:
+	return eval_access(interpreter, (AccessExpr *)expr);
 
     case EXPR_SUBSHELL:
 	return eval_subshell(interpreter, (SubshellExpr *)expr);

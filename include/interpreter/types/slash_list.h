@@ -40,6 +40,7 @@ void slash_list_init(SlashList *list);
 bool slash_list_append(SlashList *list, SlashValue val);
 
 SlashValue *slash_list_get(SlashList *list, size_t idx);
+bool slash_list_set(SlashList *list, SlashValue val, size_t idx);
 
 void slash_list_print(SlashList *list);
 

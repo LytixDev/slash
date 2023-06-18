@@ -28,7 +28,7 @@ typedef enum {
     EXPR_UNARY = 0,
     EXPR_BINARY,
     EXPR_LITERAL,
-    EXPR_INTERPOLATION,
+    EXPR_ACCESS,
     EXPR_SUBSHELL,
     EXPR_LIST,
     EXPR_ENUM_COUNT
@@ -83,8 +83,8 @@ typedef struct {
 typedef struct {
     ExprType type;
     StrView var_name;
-    int index; // optional
-} InterpolationExpr;
+    int index;
+} AccessExpr;
 
 typedef struct {
     ExprType type;
@@ -142,7 +142,7 @@ typedef struct {
 
 typedef struct {
     StmtType type;
-    StrView name;
+    AccessExpr *variable_name;
     TokenType assignment_op;
     Expr *value;
 } AssignStmt;

@@ -91,7 +91,7 @@ typedef enum {
     dt_none,
 
     /* */
-    t_interpolation,
+    t_access,
     t_identifier,
     t_newline,
     t_eof,
