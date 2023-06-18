@@ -27,7 +27,7 @@ String buitins such as .lower, .upper, .split, slice?
 Very similar to a list in Python.
 
 TODO:
-list buitins
+list builtins
 ```
 [1, 2, 3]
 ["Baines", "Jagielka", "Distin", "Coleman"]
@@ -37,7 +37,7 @@ list buitins
 ```
 var a = [1, 2, 3]
 var val1 = $a[0]
-var a_slice = $a[:2]
+var slice = $a[..2]
 ```
 
 # Comments
