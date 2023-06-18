@@ -1,11 +1,17 @@
+# initialize a list
 var pear = "pear"
 var fruits = ["apple", "banana", "orange", $pear]
+
+# iterate over the list
+loop fruit in $fruits {
+    echo $fruit
+}
 
 # modify the element of a list
 $fruits[1] = "strawberry"
 
-$fruits[1]
+# append/emplace_back/push to a list
+$fruits += ["dragonfruit"]
+$fruits += "cheese"
 
-loop c in $fruits[1] {
-    echo $c
-}
+$fruits

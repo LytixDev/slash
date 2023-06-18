@@ -38,8 +38,10 @@ void slash_list_init(SlashList *list);
 // void slash_list_copy(SlashList *list);
 
 bool slash_list_append(SlashList *list, SlashValue val);
+void slash_list_append_list(SlashList *list, SlashList *to_append);
 
 SlashValue *slash_list_get(SlashList *list, size_t idx);
+
 bool slash_list_set(SlashList *list, SlashValue val, size_t idx);
 
 void slash_list_print(SlashList *list);

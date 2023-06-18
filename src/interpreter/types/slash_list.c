@@ -32,6 +32,12 @@ bool slash_list_append(SlashList *list, SlashValue val)
     return arraylist_append(&list->underlying, &val);
 }
 
+void slash_list_append_list(SlashList *list, SlashList *to_append)
+{
+    for (size_t i = 0; i < to_append->underlying.size; i++)
+	arraylist_append(&list->underlying, slash_list_get(to_append, i));
+}
+
 bool slash_list_set(SlashList *list, SlashValue val, size_t idx)
 {
     return arraylist_set(&list->underlying, &val, idx);

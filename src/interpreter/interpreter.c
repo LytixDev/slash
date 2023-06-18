@@ -112,28 +112,45 @@ static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
     SlashValue left = eval(interpreter, expr->left);
     SlashValue right = eval(interpreter, expr->right);
     // TODO: allow plus operator for str and list
-    check_num_operands(&left, &right);
+    // check_num_operands(&left, &right);
 
     SlashValue result;
 
     switch (expr->operator_) {
     case t_greater:
+	check_num_operands(&left, &right);
 	result = (SlashValue){ .type = SLASH_BOOL, .boolean = left.num > right.num };
 	break;
     case t_greater_equal:
+	check_num_operands(&left, &right);
 	result = (SlashValue){ .type = SLASH_BOOL, .boolean = left.num >= right.num };
 	break;
     case t_less:
+	check_num_operands(&left, &right);
 	result = (SlashValue){ .type = SLASH_BOOL, .boolean = left.num < right.num };
 	break;
+	check_num_operands(&left, &right);
     case t_less_equal:
 	result = (SlashValue){ .type = SLASH_BOOL, .boolean = left.num <= right.num };
 	break;
 
     case t_plus:
-	result = (SlashValue){ .type = SLASH_NUM, .num = left.num + right.num };
+	if (left.type == SLASH_NUM && right.type == SLASH_NUM) {
+	    result = (SlashValue){ .type = SLASH_NUM, .num = left.num + right.num };
+	} else if (left.type == SLASH_LIST && right.type == SLASH_LIST) {
+	    slash_list_append_list(&left.list, &right.list);
+	    result = left;
+	} else if (left.type == SLASH_LIST) {
+	    slash_list_append(&left.list, right);
+	    result = left;
+	} else {
+	    slash_exit_interpreter_err(
+		"plus operator only supported for num and num or list and list");
+	}
 	break;
+
     case t_minus:
+	check_num_operands(&left, &right);
 	result = (SlashValue){ .type = SLASH_NUM, .num = left.num - right.num };
 	break;
 
@@ -283,19 +300,23 @@ static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
 	    return;
 	}
 
-	// TODO: list and str
-	check_num_operands(&new_value, current_value.value);
-	if (stmt->assignment_op == t_plus_equal)
-	    new_value.num += current_value.value->num;
-	else
-	    new_value.num -= current_value.value->num;
-	var_assign(interpreter->scope, &variable_name, current_value.value);
+	// TODO: this should be done in the parser
+	TokenType operator_ = stmt->assignment_op == t_plus_equal ? t_plus : t_minus;
+	LiteralExpr left = { .type = EXPR_LITERAL, .value = *current_value.value };
+	LiteralExpr right = { .type = EXPR_LITERAL, .value = new_value };
+	BinaryExpr expr = { .type = EXPR_BINARY,
+			    .left = (Expr *)&left,
+			    .operator_ = operator_,
+			    .right = (Expr *)&right };
+	SlashValue result = eval_binary(interpreter, &expr);
+	var_assign(interpreter->scope, &variable_name, &result);
     }
 
     // TODO: str
     if (current_value.value->type != SLASH_LIST)
 	slash_exit_interpreter_err("can only access element of list");
 
+    // TODO: here we ignore the operator
     slash_list_set(&current_value.value->list, new_value, stmt->variable_name->index);
     var_assign(interpreter->scope, &variable_name, current_value.value);
 }

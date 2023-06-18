@@ -273,13 +273,17 @@ static Stmt *assignment_stmt(Parser *parser)
     if (!check(parser, t_access))
 	return expr_stmt(parser);
 
+    // TODO: this is a hack
+    size_t pos_pre = parser->token_pos;
     AccessExpr *name = (AccessExpr *)access(parser);
     if (!match(parser, t_equal, t_plus_equal, t_minus_equal)) {
+	parser->token_pos = pos_pre;
+	return expr_stmt(parser);
 	/* access not part of assignment statement, so treat it as expression statement */
-	consume(parser, t_newline, "Expected newline after expression statement");
-	ExpressionStmt *stmt = (ExpressionStmt *)stmt_alloc(parser->ast_arena, STMT_EXPRESSION);
-	stmt->expression = (Expr *)name;
-	return (Stmt *)stmt;
+	// consume(parser, t_newline, "Expected newline after expression statement");
+	// ExpressionStmt *stmt = (ExpressionStmt *)stmt_alloc(parser->ast_arena, STMT_EXPRESSION);
+	// stmt->expression = (Expr *)name;
+	// return (Stmt *)stmt;
     }
 
     /* access part of assignment */
