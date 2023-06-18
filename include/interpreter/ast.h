@@ -80,10 +80,22 @@ typedef struct {
     SlashValue value;
 } LiteralExpr;
 
+typedef enum {
+    ACCESS_NONE,
+    ACCESS_INDEX,
+    ACCESS_KEY,
+    ACCESS_RANGE,
+} AccessType;
+
 typedef struct {
     ExprType type;
     StrView var_name;
-    int index;
+    AccessType access_type;
+    union {
+	int index;
+	StrView key;
+	SlashRange range;
+    };
 } AccessExpr;
 
 typedef struct {
@@ -93,7 +105,7 @@ typedef struct {
 
 typedef struct {
     ExprType type;
-    ArenaLL *exprs;
+    ArenaLL *exprs; // will be NULL for the empty list
 } ListExpr;
 
 
@@ -142,7 +154,7 @@ typedef struct {
 
 typedef struct {
     StmtType type;
-    AccessExpr *variable_name;
+    AccessExpr *access;
     TokenType assignment_op;
     Expr *value;
 } AssignStmt;

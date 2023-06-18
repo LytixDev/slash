@@ -53,6 +53,8 @@ SlashValue *slash_value_arena_alloc(Arena *arena, SlashValueType type);
 
 bool is_truthy(SlashValue *value);
 
+bool slash_value_eq(SlashValue *a, SlashValue *b);
+
 void slash_value_print(SlashValue *value);
 
 #endif /* SLASH_VALUE_H */

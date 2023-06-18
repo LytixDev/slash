@@ -3,15 +3,6 @@ var pear = "pear"
 var fruits = ["apple", "banana", "orange", $pear]
 
 # iterate over the list
-loop fruit in $fruits {
-    echo $fruit
+loop fruit in $fruits[..3] {
+    $fruit
 }
-
-# modify the element of a list
-$fruits[1] = "strawberry"
-
-# append/emplace_back/push to a list
-$fruits += ["dragonfruit"]
-$fruits += "cheese"
-
-$fruits

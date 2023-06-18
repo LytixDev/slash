@@ -122,8 +122,15 @@ static void ast_print_literal(LiteralExpr *expr)
 static void ast_print_access(AccessExpr *expr)
 {
     str_view_print(expr->var_name);
-    if (expr->index != -1)
+    if (expr->access_type == ACCESS_INDEX) {
 	printf(".get(%d)", expr->index);
+    } else if (expr->access_type == ACCESS_KEY) {
+	printf(".get(");
+	str_view_print(expr->key);
+	printf(")");
+    } else if (expr->access_type == ACCESS_RANGE) {
+	printf(".get(%d..%d)", expr->range.start, expr->range.end);
+    }
 }
 
 static void ast_print_list(ListExpr *expr)
@@ -203,7 +210,7 @@ static void ast_print_iter_loop(IterLoopStmt *stmt)
 
 static void ast_print_assign(AssignStmt *stmt)
 {
-    ast_print_expr(stmt->variable_name);
+    ast_print_expr(stmt->access);
     if (stmt->assignment_op == t_equal)
 	printf(" = ");
     else if (stmt->assignment_op == t_plus_equal)

@@ -576,13 +576,32 @@ StateFn lex_access(Lexer *lexer)
     backup(lexer);
     emit(lexer, t_access);
 
+    /* optional element access */
     if (!match(lexer, '[')) {
 	return STATE_FN(lex_any);
     }
 
-    /* consume '[' any number ']' */
     emit(lexer, t_lbracket);
-    lex_number(lexer);
+    bool some_indicy = false;
+    if (is_numeric(peek(lexer))) {
+	lex_number(lexer);
+	some_indicy = true;
+    }
+
+    if (match(lexer, '.')) {
+	if (!match(lexer, '.'))
+	    slash_exit_lex_err("expected another '.' after ranged access");
+	emit(lexer, t_dot_dot);
+
+	if (!is_numeric(peek(lexer)))
+	    slash_exit_lex_err("expected base10 number");
+	lex_number(lexer);
+	some_indicy = true;
+    }
+
+    if (!some_indicy)
+	slash_exit_lex_err("expected a valid indicy after element access");
+
     if (!match(lexer, ']'))
 	slash_exit_lex_err("expected ']' after variable access");
     emit(lexer, t_rbracket);

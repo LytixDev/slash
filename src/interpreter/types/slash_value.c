@@ -43,11 +43,43 @@ bool is_truthy(SlashValue *sv)
     case SLASH_BOOL:
 	return sv->boolean;
 
+    case SLASH_LIST:
+	return sv->list.underlying.size != 0;
+
     case SLASH_NONE:
 	return false;
 
     default:
 	fprintf(stderr, "truthy not defined for this type, returning false");
+    }
+
+    return false;
+}
+
+bool slash_value_eq(SlashValue *a, SlashValue *b)
+{
+    if (a->type != b->type)
+	return false;
+
+    switch (a->type) {
+    case SLASH_STR:
+    case SLASH_SHLIT:
+	return str_view_eq(a->str, b->str);
+
+    case SLASH_NUM:
+	return a->num == b->num;
+
+    case SLASH_BOOL:
+	return a->boolean == b->boolean;
+
+    case SLASH_LIST:
+	return slash_list_eq(&a->list, &b->list);
+
+    case SLASH_NONE:
+	return false;
+
+    default:
+	fprintf(stderr, "equality not defined for this type, returning false");
     }
 
     return false;
@@ -67,6 +99,10 @@ void slash_value_print(SlashValue *sv)
 
     case SLASH_LIST:
 	slash_list_print(&sv->list);
+	break;
+
+    case SLASH_BOOL:
+	printf("%s", sv->boolean ? "true" : "false");
 	break;
 
     default:

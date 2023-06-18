@@ -279,11 +279,6 @@ static Stmt *assignment_stmt(Parser *parser)
     if (!match(parser, t_equal, t_plus_equal, t_minus_equal)) {
 	parser->token_pos = pos_pre;
 	return expr_stmt(parser);
-	/* access not part of assignment statement, so treat it as expression statement */
-	// consume(parser, t_newline, "Expected newline after expression statement");
-	// ExpressionStmt *stmt = (ExpressionStmt *)stmt_alloc(parser->ast_arena, STMT_EXPRESSION);
-	// stmt->expression = (Expr *)name;
-	// return (Stmt *)stmt;
     }
 
     /* access part of assignment */
@@ -291,7 +286,7 @@ static Stmt *assignment_stmt(Parser *parser)
     Expr *value = expression(parser);
 
     AssignStmt *stmt = (AssignStmt *)stmt_alloc(parser->ast_arena, STMT_ASSIGN);
-    stmt->variable_name = name;
+    stmt->access = name;
     stmt->assignment_op = assignment_op->type;
     stmt->value = value;
     return (Stmt *)stmt;
@@ -410,16 +405,30 @@ static Expr *access(Parser *parser)
     AccessExpr *expr = (AccessExpr *)expr_alloc(parser->ast_arena, EXPR_ACCESS);
     expr->var_name = variable_name->lexeme;
 
-    /* optional list/str element access "[num]" */
-    if (match(parser, t_lbracket)) {
-	consume(parser, dt_num, "expected number after indexing");
-	Token *idx = previous(parser);
-	expr->index = str_view_to_int(idx->lexeme);
-	consume(parser, t_rbracket, "expected ']' after indexing");
-    } else {
-	expr->index = -1;
+    /* optional element access using brackets */
+    if (!match(parser, t_lbracket)) {
+	expr->access_type = ACCESS_NONE;
+	return (Expr *)expr;
     }
 
+    int range_start_or_index = 0;
+    if (match(parser, dt_num)) {
+	Token *start_token = previous(parser);
+	range_start_or_index = str_view_to_int(start_token->lexeme);
+    }
+
+    if (match(parser, t_dot_dot)) {
+	consume(parser, dt_num, "expected number after ranged access");
+	Token *end = previous(parser);
+	expr->access_type = ACCESS_RANGE;
+	expr->range.start = range_start_or_index;
+	expr->range.end = str_view_to_int(end->lexeme);
+    } else {
+	expr->access_type = ACCESS_INDEX;
+	expr->index = range_start_or_index;
+    }
+
+    consume(parser, t_rbracket, "expected ']' after indexing");
     return (Expr *)expr;
 }
 

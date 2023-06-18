@@ -49,7 +49,7 @@ term            -> factor (( "-" | "+" ) factor )* ;
 factor          -> unary ;
 unary           -> access ;
 
-access          -> ACCESS ( "[" NUMBER "]" )?
+access          -> ACCESS ( "[" NUMBER ( ".." NUMBER )? "]" )?
                 |  primary;
 
 primary         -> STRING 

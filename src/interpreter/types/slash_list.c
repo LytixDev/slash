@@ -48,6 +48,31 @@ SlashValue *slash_list_get(SlashList *list, size_t idx)
     return arraylist_get(&list->underlying, idx);
 }
 
+void slash_list_from_ranged_copy(SlashList *ret_ptr, SlashList *to_copy, SlashRange range)
+{
+    slash_list_init(ret_ptr);
+    assert(range.end <= to_copy->underying.size);
+    for (int i = range.start; i < range.end; i++)
+	arraylist_append(&ret_ptr->underlying, arraylist_get(&to_copy->underlying, i));
+}
+
+bool slash_list_eq(SlashList *a, SlashList *b)
+{
+    if (a->underlying.size != b->underlying.size)
+	return false;
+
+    SlashValue *A;
+    SlashValue *B;
+    for (size_t i = 0; i < a->underlying.size; i++) {
+	A = slash_list_get(a, i);
+	B = slash_list_get(b, i);
+	if (!slash_value_eq(A, B))
+	    return false;
+    }
+    return true;
+}
+
+
 void slash_list_print(SlashList *list)
 {
     putchar('[');

@@ -4,7 +4,7 @@ var fruits = ["apple", "banana", "orange", $pear]
 
 # iterate over the list
 loop fruit in $fruits {
-    echo $fruit
+    $fruit
 }
 
 # modify the element of a list
@@ -13,6 +13,7 @@ $fruits[1] = "strawberry"
 # append/emplace_back/push to a list
 $fruits += ["dragonfruit"]
 $fruits += "cheese"
+$fruits
 
 # length
 $fruits.length()
@@ -28,5 +29,5 @@ list.remove("apple")
 
 # create a sliced copy
 var primes = [2, 3, 5, 7, 11, 13]
-var sliced = $primes[1:4]
+var sliced = $primes[1..4]
 echo $sliced

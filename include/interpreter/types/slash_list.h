@@ -17,7 +17,7 @@
 #ifndef SLASH_LIST_H
 #define SLASH_LIST_H
 
-// #include "interpreter/types/slash_value.h"
+#include "interpreter/types/slash_range.h"
 #include "nicc/nicc.h"
 
 typedef struct slash_value_t SlashValue; // Forward declaration of SlashValue
@@ -43,6 +43,11 @@ void slash_list_append_list(SlashList *list, SlashList *to_append);
 SlashValue *slash_list_get(SlashList *list, size_t idx);
 
 bool slash_list_set(SlashList *list, SlashValue val, size_t idx);
+
+/* NOTE: function assumes ret_ptr is NOT initialized */
+void slash_list_from_ranged_copy(SlashList *ret_ptr, SlashList *to_copy, SlashRange range);
+
+bool slash_list_eq(SlashList *a, SlashList *b);
 
 void slash_list_print(SlashList *list);
 
