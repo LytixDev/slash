@@ -22,9 +22,9 @@
 
 /* types */
 typedef struct {
-    Arena *ast_arena;
+    Arena *ast_arena; // memory arena to put the all AST nodes on
     ArrayList *tokens;
-    size_t token_pos;
+    size_t token_pos; // index of current token being processed
 } Parser;
 
 /*

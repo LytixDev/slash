@@ -14,27 +14,28 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef SLASH_STR_H
-#define SLASH_STR_H
+#ifndef STR_VIEW_H
+#define STR_VIEW_H
 
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "nicc/nicc.h"
-
+/*
+ * the main string implementation used throughout the interpreter
+ * the char *view is a view into some memory and will most likely not be null terminated,
+ */
 typedef struct {
-    char *p; // pointer into some memory in an arena
+    char *view; // pointer into some memory in an arena
     size_t size;
-} SlashStr;
+} StrView;
 
 
-void slash_str_print(SlashStr s);
-void slash_str_println(SlashStr s);
+void str_view_print(StrView s);
+void str_view_println(StrView s);
+double str_view_to_double(StrView s);
+int32_t str_view_to_int(StrView s);
+bool str_view_eq(StrView a, StrView b);
 
-double slash_str_to_double(SlashStr s);
-int32_t slash_str_to_int(SlashStr s);
 
-bool slash_str_eq(SlashStr a, SlashStr b);
-
-#endif /* SLASH_STR_H */
+#endif /* STR_VIEW_H */

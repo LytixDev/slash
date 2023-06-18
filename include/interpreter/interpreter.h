@@ -23,6 +23,7 @@
 #include "sac/sac.h"
 
 typedef struct {
+    Arena arena;
     Scope globals;
     Scope *scope;
     int exit_code;

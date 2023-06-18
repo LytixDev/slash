@@ -20,12 +20,12 @@
 #include "sac/sac.h"
 
 /*
- * Linked list data structure for the SAC memory arena
+ * Linked list data structure for the sac memory arena
  */
 
 typedef struct arena_ll_item_t LLItem;
 struct arena_ll_item_t {
-    void *p; // a view into the arena
+    void *value; // a view into some memory in the arena
     LLItem *next;
 };
 

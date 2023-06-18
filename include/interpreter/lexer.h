@@ -19,8 +19,8 @@
 
 #include <stdint.h>
 
-#include "interpreter/types/slash_str.h"
 #include "nicc/nicc.h"
+#include "str_view.h"
 
 #define STATE_FN(___state_fn) \
     (StateFn)                 \
@@ -88,9 +88,10 @@ typedef enum {
     dt_range,
     dt_bool,
     dt_shlit,
+    dt_none,
 
     /* */
-    t_interpolation,
+    t_access,
     t_identifier,
     t_newline,
     t_eof,
@@ -104,12 +105,12 @@ extern char *token_type_str_map[t_enum_count];
 
 typedef struct {
     TokenType type;
-    SlashStr lexeme;
+    StrView lexeme;
 } Token;
 
 typedef struct {
     char *input; // the input string being scanned.
-    size_t input_size;
+    size_t input_size; // size of input in bytes.
     size_t start; // start position of this token.
     size_t pos; // current position in the input.
     ArrayList *tokens;

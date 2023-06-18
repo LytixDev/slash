@@ -20,28 +20,41 @@
 #include <stdbool.h>
 
 #include "interpreter/lexer.h"
+#include "interpreter/types/slash_list.h"
+#include "interpreter/types/slash_range.h"
 #include "sac/sac.h"
 
 
 typedef enum {
-    SVT_BOOL = 0, // p = bool *
-    SVT_STR, // p = SlashStr *
-    SVT_NUM, // p = double *
-    SVT_SHLIT, // p = SlashStr *
-    SVT_RANGE, // p = SlashRange *
-    SVT_NONE, // p = NULL
+    SLASH_BOOL = 0,
+    SLASH_STR,
+    SLASH_NUM,
+    SLASH_SHLIT,
+    SLASH_RANGE,
+    SLASH_LIST,
+    SLASH_NONE,
+    SLASH_ANY,
 } SlashValueType;
 
-typedef struct {
-    void *p; // arena allocated (TODO: well, should be)
+
+typedef struct slash_value_t {
     SlashValueType type;
+    union {
+	StrView str;
+	bool boolean;
+	double num;
+	SlashRange range;
+	SlashList list;
+    };
 } SlashValue;
 
 
+SlashValue *slash_value_arena_alloc(Arena *arena, SlashValueType type);
+
 bool is_truthy(SlashValue *value);
-// TODO: all of these functions are turbo ugly
-SlashValue slash_value_cmp(Arena *arena, SlashValue a, SlashValue b, TokenType operator);
-void slash_value_print(SlashValue sv);
-void slash_value_println(SlashValue sv);
+
+bool slash_value_eq(SlashValue *a, SlashValue *b);
+
+void slash_value_print(SlashValue *value);
 
 #endif /* SLASH_VALUE_H */

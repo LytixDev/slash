@@ -1,6 +1,6 @@
 /* context-free expression grammar */
 
-program         -> (declaration "\n"?* )* EOF ;
+program         -> (declaration "\n"*? )* EOF ;
 
 declaration     -> var_declaration
                 |  statement ;
@@ -27,7 +27,7 @@ if_stmt         -> "if" expression block (( "elif" expression block ) | ( "else"
 
 cmd_stmt        -> SHLIT ( argument* )? ;
 
-assignment_stmt -> INTERPOLATION ("=" | "+=" | "-=") expression ;
+assignment_stmt -> access ("=" | "+=" | "-=") expression ;
 
 expr_stmt       -> expressions "\n" ;
 
@@ -47,19 +47,22 @@ equality        -> comparison (( "!=" | "==" ) comparison )* ;
 comparison      -> term (( ">" | ">=" | "<" | "<=" ) term )* ;
 term            -> factor (( "-" | "+" ) factor )* ;
 factor          -> unary ;
-unary           -> primary ;
+unary           -> access ;
+
+access          -> ACCESS ( "[" NUMBER ( ".." NUMBER )? "]" )?
+                |  primary;
 
 primary         -> STRING 
                 |  SHLIT
                 |  bool_lit
                 |  number
-                |  interpolation 
-                |  range ;
+                |  range 
+                |  list ;
 
 bool_lit        -> "true" | "false ";
 
 number          -> NUMBER ;
 
-interpolation   -> INTERPOLATION ;
-
 range           -> NUMBER? ".." NUMBER ;
+
+list            -> "[" ( expression )*? "]" ;

@@ -17,12 +17,19 @@ Design document of the language can be found [here](https://github.com/LytixDev/
 ### REPL-like
 Raw expressions are evaluted and printed out to the terminal.
 ```
-0xff + 1  # prints 256
-10 - -1   # prints 11
+0xff + 1    # prints 256
+10 - -1     # prints 11
+0xff == 255 # prints 'true'
 ```
 You want to do the same in POSIX sh? That would look something like:
 ```sh
 echo $((0xff + 1))  # prints 256
+# or
+if [ $((0xff)) -eq 255 ]; then
+    echo "true"
+else
+    echo "false"
+fi
 ```
 This verbosity is really annoying and makes the POSIX shell a poor choice for quick mafs. One major goal for Slash is empowering (buzzy buzzy) the user to do simple and more complex calculations ergonomically (buzzy buzzy).
 ### C-style, but no parentheses or semicolons
@@ -51,12 +58,16 @@ loop i in 3..5 {
 ```
 var names = ["Alice", "Bob", "Callum"]
 loop name in $names {
-    if $name == Callum {
-        echo $name "= enemy"
+    if $name == "Callum" {
+        echo "Hello, enemy"
     } else {
-        echo $name "= friend"
+        echo "Hello, friend"
     }
 }
+```
+```
+var primes = [2, 3, 5, 7, 11, 13]
+$primes[1..4] # prints '[3, 5, 7]'
 ```
 
 ### Functions
@@ -90,7 +101,6 @@ The lexer is heavily influenced by [this brilliant talk](https://www.youtube.com
 - Have fun writing C code :-)
 
 ## Status
-Currently variable assignment, basic arihtmetic, if-elif-else and loops work. That's about it.
-
+Currently variable assignment, basic arihtmetic, if-elif-else, loops, list, slices, ranges.
 ## Contact
 mail to nicolahb at stud dot ntnu dot no

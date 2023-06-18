@@ -21,11 +21,10 @@
 #include "interpreter/ast.h"
 #include "interpreter/lexer.h"
 #include "interpreter/parser.h"
-#include "interpreter/types/slash_range.h"
-#include "interpreter/types/slash_str.h"
 #include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
 #include "sac/sac.h"
+#include "str_view.h"
 
 
 /* util/helper functions */
@@ -148,11 +147,12 @@ static Expr *comparison(Parser *parser);
 static Expr *term(Parser *parser);
 static Expr *factor(Parser *parser);
 static Expr *unary(Parser *parser);
+static Expr *access(Parser *parser);
 static Expr *primary(Parser *parser);
 static Expr *bool_lit(Parser *parser);
 static Expr *number(Parser *parser);
-static Expr *interpolation(Parser *parser);
 static Expr *range(Parser *parser);
+static Expr *list(Parser *parser);
 
 static Stmt *declaration(Parser *parser)
 {
@@ -179,16 +179,14 @@ static Stmt *statement(Parser *parser)
     if (match(parser, t_if))
 	return if_stmt(parser);
 
-    if (match(parser, t_interpolation))
-	return assignment_stmt(parser);
-
     if (match(parser, t_lbrace))
 	return block(parser);
 
     if (match(parser, dt_shlit))
 	return cmd_stmt(parser);
 
-    return expr_stmt(parser);
+    /* returns expr_stmt if following tokens is not a valid assignment */
+    return assignment_stmt(parser);
 }
 
 static Stmt *expr_stmt(Parser *parser)
@@ -272,18 +270,23 @@ static Stmt *block(Parser *parser)
 
 static Stmt *assignment_stmt(Parser *parser)
 {
-    /* came from t_interpolation */
-    Token *name = previous(parser);
-    // TODO: consume_any
+    if (!check(parser, t_access))
+	return expr_stmt(parser);
+
+    // TODO: this is a hack
+    size_t pos_pre = parser->token_pos;
+    AccessExpr *name = (AccessExpr *)access(parser);
     if (!match(parser, t_equal, t_plus_equal, t_minus_equal)) {
-	slash_exit_parse_err("Expected '=', '+=' or '-='");
+	parser->token_pos = pos_pre;
+	return expr_stmt(parser);
     }
 
+    /* access part of assignment */
     Token *assignment_op = previous(parser);
     Expr *value = expression(parser);
 
     AssignStmt *stmt = (AssignStmt *)stmt_alloc(parser->ast_arena, STMT_ASSIGN);
-    stmt->name = name->lexeme;
+    stmt->access = name;
     stmt->assignment_op = assignment_op->type;
     stmt->value = value;
     return (Stmt *)stmt;
@@ -390,16 +393,49 @@ static Expr *factor(Parser *parser)
 
 static Expr *unary(Parser *parser)
 {
-    return primary(parser);
+    return access(parser);
+}
+
+static Expr *access(Parser *parser)
+{
+    if (!match(parser, t_access))
+	return primary(parser);
+
+    Token *variable_name = previous(parser);
+    AccessExpr *expr = (AccessExpr *)expr_alloc(parser->ast_arena, EXPR_ACCESS);
+    expr->var_name = variable_name->lexeme;
+
+    /* optional element access using brackets */
+    if (!match(parser, t_lbracket)) {
+	expr->access_type = ACCESS_NONE;
+	return (Expr *)expr;
+    }
+
+    int range_start_or_index = 0;
+    if (match(parser, dt_num)) {
+	Token *start_token = previous(parser);
+	range_start_or_index = str_view_to_int(start_token->lexeme);
+    }
+
+    if (match(parser, t_dot_dot)) {
+	consume(parser, dt_num, "expected number after ranged access");
+	Token *end = previous(parser);
+	expr->access_type = ACCESS_RANGE;
+	expr->range.start = range_start_or_index;
+	expr->range.end = str_view_to_int(end->lexeme);
+    } else {
+	expr->access_type = ACCESS_INDEX;
+	expr->index = range_start_or_index;
+    }
+
+    consume(parser, t_rbracket, "expected ']' after indexing");
+    return (Expr *)expr;
 }
 
 static Expr *primary(Parser *parser)
 {
     if (match(parser, t_true, t_false))
 	return bool_lit(parser);
-
-    if (match(parser, t_interpolation))
-	return interpolation(parser);
 
     if (check(parser, t_dot_dot))
 	return range(parser);
@@ -410,14 +446,17 @@ static Expr *primary(Parser *parser)
 	return number(parser);
     }
 
+    if (match(parser, t_lbracket))
+	return list(parser);
+
     if (!match(parser, dt_str, dt_shlit))
 	slash_exit_parse_err("not a valid primary type");
 
     /* str or shlit */
     Token *token = previous(parser);
     LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
-    expr->value =
-	(SlashValue){ .type = token->type == dt_str ? SVT_STR : SVT_SHLIT, .p = &token->lexeme };
+    expr->value = (SlashValue){ .type = token->type == dt_str ? SLASH_STR : SLASH_SHLIT,
+				.str = token->lexeme };
     return (Expr *)expr;
 }
 
@@ -425,13 +464,10 @@ static Expr *bool_lit(Parser *parser)
 {
     Token *token = previous(parser);
     LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
-
-    SlashValue value;
-    value.type = SVT_BOOL;
-    value.p = m_arena_alloc(parser->ast_arena, sizeof(bool));
-    *(bool *)value.p = token->type == t_true ? true : false;
-
-    expr->value = value;
+    expr->value = (SlashValue){ .type = SLASH_BOOL, .boolean = t_true ? true : false };
+    // SlashBool *value = (SlashBool *)slash_value_arena_alloc(parser->ast_arena, SLASH_BOOL);
+    // value->value = token->type == t_true ? true : false;
+    // expr->value = (SlashValue *)value;
     return (Expr *)expr;
 }
 
@@ -439,22 +475,7 @@ static Expr *number(Parser *parser)
 {
     Token *token = previous(parser);
     LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
-
-    SlashValue value;
-    value.type = SVT_NUM;
-    value.p = m_arena_alloc(parser->ast_arena, sizeof(double));
-    *(double *)value.p = slash_str_to_double(token->lexeme);
-
-    expr->value = value;
-    return (Expr *)expr;
-}
-
-static Expr *interpolation(Parser *parser)
-{
-    Token *var_name = previous(parser);
-    InterpolationExpr *expr =
-	(InterpolationExpr *)expr_alloc(parser->ast_arena, EXPR_INTERPOLATION);
-    expr->var_name = var_name->lexeme;
+    expr->value = (SlashValue){ .type = SLASH_NUM, .num = str_view_to_double(token->lexeme) };
     return (Expr *)expr;
 }
 
@@ -474,21 +495,41 @@ ArrayList parse(Arena *ast_arena, ArrayList *tokens)
 
 static Expr *range(Parser *parser)
 {
-    SlashRange *range = m_arena_alloc_struct(parser->ast_arena, SlashRange);
-
+    SlashRange range;
     Token *start_num_or_any = previous(parser);
     if (start_num_or_any->type != dt_num)
-	range->start = 0;
+	range.start = 0;
     else
-	range->start = slash_str_to_int(start_num_or_any->lexeme);
+	range.start = str_view_to_int(start_num_or_any->lexeme);
 
-    consume(parser, t_dot_dot, "will only enter here if t_dot_dot was found");
+    consume(parser, t_dot_dot, "unreachable");
     consume(parser, dt_num, "Expected end number in range expression");
     Token *end_num = previous(parser);
-    range->end = slash_str_to_int(end_num->lexeme);
+    range.end = str_view_to_int(end_num->lexeme);
 
     LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
-    expr->value.p = range;
-    expr->value.type = SVT_RANGE;
+    expr->value = (SlashValue){ .type = SLASH_RANGE, .range = range };
+    return (Expr *)expr;
+}
+
+static Expr *list(Parser *parser)
+{
+    /* came from '[' */
+    ListExpr *expr = (ListExpr *)expr_alloc(parser->ast_arena, EXPR_LIST);
+
+    /* edge case: empty list */
+    if (match(parser, t_rbracket)) {
+	expr->exprs = NULL;
+	return (Expr *)expr;
+    }
+
+    expr->exprs = arena_ll_alloc(parser->ast_arena);
+    do {
+	arena_ll_append(expr->exprs, expression(parser));
+	/* "ignore" single trailing comma */
+	match(parser, t_comma);
+    } while (!check(parser, t_rbracket));
+
+    consume(parser, t_rbracket, "Expected ']' to terminate list");
     return (Expr *)expr;
 }

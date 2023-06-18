@@ -17,18 +17,16 @@
 #include <stdio.h>
 
 #include "arena_ll.h"
-#include "common.h"
 #include "interpreter/ast.h"
 #include "interpreter/lexer.h"
-#include "interpreter/types/slash_range.h"
-#include "interpreter/types/slash_str.h"
 #include "interpreter/types/slash_value.h"
 #include "sac/sac.h"
+#include "str_view.h"
 
 
 const size_t expr_size_table[] = {
-    sizeof(UnaryExpr),	       sizeof(BinaryExpr),   sizeof(LiteralExpr),
-    sizeof(InterpolationExpr), sizeof(SubshellExpr),
+    sizeof(UnaryExpr),	sizeof(BinaryExpr),   sizeof(LiteralExpr),
+    sizeof(AccessExpr), sizeof(SubshellExpr), sizeof(ListExpr),
 };
 
 const size_t stmt_size_table[] = { sizeof(ExpressionStmt), sizeof(VarStmt),  sizeof(LoopStmt),
@@ -36,7 +34,7 @@ const size_t stmt_size_table[] = { sizeof(ExpressionStmt), sizeof(VarStmt),  siz
 				   sizeof(AssignStmt),	   sizeof(BlockStmt) };
 
 char *expr_type_str_map[EXPR_ENUM_COUNT] = {
-    "EXPR_UNARY", "EXPR_BINARY", "EXPR_LITERAL", "EXPR_INTERPOLATION", "EXPR_SUBSHELL",
+    "EXPR_UNARY", "EXPR_BINARY", "EXPR_LITERAL", "EXPR_ACCESS", "EXPR_SUBSHELL", "EXPR_LIST",
 };
 
 char *stmt_type_str_map[STMT_ENUM_COUNT] = {
@@ -99,21 +97,21 @@ static void ast_print_range_literal(SlashRange *range)
 static void ast_print_literal(LiteralExpr *expr)
 {
     switch (expr->value.type) {
-    case SVT_STR:
-    case SVT_SHLIT:
-	slash_str_print(*(SlashStr *)expr->value.p);
+    case SLASH_STR:
+    case SLASH_SHLIT:
+	str_view_print(expr->value.str);
 	break;
 
-    case SVT_NUM:
-	printf("%f", *(double *)expr->value.p);
+    case SLASH_NUM:
+	printf("%f", expr->value.num);
 	break;
 
-    case SVT_BOOL:
-	printf("%s", *(bool *)expr->value.p == true ? "true" : "false");
+    case SLASH_BOOL:
+	printf("%s", expr->value.boolean == true ? "true" : "false");
 	break;
 
-    case SVT_RANGE:
-	ast_print_range_literal(expr->value.p);
+    case SLASH_RANGE:
+	ast_print_range_literal(&expr->value.range);
 	break;
 
     default:
@@ -121,9 +119,31 @@ static void ast_print_literal(LiteralExpr *expr)
     }
 }
 
-static void ast_print_interpolation(InterpolationExpr *expr)
+static void ast_print_access(AccessExpr *expr)
 {
-    slash_str_print(expr->var_name);
+    str_view_print(expr->var_name);
+    if (expr->access_type == ACCESS_INDEX) {
+	printf(".get(%d)", expr->index);
+    } else if (expr->access_type == ACCESS_KEY) {
+	printf(".get(");
+	str_view_print(expr->key);
+	printf(")");
+    } else if (expr->access_type == ACCESS_RANGE) {
+	printf(".get(%d..%d)", expr->range.start, expr->range.end);
+    }
+}
+
+static void ast_print_list(ListExpr *expr)
+{
+    if (expr->exprs == NULL)
+	return;
+
+    LLItem *item;
+    ARENA_LL_FOR_EACH(expr->exprs, item)
+    {
+	ast_print_expr(item->value);
+	printf(", ");
+    }
 }
 
 static void ast_print_expression(ExpressionStmt *stmt)
@@ -133,14 +153,14 @@ static void ast_print_expression(ExpressionStmt *stmt)
 
 static void ast_print_var(VarStmt *stmt)
 {
-    slash_str_print(stmt->name);
+    str_view_print(stmt->name);
     printf(" = ");
     ast_print_expr(stmt->initializer);
 }
 
 static void ast_print_cmd(CmdStmt *stmt)
 {
-    slash_str_print(stmt->cmd_name);
+    str_view_print(stmt->cmd_name);
     if (stmt->arg_exprs == NULL)
 	return;
 
@@ -148,7 +168,7 @@ static void ast_print_cmd(CmdStmt *stmt)
     LLItem *item;
     ARENA_LL_FOR_EACH(stmt->arg_exprs, item)
     {
-	ast_print_expr(item->p);
+	ast_print_expr(item->value);
     }
 }
 
@@ -170,7 +190,7 @@ static void ast_print_block(BlockStmt *stmt)
     LLItem *item;
     ARENA_LL_FOR_EACH(stmt->statements, item)
     {
-	ast_print_stmt(item->p);
+	ast_print_stmt(item->value);
     }
 }
 
@@ -182,7 +202,7 @@ static void ast_print_loop(LoopStmt *stmt)
 
 static void ast_print_iter_loop(IterLoopStmt *stmt)
 {
-    slash_str_print(stmt->var_name);
+    str_view_print(stmt->var_name);
     printf(" = iter.");
     ast_print_expr(stmt->underlying_iterable);
     ast_print_block(stmt->body_block);
@@ -190,7 +210,7 @@ static void ast_print_iter_loop(IterLoopStmt *stmt)
 
 static void ast_print_assign(AssignStmt *stmt)
 {
-    slash_str_print(stmt->name);
+    ast_print_expr(stmt->access);
     if (stmt->assignment_op == t_equal)
 	printf(" = ");
     else if (stmt->assignment_op == t_plus_equal)
@@ -218,12 +238,16 @@ static void ast_print_expr(Expr *expr)
 	ast_print_literal((LiteralExpr *)expr);
 	break;
 
-    case EXPR_INTERPOLATION:
-	ast_print_interpolation((InterpolationExpr *)expr);
+    case EXPR_ACCESS:
+	ast_print_access((AccessExpr *)expr);
 	break;
 
     case EXPR_SUBSHELL:
 	ast_print_stmt(((SubshellExpr *)expr)->stmt);
+	break;
+
+    case EXPR_LIST:
+	ast_print_list((ListExpr *)expr);
 	break;
 
     default:
@@ -285,7 +309,10 @@ void ast_print(ArrayList *ast_heads)
     size_t size = ast_heads->size;
     for (size_t i = 0; i < size; i++) {
 	ast_print_stmt(*(Stmt **)arraylist_get(ast_heads, i));
-	if (i != size)
-	    putchar('\n');
+	if (i != size - 1) {
+	    printf("\n\n");
+	} else {
+	    printf("\n");
+	}
     }
 }

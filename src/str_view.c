@@ -15,56 +15,52 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <stdbool.h>
-#include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
-#include "interpreter/types/slash_str.h"
-#include "interpreter/types/slash_value.h"
-#include "nicc/nicc.h"
+#include "str_view.h"
 
 
-void slash_str_print(SlashStr s)
+void str_view_print(StrView s)
 {
     char str[s.size + 1];
-    memcpy(str, s.p, s.size);
+    memcpy(str, s.view, s.size);
     str[s.size] = 0;
     printf("%s", str);
 }
 
-void slash_str_println(SlashStr s)
+void str_view_println(StrView s)
 {
     char str[s.size + 1];
-    memcpy(str, s.p, s.size);
+    memcpy(str, s.view, s.size);
     str[s.size] = 0;
     printf("%s\n", str);
 }
 
 // TODO: add base2 support
-double slash_str_to_double(SlashStr s)
+double str_view_to_double(StrView s)
 {
     char str[s.size + 1];
-    memcpy(str, s.p, s.size);
+    memcpy(str, s.view, s.size);
     str[s.size] = 0;
     return strtod(str, NULL);
 }
 
-int32_t slash_str_to_int(SlashStr s)
+int32_t str_view_to_int(StrView s)
 {
     char str[s.size + 1];
-    memcpy(str, s.p, s.size);
+    memcpy(str, s.view, s.size);
     str[s.size] = 0;
     return atoi(str);
 }
 
-bool slash_str_eq(SlashStr a, SlashStr b)
+bool str_view_eq(StrView a, StrView b)
 {
     if (a.size != b.size)
 	return false;
 
-    char *A = a.p;
-    char *B = b.p;
+    char *A = a.view;
+    char *B = b.view;
     for (size_t i = 0; i < a.size; i++) {
 	if (A[i] != B[i])
 	    return false;

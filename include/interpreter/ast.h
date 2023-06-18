@@ -19,7 +19,6 @@
 
 #include "arena_ll.h"
 #include "interpreter/lexer.h"
-#include "interpreter/types/slash_str.h"
 #include "interpreter/types/slash_value.h"
 #include "sac/sac.h"
 
@@ -29,8 +28,9 @@ typedef enum {
     EXPR_UNARY = 0,
     EXPR_BINARY,
     EXPR_LITERAL,
-    EXPR_INTERPOLATION,
+    EXPR_ACCESS,
     EXPR_SUBSHELL,
+    EXPR_LIST,
     EXPR_ENUM_COUNT
 } ExprType;
 
@@ -80,15 +80,33 @@ typedef struct {
     SlashValue value;
 } LiteralExpr;
 
+typedef enum {
+    ACCESS_NONE,
+    ACCESS_INDEX,
+    ACCESS_KEY,
+    ACCESS_RANGE,
+} AccessType;
+
 typedef struct {
     ExprType type;
-    SlashStr var_name;
-} InterpolationExpr;
+    StrView var_name;
+    AccessType access_type;
+    union {
+	int index;
+	StrView key;
+	SlashRange range;
+    };
+} AccessExpr;
 
 typedef struct {
     ExprType type;
     Stmt *stmt;
 } SubshellExpr;
+
+typedef struct {
+    ExprType type;
+    ArenaLL *exprs; // will be NULL for the empty list
+} ListExpr;
 
 
 /* statements */
@@ -110,14 +128,14 @@ typedef struct {
 
 typedef struct {
     StmtType type;
-    SlashStr var_name;
+    StrView var_name;
     Expr *underlying_iterable;
     BlockStmt *body_block;
 } IterLoopStmt;
 
 typedef struct {
     StmtType type;
-    SlashStr name;
+    StrView name;
     Expr *initializer;
 } VarStmt;
 
@@ -130,13 +148,13 @@ typedef struct {
 
 typedef struct {
     StmtType type;
-    SlashStr cmd_name;
+    StrView cmd_name;
     ArenaLL *arg_exprs;
 } CmdStmt;
 
 typedef struct {
     StmtType type;
-    SlashStr name;
+    AccessExpr *access;
     TokenType assignment_op;
     Expr *value;
 } AssignStmt;
