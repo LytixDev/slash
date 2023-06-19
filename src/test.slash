@@ -1,8 +1,11 @@
-# initialize a list
-var pear = "pear"
-var fruits = ["apple", "banana", "orange", $pear]
+# initialize a map
+var fruits = [[ "apple": 10, "banana": 1, "orange": 4 ]]
+$fruits
 
-# iterate over the list
-loop fruit in $fruits[..3] {
-    $fruit
-}
+$fruits["dragonfruit"] = 1
+$fruits
+
+# iterate over the map
+#loop fruit in $fruits {
+#    $fruit
+#}

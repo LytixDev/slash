@@ -49,7 +49,7 @@ term            -> factor (( "-" | "+" ) factor )* ;
 factor          -> unary ;
 unary           -> access ;
 
-access          -> ACCESS ( "[" NUMBER ( ".." NUMBER )? "]" )?
+access          -> ACCESS ( "[" NUMBER | ( NUMBER? ".." NUMBER ) | STRING "]" )?
                 |  primary;
 
 primary         -> STRING 
@@ -57,7 +57,8 @@ primary         -> STRING
                 |  bool_lit
                 |  number
                 |  range 
-                |  list ;
+                |  list
+                |  map ;
 
 bool_lit        -> "true" | "false ";
 
@@ -66,3 +67,5 @@ number          -> NUMBER ;
 range           -> NUMBER? ".." NUMBER ;
 
 list            -> "[" ( expression )*? "]" ;
+
+map             -> "[[" ( expression ":" expression )*? "]]"

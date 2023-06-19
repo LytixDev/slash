@@ -21,6 +21,7 @@
 
 #include "interpreter/lexer.h"
 #include "interpreter/types/slash_list.h"
+#include "interpreter/types/slash_map.h"
 #include "interpreter/types/slash_range.h"
 #include "sac/sac.h"
 
@@ -32,6 +33,7 @@ typedef enum {
     SLASH_SHLIT,
     SLASH_RANGE,
     SLASH_LIST,
+    SLASH_MAP,
     SLASH_NONE,
     SLASH_ANY,
 } SlashValueType;
@@ -45,6 +47,7 @@ typedef struct slash_value_t {
 	double num;
 	SlashRange range;
 	SlashList list;
+	SlashMap map;
     };
 } SlashValue;
 

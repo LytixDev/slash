@@ -153,6 +153,7 @@ static Expr *bool_lit(Parser *parser);
 static Expr *number(Parser *parser);
 static Expr *range(Parser *parser);
 static Expr *list(Parser *parser);
+static Expr *map(Parser *parser);
 
 static Stmt *declaration(Parser *parser)
 {
@@ -411,6 +412,15 @@ static Expr *access(Parser *parser)
 	return (Expr *)expr;
     }
 
+    /* index as str */
+    if (match(parser, dt_str)) {
+	expr->access_type = ACCESS_KEY;
+	expr->key = previous(parser)->lexeme;
+	consume(parser, t_rbracket, "expected ']' after indexing");
+	return (Expr *)expr;
+    }
+
+    /* index as num or range */
     int range_start_or_index = 0;
     if (match(parser, dt_num)) {
 	Token *start_token = previous(parser);
@@ -462,12 +472,8 @@ static Expr *primary(Parser *parser)
 
 static Expr *bool_lit(Parser *parser)
 {
-    Token *token = previous(parser);
     LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
     expr->value = (SlashValue){ .type = SLASH_BOOL, .boolean = t_true ? true : false };
-    // SlashBool *value = (SlashBool *)slash_value_arena_alloc(parser->ast_arena, SLASH_BOOL);
-    // value->value = token->type == t_true ? true : false;
-    // expr->value = (SlashValue *)value;
     return (Expr *)expr;
 }
 
@@ -515,6 +521,9 @@ static Expr *range(Parser *parser)
 static Expr *list(Parser *parser)
 {
     /* came from '[' */
+    if (match(parser, t_lbracket))
+	return map(parser);
+
     ListExpr *expr = (ListExpr *)expr_alloc(parser->ast_arena, EXPR_LIST);
 
     /* edge case: empty list */
@@ -531,5 +540,26 @@ static Expr *list(Parser *parser)
     } while (!check(parser, t_rbracket));
 
     consume(parser, t_rbracket, "Expected ']' to terminate list");
+    return (Expr *)expr;
+}
+
+static Expr *map(Parser *parser)
+{
+    /* came from '[[' */
+    MapExpr *expr = (MapExpr *)expr_alloc(parser->ast_arena, EXPR_MAP);
+    expr->key_value_pairs = arena_ll_alloc(parser->ast_arena);
+
+    do {
+	KeyValuePair *pair = m_arena_alloc_struct(parser->ast_arena, KeyValuePair);
+	pair->key = expression(parser);
+	consume(parser, t_colon, "expected colon ':' to denote value for key in map expression");
+	pair->value = expression(parser);
+	arena_ll_append(expr->key_value_pairs, pair);
+	if (!match(parser, t_comma))
+	    break;
+    } while (!check(parser, t_rbracket));
+
+    consume(parser, t_rbracket, "Expected ']]' to terminate map");
+    consume(parser, t_rbracket, "Expected ']]' to terminate map");
     return (Expr *)expr;
 }

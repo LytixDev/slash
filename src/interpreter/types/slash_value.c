@@ -18,6 +18,7 @@
 #include <stdio.h>
 
 #include "interpreter/types/slash_list.h"
+#include "interpreter/types/slash_map.h"
 #include "interpreter/types/slash_value.h"
 #include "sac/sac.h"
 #include "str_view.h"
@@ -101,9 +102,14 @@ void slash_value_print(SlashValue *sv)
 	slash_list_print(&sv->list);
 	break;
 
+    case SLASH_MAP:
+	slash_map_print(&sv->map);
+	break;
+
     case SLASH_BOOL:
 	printf("%s", sv->boolean ? "true" : "false");
 	break;
+
 
     default:
 	fprintf(stderr, "printing not defined for this type");
