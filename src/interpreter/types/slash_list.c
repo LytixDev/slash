@@ -51,7 +51,7 @@ SlashValue *slash_list_get(SlashList *list, size_t idx)
 void slash_list_from_ranged_copy(SlashList *ret_ptr, SlashList *to_copy, SlashRange range)
 {
     slash_list_init(ret_ptr);
-    assert(range.end <= to_copy->underying.size);
+    assert(range.end <= to_copy->underlying.size);
     for (int i = range.start; i < range.end; i++)
 	arraylist_append(&ret_ptr->underlying, arraylist_get(&to_copy->underlying, i));
 }

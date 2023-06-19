@@ -162,10 +162,9 @@ static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
 	break;
 
     default:
-	// TODO: remove
 	slash_exit_interpreter_err("binary operator not supported");
 
-	// TODO: assert not reachable
+	ASSERT_NOT_REACHED;
 	return (SlashValue){ 0 };
     }
 
