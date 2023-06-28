@@ -19,6 +19,7 @@
 
 #include "interpreter/types/slash_list.h"
 #include "interpreter/types/slash_map.h"
+#include "interpreter/types/slash_tuple.h"
 #include "interpreter/types/slash_value.h"
 #include "sac/sac.h"
 #include "str_view.h"
@@ -46,6 +47,9 @@ bool is_truthy(SlashValue *sv)
 
     case SLASH_LIST:
 	return sv->list.underlying.size != 0;
+
+    case SLASH_TUPLE:
+	return sv->tuple.size != 0;
 
     case SLASH_NONE:
 	return false;
@@ -100,6 +104,10 @@ void slash_value_print(SlashValue *sv)
 
     case SLASH_LIST:
 	slash_list_print(&sv->list);
+	break;
+
+    case SLASH_TUPLE:
+        slash_tuple_print(&sv->tuple);
 	break;
 
     case SLASH_MAP:

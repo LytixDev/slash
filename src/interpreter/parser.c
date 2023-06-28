@@ -152,8 +152,8 @@ static Expr *primary(Parser *parser);
 static Expr *bool_lit(Parser *parser);
 static Expr *number(Parser *parser);
 static Expr *range(Parser *parser);
-static Expr *list(Parser *parser);
 static Expr *map(Parser *parser);
+static Expr *list_or_tuple_or_map(Parser *parser, bool is_list);
 
 static Stmt *declaration(Parser *parser)
 {
@@ -319,9 +319,16 @@ static Expr *argument(Parser *parser)
 
 static Expr *expression(Parser *parser)
 {
+    if (!match(parser, t_lparen))
+        return equality(parser);
+
+    /* 
+     * need to figure out if '(' should be parsed as a tuple, subshell or grouping (TODO)
+     */
     if (match(parser, t_lparen))
-	return subshell(parser);
-    return equality(parser);
+        return list_or_tuple_or_map(parser, true);
+
+    return subshell(parser);
 }
 
 static Expr *subshell(Parser *parser)
@@ -457,7 +464,7 @@ static Expr *primary(Parser *parser)
     }
 
     if (match(parser, t_lbracket))
-	return list(parser);
+	return list_or_tuple_or_map(parser, false);
 
     if (!match(parser, dt_str, dt_shlit))
 	slash_exit_parse_err("not a valid primary type");
@@ -518,31 +525,6 @@ static Expr *range(Parser *parser)
     return (Expr *)expr;
 }
 
-static Expr *list(Parser *parser)
-{
-    /* came from '[' */
-    if (match(parser, t_lbracket))
-	return map(parser);
-
-    ListExpr *expr = (ListExpr *)expr_alloc(parser->ast_arena, EXPR_LIST);
-
-    /* edge case: empty list */
-    if (match(parser, t_rbracket)) {
-	expr->exprs = NULL;
-	return (Expr *)expr;
-    }
-
-    expr->exprs = arena_ll_alloc(parser->ast_arena);
-    do {
-	arena_ll_append(expr->exprs, expression(parser));
-	/* "ignore" single trailing comma */
-	match(parser, t_comma);
-    } while (!check(parser, t_rbracket));
-
-    consume(parser, t_rbracket, "Expected ']' to terminate list");
-    return (Expr *)expr;
-}
-
 static Expr *map(Parser *parser)
 {
     /* came from '[[' */
@@ -561,5 +543,36 @@ static Expr *map(Parser *parser)
 
     consume(parser, t_rbracket, "Expected ']]' to terminate map");
     consume(parser, t_rbracket, "Expected ']]' to terminate map");
+    return (Expr *)expr;
+}
+
+static Expr *list_or_tuple_or_map(Parser *parser, bool is_tuple)
+{
+    /* came from '[' or '((' */
+    if (match(parser, t_lbracket))
+	return map(parser);
+
+    ListExpr *expr = (ListExpr *)expr_alloc(parser->ast_arena, EXPR_LIST);
+    expr->list_type = is_tuple ? SLASH_TUPLE : SLASH_LIST;
+    TokenType terminator = is_tuple ? t_rparen : t_rbracket;
+
+    /* edge case: empty list */
+    if (match(parser, terminator)) {
+        if (is_tuple)
+            consume(parser, t_rparen, "Expected '))' to terminate tuple");
+	expr->exprs = NULL;
+	return (Expr *)expr;
+    }
+
+    expr->exprs = arena_ll_alloc(parser->ast_arena);
+    do {
+	arena_ll_append(expr->exprs, expression(parser));
+	/* "ignore" single trailing comma */
+	match(parser, t_comma);
+    } while (!check(parser, terminator));
+
+    consume(parser, terminator, "Expected list terminator");
+    if (is_tuple)
+        consume(parser, t_rparen, "Expected '))' to terminate tuple");
     return (Expr *)expr;
 }

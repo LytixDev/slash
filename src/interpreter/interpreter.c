@@ -27,6 +27,7 @@
 #include "interpreter/types/slash_list.h"
 #include "interpreter/types/slash_map.h"
 #include "interpreter/types/slash_range.h"
+#include "interpreter/types/slash_tuple.h"
 #include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
 #include "str_view.h"
@@ -223,8 +224,33 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
     return (SlashValue){ .type = SLASH_STR, .str = { .view = str_view, .size = size } };
 }
 
+static SlashValue eval_tuple(Interpreter *interpreter, ListExpr *expr)
+{
+    SlashTuple tuple = { .size = expr->exprs->size, .values = NULL };
+    /* size is 0 */
+    if (expr->exprs == NULL) {
+        assert(tuple.size == 0);
+	return (SlashValue){ .type = SLASH_TUPLE, .tuple = tuple };
+    }
+
+    tuple.values = scope_alloc(interpreter->scope, sizeof(SlashValue) * tuple.size);
+
+    size_t i = 0;
+    LLItem *item;
+    ARENA_LL_FOR_EACH(expr->exprs, item)
+    {
+	SlashValue element_value = eval(interpreter, item->value);
+        tuple.values[i++] = element_value;
+    }
+
+    return (SlashValue){ .type = SLASH_TUPLE, .tuple = tuple };
+}
+
 static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
 {
+    if (expr->list_type == SLASH_TUPLE)
+        return eval_tuple(interpreter, expr);
+
     SlashValue value = { .type = SLASH_LIST };
     slash_list_init(&value.list);
 

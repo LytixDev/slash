@@ -70,4 +70,4 @@ list            -> "[" ( expression "," )*? "]" ;
 
 map             -> "[[" ( expression ":" expression "," )*? "]]"
 
-tuple           -> "(" (expression ",")*? ")" ;
+tuple           -> "((" (expression ",")*? "))" ;

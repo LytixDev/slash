@@ -106,6 +106,7 @@ typedef struct {
 
 typedef struct {
     ExprType type;
+    SlashValueType list_type; // tuple or list
     ArenaLL *exprs; // will be NULL for the empty list
 } ListExpr;
 

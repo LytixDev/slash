@@ -329,7 +329,10 @@ StateFn lex_any(Lexer *lexer)
 
 	/* one character tokens */
 	case '(':
-	    if (prev_token_type(lexer) != t_identifier)
+            /* do not go into subshell parsing mode if tuple: came from '(' or next is '(' */
+	    if (!(prev_token_type(lexer) == t_identifier ||
+                prev_token_type(lexer) == t_lparen || 
+                peek(lexer) == '('))
 		return STATE_FN(lex_subshell_start);
 	    emit(lexer, t_lparen);
 	    break;
