@@ -1,11 +1,3 @@
-# initialize a map
-var fruits = [[ "apple": 10, "banana": 1, "orange": 4 ]]
+# initialize a tuple
+var fruits = ("apple", "banana", "orange")
 $fruits
-
-$fruits["dragonfruit"] = 1
-$fruits
-
-# iterate over the map
-#loop fruit in $fruits {
-#    $fruit
-#}

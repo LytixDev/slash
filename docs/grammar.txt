@@ -66,6 +66,8 @@ number          -> NUMBER ;
 
 range           -> NUMBER? ".." NUMBER ;
 
-list            -> "[" ( expression )*? "]" ;
+list            -> "[" ( expression "," )*? "]" ;
 
-map             -> "[[" ( expression ":" expression )*? "]]"
+map             -> "[[" ( expression ":" expression "," )*? "]]"
+
+tuple           -> "(" (expression ",")*? ")" ;

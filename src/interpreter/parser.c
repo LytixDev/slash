@@ -161,10 +161,7 @@ static Stmt *declaration(Parser *parser)
     /* ignore all leading newlines */
     ignore(parser, t_newline);
 
-    if (match(parser, t_var))
-	stmt = var_decl(parser);
-    else
-	stmt = statement(parser);
+    stmt = statement(parser);
 
     /* ignore all trailing newlines */
     ignore(parser, t_newline);
@@ -174,6 +171,9 @@ static Stmt *declaration(Parser *parser)
 
 static Stmt *statement(Parser *parser)
 {
+    if (match(parser, t_var))
+	return var_decl(parser);
+
     if (match(parser, t_loop))
 	return loop_stmt(parser);
 
@@ -186,8 +186,10 @@ static Stmt *statement(Parser *parser)
     if (match(parser, dt_shlit))
 	return cmd_stmt(parser);
 
-    /* returns expr_stmt if following tokens is not a valid assignment */
-    return assignment_stmt(parser);
+    if (check(parser, t_access))
+	return assignment_stmt(parser);
+
+    return expr_stmt(parser);
 }
 
 static Stmt *expr_stmt(Parser *parser)
@@ -199,6 +201,28 @@ static Stmt *expr_stmt(Parser *parser)
     stmt->expression = expr;
     return (Stmt *)stmt;
 }
+
+static Stmt *assignment_stmt(Parser *parser)
+{
+    // TODO: this is a hack
+    size_t pos_pre = parser->token_pos;
+    AccessExpr *name = (AccessExpr *)access(parser);
+    if (!match(parser, t_equal, t_plus_equal, t_minus_equal)) {
+	parser->token_pos = pos_pre;
+	return expr_stmt(parser);
+    }
+
+    /* access part of assignment */
+    Token *assignment_op = previous(parser);
+    Expr *value = expression(parser);
+
+    AssignStmt *stmt = (AssignStmt *)stmt_alloc(parser->ast_arena, STMT_ASSIGN);
+    stmt->access = name;
+    stmt->assignment_op = assignment_op->type;
+    stmt->value = value;
+    return (Stmt *)stmt;
+}
+
 
 static Stmt *var_decl(Parser *parser)
 {
@@ -266,30 +290,6 @@ static Stmt *block(Parser *parser)
 	arena_ll_append(stmt->statements, declaration(parser));
 
     consume(parser, t_rbrace, "Expected '}' after block");
-    return (Stmt *)stmt;
-}
-
-static Stmt *assignment_stmt(Parser *parser)
-{
-    if (!check(parser, t_access))
-	return expr_stmt(parser);
-
-    // TODO: this is a hack
-    size_t pos_pre = parser->token_pos;
-    AccessExpr *name = (AccessExpr *)access(parser);
-    if (!match(parser, t_equal, t_plus_equal, t_minus_equal)) {
-	parser->token_pos = pos_pre;
-	return expr_stmt(parser);
-    }
-
-    /* access part of assignment */
-    Token *assignment_op = previous(parser);
-    Expr *value = expression(parser);
-
-    AssignStmt *stmt = (AssignStmt *)stmt_alloc(parser->ast_arena, STMT_ASSIGN);
-    stmt->access = name;
-    stmt->assignment_op = assignment_op->type;
-    stmt->value = value;
     return (Stmt *)stmt;
 }
 
