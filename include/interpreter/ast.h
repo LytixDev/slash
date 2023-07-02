@@ -31,6 +31,7 @@ typedef enum {
     EXPR_ACCESS,
     EXPR_SUBSHELL,
     EXPR_LIST,
+    EXPR_MAP,
     EXPR_ENUM_COUNT
 } ExprType;
 
@@ -105,8 +106,19 @@ typedef struct {
 
 typedef struct {
     ExprType type;
+    SlashType list_type; // tuple or list
     ArenaLL *exprs; // will be NULL for the empty list
 } ListExpr;
+
+typedef struct {
+    Expr *key;
+    Expr *value;
+} KeyValuePair;
+
+typedef struct {
+    ExprType type;
+    ArenaLL *key_value_pairs;
+} MapExpr;
 
 
 /* statements */

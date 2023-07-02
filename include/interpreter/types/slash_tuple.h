@@ -14,18 +14,28 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef COMMON_H
-#define COMMON_H
+#ifndef SLASH_TUPLE_H
+#define SLASH_TUPLE_H
 
-#include <assert.h>
+#include "interpreter/types/slash_op.h"
+#include <stdlib.h>
+
+typedef struct slash_value_t SlashValue; // Forward declaration of SlashValue
+
+/*
+ * Tuples are ordered and unchangeable.
+ * Other than that they behave similarly, and are generally inspired by, tuples in Python.
+ */
+typedef struct {
+    size_t size;
+    SlashValue *values;
+} SlashTuple;
 
 
-#define ASSERT_NOT_REACHED assert(false && "panic: unreachable code reached")
+void slash_tuple_print(SlashTuple *tuple);
+//void slash_tuple_print(SlashValue *tuple);
+
+inline size_t slash_tuple_len(SlashTuple *tuple);
 
 
-void slash_exit_lex_err(char *err_msg);
-void slash_exit_parse_err(char *err_msg);
-void slash_exit_interpreter_err(char *err_msg);
-void slash_exit_internal_err(char *err_msg);
-
-#endif /* COMMON_H */
+#endif /* SLASH_TUPLE_H */

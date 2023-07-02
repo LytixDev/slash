@@ -18,12 +18,47 @@
 #include <stdio.h>
 
 #include "interpreter/types/slash_list.h"
+#include "interpreter/types/slash_map.h"
+#include "interpreter/types/slash_tuple.h"
 #include "interpreter/types/slash_value.h"
 #include "sac/sac.h"
 #include "str_view.h"
 
 
-SlashValue *slash_value_arena_alloc(Arena *arena, SlashValueType type)
+/*
+ * print, len
+ */
+SlashOpFunc type_functions[SLASH_TYPE_COUNT][OP_COUNT] = {
+    /* bool */
+    { (SlashOpFunc)slash_op_not_supported, (SlashOpFunc)slash_op_not_supported },
+
+    /* str */
+    { (SlashOpFunc)slash_op_not_supported, (SlashOpFunc)slash_op_not_supported },
+
+    /* num */
+    { (SlashOpFunc)slash_op_not_supported, (SlashOpFunc)slash_op_not_supported },
+
+    /* shlit */
+    { (SlashOpFunc)slash_op_not_supported, (SlashOpFunc)slash_op_not_supported },
+
+    /* range */
+    { (SlashOpFunc)slash_op_not_supported, (SlashOpFunc)slash_op_not_supported },
+
+    /* list */
+    { (SlashOpFunc)slash_list_print, (SlashOpFunc)slash_op_not_supported },
+
+    /* tuple */
+    { (SlashOpFunc)slash_tuple_print, (SlashOpFunc)slash_op_not_supported },
+
+    /* map */
+    { (SlashOpFunc)slash_map_print, (SlashOpFunc)slash_op_not_supported },
+
+    /* none */
+    { (SlashOpFunc)slash_op_not_supported, (SlashOpFunc)slash_op_not_supported },
+};
+
+
+SlashValue *slash_value_arena_alloc(Arena *arena, SlashType type)
 {
     SlashValue *sv = m_arena_alloc_struct(arena, SlashValue);
     sv->type = type;
@@ -45,6 +80,9 @@ bool is_truthy(SlashValue *sv)
 
     case SLASH_LIST:
 	return sv->list.underlying.size != 0;
+
+    case SLASH_TUPLE:
+	return sv->tuple.size != 0;
 
     case SLASH_NONE:
 	return false;
@@ -101,11 +139,25 @@ void slash_value_print(SlashValue *sv)
 	slash_list_print(&sv->list);
 	break;
 
+    case SLASH_TUPLE:
+	slash_tuple_print(&sv->tuple);
+	break;
+
+    case SLASH_MAP:
+	slash_map_print(&sv->map);
+	break;
+
     case SLASH_BOOL:
 	printf("%s", sv->boolean ? "true" : "false");
 	break;
 
+
     default:
 	fprintf(stderr, "printing not defined for this type");
     }
+}
+
+void slash_op_not_supported(void *arg)
+{
+    printf("Not supported\n");
 }

@@ -14,18 +14,22 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef COMMON_H
-#define COMMON_H
-
-#include <assert.h>
+#ifndef SLASH_OP_H
+#define SLASH_OP_H
 
 
-#define ASSERT_NOT_REACHED assert(false && "panic: unreachable code reached")
+// /*
+//  * Generic function pointer used for operations
+//  */
+// typedef void * (*SlashOpFunc)(void *);
+//
+// /*
+//  * Every SlashValue will have a table containing function pointers that implement these
+//  operations
+//  */
+// typedef enum {
+//     OP_PRINT = 0,
+//     OP_LEN,
+// } SlashTypeOp;
 
-
-void slash_exit_lex_err(char *err_msg);
-void slash_exit_parse_err(char *err_msg);
-void slash_exit_interpreter_err(char *err_msg);
-void slash_exit_internal_err(char *err_msg);
-
-#endif /* COMMON_H */
+#endif /* SLASH_OP_H */

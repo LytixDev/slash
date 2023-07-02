@@ -14,18 +14,24 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef COMMON_H
-#define COMMON_H
+#ifndef SLASH_MAP_H
+#define SLASH_MAP_H
 
-#include <assert.h>
+#include "nicc/nicc.h"
 
+typedef struct slash_value_t SlashValue; // Forward declaration of SlashValue
 
-#define ASSERT_NOT_REACHED assert(false && "panic: unreachable code reached")
+typedef struct {
+    HashMap underlying;
+} SlashMap;
 
+void slash_map_init(SlashMap *map);
 
-void slash_exit_lex_err(char *err_msg);
-void slash_exit_parse_err(char *err_msg);
-void slash_exit_interpreter_err(char *err_msg);
-void slash_exit_internal_err(char *err_msg);
+void slash_map_put(SlashMap *map, SlashValue *key, SlashValue *value);
+/* returns NULL if key does not have an associated value */
+SlashValue *slash_map_get(SlashMap *map, SlashValue *key);
 
-#endif /* COMMON_H */
+/* O(n) */
+void slash_map_print(SlashMap *map);
+
+#endif /* SLASH_MAP_H */

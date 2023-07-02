@@ -24,8 +24,10 @@
 #include "interpreter/interpreter.h"
 #include "interpreter/lexer.h"
 #include "interpreter/scope.h"
-#include "interpreter/types/slash_list.h"
-#include "interpreter/types/slash_range.h"
+// #include "interpreter/types/slash_list.h"
+// #include "interpreter/types/slash_map.h"
+// #include "interpreter/types/slash_range.h"
+// #include "interpreter/types/slash_tuple.h"
 #include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
 #include "str_view.h"
@@ -127,8 +129,8 @@ static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
 	check_num_operands(&left, &right);
 	result = (SlashValue){ .type = SLASH_BOOL, .boolean = left.num < right.num };
 	break;
-	check_num_operands(&left, &right);
     case t_less_equal:
+	check_num_operands(&left, &right);
 	result = (SlashValue){ .type = SLASH_BOOL, .boolean = left.num <= right.num };
 	break;
 
@@ -161,10 +163,9 @@ static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
 	break;
 
     default:
-	// TODO: remove
 	slash_exit_interpreter_err("binary operator not supported");
 
-	// TODO: assert not reachable
+	ASSERT_NOT_REACHED;
 	return (SlashValue){ 0 };
     }
 
@@ -223,8 +224,33 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
     return (SlashValue){ .type = SLASH_STR, .str = { .view = str_view, .size = size } };
 }
 
+static SlashValue eval_tuple(Interpreter *interpreter, ListExpr *expr)
+{
+    SlashTuple tuple = { .size = expr->exprs->size, .values = NULL };
+    /* size is 0 */
+    if (expr->exprs == NULL) {
+	assert(tuple.size == 0);
+	return (SlashValue){ .type = SLASH_TUPLE, .tuple = tuple };
+    }
+
+    tuple.values = scope_alloc(interpreter->scope, sizeof(SlashValue) * tuple.size);
+
+    size_t i = 0;
+    LLItem *item;
+    ARENA_LL_FOR_EACH(expr->exprs, item)
+    {
+	SlashValue element_value = eval(interpreter, item->value);
+	tuple.values[i++] = element_value;
+    }
+
+    return (SlashValue){ .type = SLASH_TUPLE, .tuple = tuple };
+}
+
 static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
 {
+    if (expr->list_type == SLASH_TUPLE)
+	return eval_tuple(interpreter, expr);
+
     SlashValue value = { .type = SLASH_LIST };
     slash_list_init(&value.list);
 
@@ -241,6 +267,27 @@ static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
     return value;
 }
 
+static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
+{
+    SlashValue map = { .type = SLASH_MAP };
+    slash_map_init(&map.map);
+
+    if (expr->key_value_pairs == NULL)
+	return map;
+
+    LLItem *item;
+    KeyValuePair *pair;
+    ARENA_LL_FOR_EACH(expr->key_value_pairs, item)
+    {
+	pair = item->value;
+	SlashValue key = eval(interpreter, pair->key);
+	SlashValue value = eval(interpreter, pair->value);
+	slash_map_put(&map.map, &key, &value);
+    }
+
+    return map;
+}
+
 
 /*
  * statment execution functions
@@ -248,6 +295,8 @@ static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
 static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
 {
     SlashValue value = eval(interpreter, stmt->expression);
+    //SlashOpFunc print_func = type_functions[value.type][OP_PRINT];
+    //print_func(&value);
     slash_value_print(&value);
     putchar('\n');
 }
@@ -303,9 +352,37 @@ static void exec_block(Interpreter *interpreter, BlockStmt *stmt)
     scope_destroy(&block_scope);
 }
 
-static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
+static void exec_assign_list_element(Interpreter *interpreter, AssignStmt *stmt,
+				     SlashValue current_value, SlashValue new_value)
+{
+    StrView variable_name = stmt->access->var_name;
+    // TODO: here we ignore the operator
+    if (stmt->access->access_type == ACCESS_INDEX) {
+	slash_list_set(&current_value.list, new_value, stmt->access->index);
+	var_assign(interpreter->scope, &variable_name, &current_value);
+    } else if (stmt->access->access_type == ACCESS_RANGE) {
+	SlashValue ranged_copy = { .type = SLASH_LIST };
+	slash_list_from_ranged_copy(&ranged_copy.list, &current_value.list, stmt->access->range);
+	var_assign(interpreter->scope, &variable_name, &ranged_copy);
+    } else {
+	slash_exit_interpreter_err("list index must be number or range");
+    }
+}
+
+static void exec_assign_map_element(Interpreter *interpreter, AssignStmt *stmt, SlashValue map,
+				    SlashValue new_value)
 {
     StrView variable_name = ((AccessExpr *)stmt->access)->var_name;
+    // TODO: here we ignore the operator
+
+    // TODO: currently assume ACCESS_STR
+    SlashValue key = { .type = SLASH_STR, .str = stmt->access->key };
+    slash_map_put(&map.map, &key, &new_value);
+}
+
+static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
+{
+    StrView variable_name = stmt->access->var_name;
     ScopeAndValue current_value = var_get(interpreter->scope, &variable_name);
     if (current_value.value == NULL)
 	slash_exit_interpreter_err("cannot modify undefined variable");
@@ -332,22 +409,26 @@ static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
 	return;
     }
 
+    if (current_value.value->type == SLASH_LIST)
+	exec_assign_list_element(interpreter, stmt, *current_value.value, new_value);
+    else if (current_value.value->type == SLASH_MAP)
+	exec_assign_map_element(interpreter, stmt, *current_value.value, new_value);
     // TODO: str
-    if (current_value.value->type != SLASH_LIST)
-	slash_exit_interpreter_err("can only access element of list");
+    else
+	slash_exit_interpreter_err("can only access element of list and map");
 
-    // TODO: here we ignore the operator
-    if (stmt->access->access_type == ACCESS_INDEX) {
-	slash_list_set(&current_value.value->list, new_value, stmt->access->index);
-	var_assign(interpreter->scope, &variable_name, current_value.value);
-    } else if (stmt->access->access_type == ACCESS_RANGE) {
-	SlashValue ranged_copy = { .type = SLASH_LIST };
-	slash_list_from_ranged_copy(&ranged_copy.list, &current_value.value->list,
-				    stmt->access->range);
-	var_assign(interpreter->scope, &variable_name, &ranged_copy);
-    } else {
-	slash_exit_interpreter_err("list index must be number or range");
-    }
+    //// TODO: here we ignore the operator
+    // if (stmt->access->access_type == ACCESS_INDEX) {
+    //     slash_list_set(&current_value.value->list, new_value, stmt->access->index);
+    //     var_assign(interpreter->scope, &variable_name, current_value.value);
+    // } else if (stmt->access->access_type == ACCESS_RANGE) {
+    //     SlashValue ranged_copy = { .type = SLASH_LIST };
+    //     slash_list_from_ranged_copy(&ranged_copy.list, &current_value.value->list,
+    //     			    stmt->access->range);
+    //     var_assign(interpreter->scope, &variable_name, &ranged_copy);
+    // } else {
+    //     slash_exit_interpreter_err("list index must be number or range");
+    // }
 }
 
 static void exec_loop(Interpreter *interpreter, LoopStmt *stmt)
@@ -455,6 +536,9 @@ static SlashValue eval(Interpreter *interpreter, Expr *expr)
 
     case EXPR_LIST:
 	return eval_list(interpreter, (ListExpr *)expr);
+
+    case EXPR_MAP:
+	return eval_map(interpreter, (MapExpr *)expr);
 
     default:
 	slash_exit_internal_err("interpreter: expr type not handled");

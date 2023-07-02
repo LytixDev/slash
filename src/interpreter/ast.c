@@ -25,8 +25,8 @@
 
 
 const size_t expr_size_table[] = {
-    sizeof(UnaryExpr),	sizeof(BinaryExpr),   sizeof(LiteralExpr),
-    sizeof(AccessExpr), sizeof(SubshellExpr), sizeof(ListExpr),
+    sizeof(UnaryExpr),	  sizeof(BinaryExpr), sizeof(LiteralExpr), sizeof(AccessExpr),
+    sizeof(SubshellExpr), sizeof(ListExpr),   sizeof(MapExpr),
 };
 
 const size_t stmt_size_table[] = { sizeof(ExpressionStmt), sizeof(VarStmt),  sizeof(LoopStmt),
@@ -34,7 +34,8 @@ const size_t stmt_size_table[] = { sizeof(ExpressionStmt), sizeof(VarStmt),  siz
 				   sizeof(AssignStmt),	   sizeof(BlockStmt) };
 
 char *expr_type_str_map[EXPR_ENUM_COUNT] = {
-    "EXPR_UNARY", "EXPR_BINARY", "EXPR_LITERAL", "EXPR_ACCESS", "EXPR_SUBSHELL", "EXPR_LIST",
+    "EXPR_UNARY",    "EXPR_BINARY", "EXPR_LITERAL", "EXPR_ACCESS",
+    "EXPR_SUBSHELL", "EXPR_LIST",   "EXPR_MAP",
 };
 
 char *stmt_type_str_map[STMT_ENUM_COUNT] = {
@@ -146,6 +147,22 @@ static void ast_print_list(ListExpr *expr)
     }
 }
 
+static void ast_print_map(MapExpr *expr)
+{
+    if (expr->key_value_pairs == NULL)
+	return;
+
+    LLItem *item;
+    KeyValuePair *pair;
+    ARENA_LL_FOR_EACH(expr->key_value_pairs, item)
+    {
+	pair = item->value;
+	ast_print_expr(pair->key);
+	printf(":");
+	ast_print_expr(pair->value);
+    }
+}
+
 static void ast_print_expression(ExpressionStmt *stmt)
 {
     ast_print_expr(stmt->expression);
@@ -210,7 +227,7 @@ static void ast_print_iter_loop(IterLoopStmt *stmt)
 
 static void ast_print_assign(AssignStmt *stmt)
 {
-    ast_print_expr(stmt->access);
+    ast_print_access(stmt->access);
     if (stmt->assignment_op == t_equal)
 	printf(" = ");
     else if (stmt->assignment_op == t_plus_equal)
@@ -248,6 +265,10 @@ static void ast_print_expr(Expr *expr)
 
     case EXPR_LIST:
 	ast_print_list((ListExpr *)expr);
+	break;
+
+    case EXPR_MAP:
+	ast_print_map((MapExpr *)expr);
 	break;
 
     default:

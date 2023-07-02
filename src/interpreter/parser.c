@@ -152,7 +152,8 @@ static Expr *primary(Parser *parser);
 static Expr *bool_lit(Parser *parser);
 static Expr *number(Parser *parser);
 static Expr *range(Parser *parser);
-static Expr *list(Parser *parser);
+static Expr *map(Parser *parser);
+static Expr *list_or_tuple_or_map(Parser *parser, bool is_list);
 
 static Stmt *declaration(Parser *parser)
 {
@@ -160,10 +161,7 @@ static Stmt *declaration(Parser *parser)
     /* ignore all leading newlines */
     ignore(parser, t_newline);
 
-    if (match(parser, t_var))
-	stmt = var_decl(parser);
-    else
-	stmt = statement(parser);
+    stmt = statement(parser);
 
     /* ignore all trailing newlines */
     ignore(parser, t_newline);
@@ -173,6 +171,9 @@ static Stmt *declaration(Parser *parser)
 
 static Stmt *statement(Parser *parser)
 {
+    if (match(parser, t_var))
+	return var_decl(parser);
+
     if (match(parser, t_loop))
 	return loop_stmt(parser);
 
@@ -185,8 +186,10 @@ static Stmt *statement(Parser *parser)
     if (match(parser, dt_shlit))
 	return cmd_stmt(parser);
 
-    /* returns expr_stmt if following tokens is not a valid assignment */
-    return assignment_stmt(parser);
+    if (check(parser, t_access))
+	return assignment_stmt(parser);
+
+    return expr_stmt(parser);
 }
 
 static Stmt *expr_stmt(Parser *parser)
@@ -198,6 +201,28 @@ static Stmt *expr_stmt(Parser *parser)
     stmt->expression = expr;
     return (Stmt *)stmt;
 }
+
+static Stmt *assignment_stmt(Parser *parser)
+{
+    // TODO: this is a hack
+    size_t pos_pre = parser->token_pos;
+    AccessExpr *name = (AccessExpr *)access(parser);
+    if (!match(parser, t_equal, t_plus_equal, t_minus_equal)) {
+	parser->token_pos = pos_pre;
+	return expr_stmt(parser);
+    }
+
+    /* access part of assignment */
+    Token *assignment_op = previous(parser);
+    Expr *value = expression(parser);
+
+    AssignStmt *stmt = (AssignStmt *)stmt_alloc(parser->ast_arena, STMT_ASSIGN);
+    stmt->access = name;
+    stmt->assignment_op = assignment_op->type;
+    stmt->value = value;
+    return (Stmt *)stmt;
+}
+
 
 static Stmt *var_decl(Parser *parser)
 {
@@ -268,30 +293,6 @@ static Stmt *block(Parser *parser)
     return (Stmt *)stmt;
 }
 
-static Stmt *assignment_stmt(Parser *parser)
-{
-    if (!check(parser, t_access))
-	return expr_stmt(parser);
-
-    // TODO: this is a hack
-    size_t pos_pre = parser->token_pos;
-    AccessExpr *name = (AccessExpr *)access(parser);
-    if (!match(parser, t_equal, t_plus_equal, t_minus_equal)) {
-	parser->token_pos = pos_pre;
-	return expr_stmt(parser);
-    }
-
-    /* access part of assignment */
-    Token *assignment_op = previous(parser);
-    Expr *value = expression(parser);
-
-    AssignStmt *stmt = (AssignStmt *)stmt_alloc(parser->ast_arena, STMT_ASSIGN);
-    stmt->access = name;
-    stmt->assignment_op = assignment_op->type;
-    stmt->value = value;
-    return (Stmt *)stmt;
-}
-
 static Stmt *cmd_stmt(Parser *parser)
 {
     /* came from dt_shlit */
@@ -318,9 +319,16 @@ static Expr *argument(Parser *parser)
 
 static Expr *expression(Parser *parser)
 {
+    if (!match(parser, t_lparen))
+	return equality(parser);
+
+    /*
+     * need to figure out if '(' should be parsed as a tuple, subshell or grouping (TODO)
+     */
     if (match(parser, t_lparen))
-	return subshell(parser);
-    return equality(parser);
+	return list_or_tuple_or_map(parser, true);
+
+    return subshell(parser);
 }
 
 static Expr *subshell(Parser *parser)
@@ -411,6 +419,15 @@ static Expr *access(Parser *parser)
 	return (Expr *)expr;
     }
 
+    /* index as str */
+    if (match(parser, dt_str)) {
+	expr->access_type = ACCESS_KEY;
+	expr->key = previous(parser)->lexeme;
+	consume(parser, t_rbracket, "expected ']' after indexing");
+	return (Expr *)expr;
+    }
+
+    /* index as num or range */
     int range_start_or_index = 0;
     if (match(parser, dt_num)) {
 	Token *start_token = previous(parser);
@@ -447,7 +464,7 @@ static Expr *primary(Parser *parser)
     }
 
     if (match(parser, t_lbracket))
-	return list(parser);
+	return list_or_tuple_or_map(parser, false);
 
     if (!match(parser, dt_str, dt_shlit))
 	slash_exit_parse_err("not a valid primary type");
@@ -462,12 +479,8 @@ static Expr *primary(Parser *parser)
 
 static Expr *bool_lit(Parser *parser)
 {
-    Token *token = previous(parser);
     LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
     expr->value = (SlashValue){ .type = SLASH_BOOL, .boolean = t_true ? true : false };
-    // SlashBool *value = (SlashBool *)slash_value_arena_alloc(parser->ast_arena, SLASH_BOOL);
-    // value->value = token->type == t_true ? true : false;
-    // expr->value = (SlashValue *)value;
     return (Expr *)expr;
 }
 
@@ -512,13 +525,41 @@ static Expr *range(Parser *parser)
     return (Expr *)expr;
 }
 
-static Expr *list(Parser *parser)
+static Expr *map(Parser *parser)
 {
-    /* came from '[' */
+    /* came from '[[' */
+    MapExpr *expr = (MapExpr *)expr_alloc(parser->ast_arena, EXPR_MAP);
+    expr->key_value_pairs = arena_ll_alloc(parser->ast_arena);
+
+    do {
+	KeyValuePair *pair = m_arena_alloc_struct(parser->ast_arena, KeyValuePair);
+	pair->key = expression(parser);
+	consume(parser, t_colon, "expected colon ':' to denote value for key in map expression");
+	pair->value = expression(parser);
+	arena_ll_append(expr->key_value_pairs, pair);
+	if (!match(parser, t_comma))
+	    break;
+    } while (!check(parser, t_rbracket));
+
+    consume(parser, t_rbracket, "Expected ']]' to terminate map");
+    consume(parser, t_rbracket, "Expected ']]' to terminate map");
+    return (Expr *)expr;
+}
+
+static Expr *list_or_tuple_or_map(Parser *parser, bool is_tuple)
+{
+    /* came from '[' or '((' */
+    if (match(parser, t_lbracket))
+	return map(parser);
+
     ListExpr *expr = (ListExpr *)expr_alloc(parser->ast_arena, EXPR_LIST);
+    expr->list_type = is_tuple ? SLASH_TUPLE : SLASH_LIST;
+    TokenType terminator = is_tuple ? t_rparen : t_rbracket;
 
     /* edge case: empty list */
-    if (match(parser, t_rbracket)) {
+    if (match(parser, terminator)) {
+	if (is_tuple)
+	    consume(parser, t_rparen, "Expected '))' to terminate tuple");
 	expr->exprs = NULL;
 	return (Expr *)expr;
     }
@@ -528,8 +569,10 @@ static Expr *list(Parser *parser)
 	arena_ll_append(expr->exprs, expression(parser));
 	/* "ignore" single trailing comma */
 	match(parser, t_comma);
-    } while (!check(parser, t_rbracket));
+    } while (!check(parser, terminator));
 
-    consume(parser, t_rbracket, "Expected ']' to terminate list");
+    consume(parser, terminator, "Expected list terminator");
+    if (is_tuple)
+	consume(parser, t_rparen, "Expected '))' to terminate tuple");
     return (Expr *)expr;
 }

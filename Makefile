@@ -25,7 +25,7 @@ $(TARGET): $(OBJS)
 	@echo [LD] $@
 	@$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
-debug: CFLAGS += -g -DDEBUG
+debug: CFLAGS = -Iinclude -Wall -Wpedantic -Wextra -Wshadow -std=c11 -g -DDEBUG
 debug: $(TARGET)
 
 clean:

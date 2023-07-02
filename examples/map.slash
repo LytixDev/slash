@@ -1,0 +1,11 @@
+# initialize a map
+var fruits = { "apple": 10, "banana": 1, "orange": 4 }
+
+# iterate over the map
+#loop fruit in $fruits {
+#    $fruit
+#}
+
+$fruits["apple"] -= 5
+$fruits["dragonfruit"] = 1
+$fruits
