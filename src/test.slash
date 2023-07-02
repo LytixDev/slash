@@ -1,3 +1,2 @@
-# initialize a tuple
-var fruits = (("apple", "banana", "orange"))
-$fruits[0]
+var my_tuple = ((1, 2, 3))
+$my_tuple

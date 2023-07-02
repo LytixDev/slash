@@ -23,10 +23,12 @@
 void slash_tuple_print(SlashTuple *tuple)
 {
     putchar('(');
+    putchar('(');
     for (size_t i = 0; i < tuple->size; i++) {
         slash_value_print(&tuple->values[i]);
 	if (i != tuple->size - 1)
 	    printf(", ");
     }
+    putchar(')');
     putchar(')');
 }

@@ -409,7 +409,7 @@ static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
 
     if (current_value.value->type == SLASH_LIST)
 	exec_assign_list_element(interpreter, stmt, *current_value.value, new_value);
-    if (current_value.value->type == SLASH_MAP)
+    else if (current_value.value->type == SLASH_MAP)
 	exec_assign_map_element(interpreter, stmt, *current_value.value, new_value);
     // TODO: str
     else
