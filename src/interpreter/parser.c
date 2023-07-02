@@ -320,13 +320,13 @@ static Expr *argument(Parser *parser)
 static Expr *expression(Parser *parser)
 {
     if (!match(parser, t_lparen))
-        return equality(parser);
+	return equality(parser);
 
-    /* 
+    /*
      * need to figure out if '(' should be parsed as a tuple, subshell or grouping (TODO)
      */
     if (match(parser, t_lparen))
-        return list_or_tuple_or_map(parser, true);
+	return list_or_tuple_or_map(parser, true);
 
     return subshell(parser);
 }
@@ -558,8 +558,8 @@ static Expr *list_or_tuple_or_map(Parser *parser, bool is_tuple)
 
     /* edge case: empty list */
     if (match(parser, terminator)) {
-        if (is_tuple)
-            consume(parser, t_rparen, "Expected '))' to terminate tuple");
+	if (is_tuple)
+	    consume(parser, t_rparen, "Expected '))' to terminate tuple");
 	expr->exprs = NULL;
 	return (Expr *)expr;
     }
@@ -573,6 +573,6 @@ static Expr *list_or_tuple_or_map(Parser *parser, bool is_tuple)
 
     consume(parser, terminator, "Expected list terminator");
     if (is_tuple)
-        consume(parser, t_rparen, "Expected '))' to terminate tuple");
+	consume(parser, t_rparen, "Expected '))' to terminate tuple");
     return (Expr *)expr;
 }

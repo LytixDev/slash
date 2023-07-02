@@ -22,13 +22,32 @@
 
 void slash_tuple_print(SlashTuple *tuple)
 {
-    putchar('(');
-    putchar('(');
-    for (size_t i = 0; i < tuple->size; i++) {
-        slash_value_print(&tuple->values[i]);
+     putchar('(');
+     putchar('(');
+     for (size_t i = 0; i < tuple->size; i++) {
+         slash_value_print(&tuple->values[i]);
 	if (i != tuple->size - 1)
 	    printf(", ");
-    }
-    putchar(')');
-    putchar(')');
+     }
+     putchar(')');
+     putchar(')');
+}
+
+//void slash_tuple_print(SlashValue *tuple)
+//{
+//    SlashTuple t = tuple->tuple;
+//    putchar('(');
+//    putchar('(');
+//    for (size_t i = 0; i < t.size; i++) {
+//	slash_value_print(&t.values[i]);
+//	if (i != t.size - 1)
+//	    printf(", ");
+//    }
+//    putchar(')');
+//    putchar(')');
+//}
+
+inline size_t slash_tuple_len(SlashTuple *tuple)
+{
+    return tuple->size;
 }

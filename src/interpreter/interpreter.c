@@ -24,10 +24,10 @@
 #include "interpreter/interpreter.h"
 #include "interpreter/lexer.h"
 #include "interpreter/scope.h"
-#include "interpreter/types/slash_list.h"
-#include "interpreter/types/slash_map.h"
-#include "interpreter/types/slash_range.h"
-#include "interpreter/types/slash_tuple.h"
+// #include "interpreter/types/slash_list.h"
+// #include "interpreter/types/slash_map.h"
+// #include "interpreter/types/slash_range.h"
+// #include "interpreter/types/slash_tuple.h"
 #include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
 #include "str_view.h"
@@ -229,7 +229,7 @@ static SlashValue eval_tuple(Interpreter *interpreter, ListExpr *expr)
     SlashTuple tuple = { .size = expr->exprs->size, .values = NULL };
     /* size is 0 */
     if (expr->exprs == NULL) {
-        assert(tuple.size == 0);
+	assert(tuple.size == 0);
 	return (SlashValue){ .type = SLASH_TUPLE, .tuple = tuple };
     }
 
@@ -240,7 +240,7 @@ static SlashValue eval_tuple(Interpreter *interpreter, ListExpr *expr)
     ARENA_LL_FOR_EACH(expr->exprs, item)
     {
 	SlashValue element_value = eval(interpreter, item->value);
-        tuple.values[i++] = element_value;
+	tuple.values[i++] = element_value;
     }
 
     return (SlashValue){ .type = SLASH_TUPLE, .tuple = tuple };
@@ -249,7 +249,7 @@ static SlashValue eval_tuple(Interpreter *interpreter, ListExpr *expr)
 static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
 {
     if (expr->list_type == SLASH_TUPLE)
-        return eval_tuple(interpreter, expr);
+	return eval_tuple(interpreter, expr);
 
     SlashValue value = { .type = SLASH_LIST };
     slash_list_init(&value.list);
@@ -295,6 +295,8 @@ static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
 static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
 {
     SlashValue value = eval(interpreter, stmt->expression);
+    //SlashOpFunc print_func = type_functions[value.type][OP_PRINT];
+    //print_func(&value);
     slash_value_print(&value);
     putchar('\n');
 }
