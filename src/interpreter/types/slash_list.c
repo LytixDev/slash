@@ -14,8 +14,10 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <assert.h>
 #include <stdio.h>
 
+#include "common.h"
 #include "interpreter/types/slash_list.h"
 #include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
@@ -38,9 +40,9 @@ void slash_list_append_list(SlashList *list, SlashList *to_append)
 	arraylist_append(&list->underlying, slash_list_get(to_append, i));
 }
 
-bool slash_list_set(SlashList *list, SlashValue val, size_t idx)
+bool slash_list_set(SlashList *list, SlashValue *val, size_t idx)
 {
-    return arraylist_set(&list->underlying, &val, idx);
+    return arraylist_set(&list->underlying, val, idx);
 }
 
 SlashValue *slash_list_get(SlashList *list, size_t idx)
@@ -73,13 +75,50 @@ bool slash_list_eq(SlashList *a, SlashList *b)
 }
 
 
-void slash_list_print(SlashList *list)
+void slash_list_print(SlashValue *value)
 {
+    ArrayList underlying = value->list.underlying;
+    SlashValue *item;
+
     putchar('[');
-    for (size_t i = 0; i < list->underlying.size; i++) {
-	slash_value_print(arraylist_get(&list->underlying, i));
-	if (i != list->underlying.size - 1)
+
+    for (size_t i = 0; i < underlying.size; i++) {
+	item = arraylist_get(&underlying, i);
+	slash_print[item->type](item);
+
+	if (i != underlying.size - 1)
 	    printf(", ");
     }
     putchar(']');
+}
+
+size_t *slash_list_len(SlashValue *value)
+{
+    return &value->list.underlying.size;
+}
+
+SlashValue *slash_list_item_get(SlashValue *collection, SlashValue *index)
+{
+    assert(collection->type == SLASH_LIST);
+    if (index->type != SLASH_NUM) {
+	slash_exit_interpreter_err("list indices must be numbers");
+	ASSERT_NOT_REACHED;
+    }
+
+    size_t idx = (size_t)index->num;
+    return slash_list_get(&collection->list, idx);
+}
+
+void slash_list_item_assign(SlashValue *collection, SlashValue *index, SlashValue *new_value)
+{
+    assert(collection->type == SLASH_LIST);
+
+    if (index->type != SLASH_NUM) {
+	slash_exit_interpreter_err("list indices must be numbers");
+	ASSERT_NOT_REACHED;
+    }
+
+    // TODO: cursed double to index
+    size_t idx = (size_t)index->num;
+    slash_list_set(&collection->list, new_value, idx);
 }

@@ -38,6 +38,12 @@ static Token *previous(Parser *parser)
     return arraylist_get(parser->tokens, parser->token_pos - 1);
 }
 
+/* lol */
+static Token *previous_previous(Parser *parser)
+{
+    return arraylist_get(parser->tokens, parser->token_pos - 2);
+}
+
 static bool is_at_end(Parser *parser)
 {
     return peek(parser)->type == t_eof;
@@ -148,6 +154,7 @@ static Expr *term(Parser *parser);
 static Expr *factor(Parser *parser);
 static Expr *unary(Parser *parser);
 static Expr *access(Parser *parser);
+static Expr *item_access(Parser *parser);
 static Expr *primary(Parser *parser);
 static Expr *bool_lit(Parser *parser);
 static Expr *number(Parser *parser);
@@ -186,6 +193,12 @@ static Stmt *statement(Parser *parser)
     if (match(parser, dt_shlit))
 	return cmd_stmt(parser);
 
+    /*
+     * TODO:
+     * this can't be a match due to the BNF.
+     * we have to call item_access() later that does not assume we came from
+     * t_access. This is bad and should be fixed.
+     */
     if (check(parser, t_access))
 	return assignment_stmt(parser);
 
@@ -204,11 +217,17 @@ static Stmt *expr_stmt(Parser *parser)
 
 static Stmt *assignment_stmt(Parser *parser)
 {
+    /* know next is t_access */
+
     // TODO: this is a hack
-    size_t pos_pre = parser->token_pos;
-    AccessExpr *name = (AccessExpr *)access(parser);
+    size_t pos = parser->token_pos;
+
+    // TODO: throw parse error if not AccessExpr or ItemAccessExpr ?
+    Expr *var = item_access(parser);
     if (!match(parser, t_equal, t_plus_equal, t_minus_equal)) {
-	parser->token_pos = pos_pre;
+	/* if next token after access is not an assignment op, then ignore everything we just did */
+	// TODO: can we just return the `var` as an ExpressionStmt ?
+	parser->token_pos = pos;
 	return expr_stmt(parser);
     }
 
@@ -217,12 +236,11 @@ static Stmt *assignment_stmt(Parser *parser)
     Expr *value = expression(parser);
 
     AssignStmt *stmt = (AssignStmt *)stmt_alloc(parser->ast_arena, STMT_ASSIGN);
-    stmt->access = name;
+    stmt->var = var;
     stmt->assignment_op = assignment_op->type;
     stmt->value = value;
     return (Stmt *)stmt;
 }
-
 
 static Stmt *var_decl(Parser *parser)
 {
@@ -401,51 +419,32 @@ static Expr *factor(Parser *parser)
 
 static Expr *unary(Parser *parser)
 {
-    return access(parser);
+    return item_access(parser);
 }
 
-static Expr *access(Parser *parser)
+static Expr *item_access(Parser *parser)
 {
     if (!match(parser, t_access))
 	return primary(parser);
 
+    if (!match(parser, t_lbracket))
+	return access(parser);
+
+    Token *variable_name = previous_previous(parser);
+    Expr *access_value = expression(parser);
+    consume(parser, t_rbracket, "expected ']' after variable item access");
+    ItemAccessExpr *expr = (ItemAccessExpr *)expr_alloc(parser->ast_arena, EXPR_ITEM_ACCESS);
+    expr->var_name = variable_name->lexeme;
+    expr->access_value = access_value;
+    return (Expr *)expr;
+}
+
+static Expr *access(Parser *parser)
+{
+    /* came from t_access */
     Token *variable_name = previous(parser);
     AccessExpr *expr = (AccessExpr *)expr_alloc(parser->ast_arena, EXPR_ACCESS);
     expr->var_name = variable_name->lexeme;
-
-    /* optional element access using brackets */
-    if (!match(parser, t_lbracket)) {
-	expr->access_type = ACCESS_NONE;
-	return (Expr *)expr;
-    }
-
-    /* index as str */
-    if (match(parser, dt_str)) {
-	expr->access_type = ACCESS_KEY;
-	expr->key = previous(parser)->lexeme;
-	consume(parser, t_rbracket, "expected ']' after indexing");
-	return (Expr *)expr;
-    }
-
-    /* index as num or range */
-    int range_start_or_index = 0;
-    if (match(parser, dt_num)) {
-	Token *start_token = previous(parser);
-	range_start_or_index = str_view_to_int(start_token->lexeme);
-    }
-
-    if (match(parser, t_dot_dot)) {
-	consume(parser, dt_num, "expected number after ranged access");
-	Token *end = previous(parser);
-	expr->access_type = ACCESS_RANGE;
-	expr->range.start = range_start_or_index;
-	expr->range.end = str_view_to_int(end->lexeme);
-    } else {
-	expr->access_type = ACCESS_INDEX;
-	expr->index = range_start_or_index;
-    }
-
-    consume(parser, t_rbracket, "expected ']' after indexing");
     return (Expr *)expr;
 }
 
@@ -490,20 +489,6 @@ static Expr *number(Parser *parser)
     LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
     expr->value = (SlashValue){ .type = SLASH_NUM, .num = str_view_to_double(token->lexeme) };
     return (Expr *)expr;
-}
-
-ArrayList parse(Arena *ast_arena, ArrayList *tokens)
-{
-    Parser parser = { .ast_arena = ast_arena, .tokens = tokens, .token_pos = 0 };
-    ArrayList statements;
-    arraylist_init(&statements, sizeof(Stmt *));
-
-    while (!check(&parser, t_eof)) {
-	Stmt *stmt = declaration(&parser);
-	arraylist_append(&statements, &stmt);
-    }
-
-    return statements;
 }
 
 static Expr *range(Parser *parser)
@@ -575,4 +560,18 @@ static Expr *list_or_tuple_or_map(Parser *parser, bool is_tuple)
     if (is_tuple)
 	consume(parser, t_rparen, "Expected '))' to terminate tuple");
     return (Expr *)expr;
+}
+
+ArrayList parse(Arena *ast_arena, ArrayList *tokens)
+{
+    Parser parser = { .ast_arena = ast_arena, .tokens = tokens, .token_pos = 0 };
+    ArrayList statements;
+    arraylist_init(&statements, sizeof(Stmt *));
+
+    while (!check(&parser, t_eof)) {
+	Stmt *stmt = declaration(&parser);
+	arraylist_append(&statements, &stmt);
+    }
+
+    return statements;
 }

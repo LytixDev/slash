@@ -34,12 +34,14 @@ SlashValue *slash_map_get(SlashMap *map, SlashValue *key)
     return hashmap_get(&map->underlying, key, sizeof(SlashValue));
 }
 
-void slash_map_print(SlashMap *map)
+void slash_map_print(SlashValue *value)
 {
     printf("[[");
-    HashMap *m = &map->underlying;
+    HashMap *m = &value->map.underlying;
+    SlashValue *k, *v;
     struct hm_bucket_t *bucket;
     struct hm_entry_t entry;
+
     for (int i = 0; i < N_BUCKETS(m->size_log2); i++) {
 	bucket = &m->buckets[i];
 	for (int j = 0; j < HM_BUCKET_SIZE; j++) {
@@ -47,11 +49,18 @@ void slash_map_print(SlashMap *map)
 	    if (entry.key == NULL)
 		continue;
 
-	    slash_value_print(entry.key);
+	    k = entry.key;
+	    v = entry.value;
+	    slash_print[k->type](k);
 	    putchar(':');
-	    slash_value_print(entry.value);
+	    slash_print[v->type](v);
 	    printf(", ");
 	}
     }
     printf("]]");
+}
+
+size_t *slash_map_len(SlashValue *value)
+{
+    return (size_t *)&value->map.underlying.len;
 }

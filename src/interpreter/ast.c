@@ -25,8 +25,8 @@
 
 
 const size_t expr_size_table[] = {
-    sizeof(UnaryExpr),	  sizeof(BinaryExpr), sizeof(LiteralExpr), sizeof(AccessExpr),
-    sizeof(SubshellExpr), sizeof(ListExpr),   sizeof(MapExpr),
+    sizeof(UnaryExpr),	    sizeof(BinaryExpr),	  sizeof(LiteralExpr), sizeof(AccessExpr),
+    sizeof(ItemAccessExpr), sizeof(SubshellExpr), sizeof(ListExpr),    sizeof(MapExpr),
 };
 
 const size_t stmt_size_table[] = { sizeof(ExpressionStmt), sizeof(VarStmt),  sizeof(LoopStmt),
@@ -123,15 +123,14 @@ static void ast_print_literal(LiteralExpr *expr)
 static void ast_print_access(AccessExpr *expr)
 {
     str_view_print(expr->var_name);
-    if (expr->access_type == ACCESS_INDEX) {
-	printf(".get(%d)", expr->index);
-    } else if (expr->access_type == ACCESS_KEY) {
-	printf(".get(");
-	str_view_print(expr->key);
-	printf(")");
-    } else if (expr->access_type == ACCESS_RANGE) {
-	printf(".get(%d..%d)", expr->range.start, expr->range.end);
-    }
+}
+
+static void ast_print_item_access(ItemAccessExpr *expr)
+{
+    str_view_print(expr->var_name);
+    putchar('[');
+    ast_print_expr(expr->access_value);
+    putchar(']');
 }
 
 static void ast_print_list(ListExpr *expr)
@@ -227,7 +226,7 @@ static void ast_print_iter_loop(IterLoopStmt *stmt)
 
 static void ast_print_assign(AssignStmt *stmt)
 {
-    ast_print_access(stmt->access);
+    ast_print_expr(stmt->var);
     if (stmt->assignment_op == t_equal)
 	printf(" = ");
     else if (stmt->assignment_op == t_plus_equal)
@@ -257,6 +256,10 @@ static void ast_print_expr(Expr *expr)
 
     case EXPR_ACCESS:
 	ast_print_access((AccessExpr *)expr);
+	break;
+
+    case EXPR_ITEM_ACCESS:
+	ast_print_item_access((ItemAccessExpr *)expr);
 	break;
 
     case EXPR_SUBSHELL:

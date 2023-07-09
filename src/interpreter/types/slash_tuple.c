@@ -20,34 +20,22 @@
 #include "interpreter/types/slash_value.h"
 
 
-void slash_tuple_print(SlashTuple *tuple)
+void slash_tuple_print(SlashValue *value)
 {
-     putchar('(');
-     putchar('(');
-     for (size_t i = 0; i < tuple->size; i++) {
-         slash_value_print(&tuple->values[i]);
-	if (i != tuple->size - 1)
+    SlashTuple tuple = value->tuple;
+    SlashValue current;
+    printf("((");
+    for (size_t i = 0; i < tuple.size; i++) {
+	current = tuple.values[i];
+	/* call the print function directly */
+	slash_print[current.type](&current);
+	if (i != tuple.size - 1)
 	    printf(", ");
-     }
-     putchar(')');
-     putchar(')');
+    }
+    printf("))");
 }
 
-//void slash_tuple_print(SlashValue *tuple)
-//{
-//    SlashTuple t = tuple->tuple;
-//    putchar('(');
-//    putchar('(');
-//    for (size_t i = 0; i < t.size; i++) {
-//	slash_value_print(&t.values[i]);
-//	if (i != t.size - 1)
-//	    printf(", ");
-//    }
-//    putchar(')');
-//    putchar(')');
-//}
-
-inline size_t slash_tuple_len(SlashTuple *tuple)
+size_t *slash_tuple_len(SlashValue *value)
 {
-    return tuple->size;
+    return &value->tuple.size;
 }

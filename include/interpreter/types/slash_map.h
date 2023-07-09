@@ -32,6 +32,8 @@ void slash_map_put(SlashMap *map, SlashValue *key, SlashValue *value);
 SlashValue *slash_map_get(SlashMap *map, SlashValue *key);
 
 /* O(n) */
-void slash_map_print(SlashMap *map);
+void slash_map_print(SlashValue *value);
+
+size_t *slash_map_len(SlashValue *value);
 
 #endif /* SLASH_MAP_H */

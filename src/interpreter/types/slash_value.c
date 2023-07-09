@@ -17,44 +17,92 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "interpreter/types/slash_list.h"
-#include "interpreter/types/slash_map.h"
-#include "interpreter/types/slash_tuple.h"
+#include "common.h"
 #include "interpreter/types/slash_value.h"
 #include "sac/sac.h"
 #include "str_view.h"
 
 
-/*
- * print, len
- */
-SlashOpFunc type_functions[SLASH_TYPE_COUNT][OP_COUNT] = {
+void slash_print_none(void)
+{
+}
+
+void slash_print_not_defined(SlashValue *value)
+{
+    printf("Print not defined for %d", value->type);
+}
+
+void slash_item_get_not_defined(void)
+{
+    slash_exit_interpreter_err("item no get");
+}
+
+void slash_item_assign_not_defined(void)
+{
+    slash_exit_interpreter_err("item assignment nt defined for this type");
+}
+
+SlashPrintFunc slash_print[SLASH_TYPE_COUNT] = {
     /* bool */
-    { (SlashOpFunc)slash_op_not_supported, (SlashOpFunc)slash_op_not_supported },
-
+    (SlashPrintFunc)slash_bool_print,
     /* str */
-    { (SlashOpFunc)slash_op_not_supported, (SlashOpFunc)slash_op_not_supported },
-
+    (SlashPrintFunc)slash_str_print,
     /* num */
-    { (SlashOpFunc)slash_op_not_supported, (SlashOpFunc)slash_op_not_supported },
-
+    (SlashPrintFunc)slash_num_print,
     /* shlit */
-    { (SlashOpFunc)slash_op_not_supported, (SlashOpFunc)slash_op_not_supported },
-
+    (SlashPrintFunc)slash_print_not_defined,
     /* range */
-    { (SlashOpFunc)slash_op_not_supported, (SlashOpFunc)slash_op_not_supported },
-
+    (SlashPrintFunc)slash_range_print,
     /* list */
-    { (SlashOpFunc)slash_list_print, (SlashOpFunc)slash_op_not_supported },
-
+    (SlashPrintFunc)slash_list_print,
     /* tuple */
-    { (SlashOpFunc)slash_tuple_print, (SlashOpFunc)slash_op_not_supported },
-
+    (SlashPrintFunc)slash_tuple_print,
     /* map */
-    { (SlashOpFunc)slash_map_print, (SlashOpFunc)slash_op_not_supported },
-
+    (SlashPrintFunc)slash_map_print,
     /* none */
-    { (SlashOpFunc)slash_op_not_supported, (SlashOpFunc)slash_op_not_supported },
+    (SlashPrintFunc)slash_print_none,
+};
+
+SlashItemGetFunc slash_item_get[SLASH_TYPE_COUNT] = {
+    /* bool */
+    (SlashItemGetFunc)slash_item_get_not_defined,
+    /* str */
+    (SlashItemGetFunc)slash_item_get_not_defined,
+    /* num */
+    (SlashItemGetFunc)slash_item_get_not_defined,
+    /* shlit */
+    (SlashItemGetFunc)slash_item_get_not_defined,
+    /* range */
+    (SlashItemGetFunc)slash_item_get_not_defined,
+    /* list */
+    (SlashItemGetFunc)slash_list_item_get,
+    /* tuple */
+    (SlashItemGetFunc)slash_item_get_not_defined,
+    /* map */
+    (SlashItemGetFunc)slash_item_get_not_defined,
+    /* none */
+    (SlashItemGetFunc)slash_item_get_not_defined,
+};
+
+SlashItemAssignFunc slash_item_assign[SLASH_TYPE_COUNT] = {
+    /* bool */
+    (SlashItemAssignFunc)slash_item_assign_not_defined,
+    /* str */
+    (SlashItemAssignFunc)slash_item_assign_not_defined,
+    /* num */
+    (SlashItemAssignFunc)slash_item_assign_not_defined,
+    /* shlit */
+    (SlashItemAssignFunc)slash_item_assign_not_defined,
+    /* range */
+    (SlashItemAssignFunc)slash_item_assign_not_defined,
+    /* list */
+    (SlashItemAssignFunc)slash_list_item_assign,
+    /* tuple */
+    (SlashItemAssignFunc)slash_item_assign_not_defined,
+    /* map */
+    (SlashItemAssignFunc)slash_item_assign_not_defined,
+    /* none */
+    (SlashItemAssignFunc)slash_item_assign_not_defined,
 };
 
 
@@ -121,43 +169,4 @@ bool slash_value_eq(SlashValue *a, SlashValue *b)
     }
 
     return false;
-}
-
-void slash_value_print(SlashValue *sv)
-{
-    switch (sv->type) {
-    case SLASH_STR:
-    case SLASH_SHLIT:
-	str_view_print(sv->str);
-	break;
-
-    case SLASH_NUM:
-	printf("%f", sv->num);
-	break;
-
-    case SLASH_LIST:
-	slash_list_print(&sv->list);
-	break;
-
-    case SLASH_TUPLE:
-	slash_tuple_print(&sv->tuple);
-	break;
-
-    case SLASH_MAP:
-	slash_map_print(&sv->map);
-	break;
-
-    case SLASH_BOOL:
-	printf("%s", sv->boolean ? "true" : "false");
-	break;
-
-
-    default:
-	fprintf(stderr, "printing not defined for this type");
-    }
-}
-
-void slash_op_not_supported(void *arg)
-{
-    printf("Not supported\n");
 }

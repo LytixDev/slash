@@ -29,6 +29,7 @@ typedef enum {
     EXPR_BINARY,
     EXPR_LITERAL,
     EXPR_ACCESS,
+    EXPR_ITEM_ACCESS,
     EXPR_SUBSHELL,
     EXPR_LIST,
     EXPR_MAP,
@@ -81,23 +82,16 @@ typedef struct {
     SlashValue value;
 } LiteralExpr;
 
-typedef enum {
-    ACCESS_NONE,
-    ACCESS_INDEX,
-    ACCESS_KEY,
-    ACCESS_RANGE,
-} AccessType;
+typedef struct {
+    ExprType type;
+    StrView var_name;
+} AccessExpr;
 
 typedef struct {
     ExprType type;
     StrView var_name;
-    AccessType access_type;
-    union {
-	int index;
-	StrView key;
-	SlashRange range;
-    };
-} AccessExpr;
+    Expr *access_value; // a[x], where x in this case is the 'access_value'
+} ItemAccessExpr;
 
 typedef struct {
     ExprType type;
@@ -110,6 +104,7 @@ typedef struct {
     ArenaLL *exprs; // will be NULL for the empty list
 } ListExpr;
 
+// NOTE: not an expression
 typedef struct {
     Expr *key;
     Expr *value;
@@ -166,7 +161,7 @@ typedef struct {
 
 typedef struct {
     StmtType type;
-    AccessExpr *access;
+    Expr *var; // AccessExpr or ItemAccessExpr
     TokenType assignment_op;
     Expr *value;
 } AssignStmt;

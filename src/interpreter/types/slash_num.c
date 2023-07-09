@@ -14,22 +14,13 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef SLASH_OP_H
-#define SLASH_OP_H
+#include "interpreter/types/slash_value.h"
+#include <stdio.h>
 
-
-// /*
-//  * Generic function pointer used for operations
-//  */
-// typedef void * (*SlashOpFunc)(void *);
-//
-// /*
-//  * Every SlashValue will have a table containing function pointers that implement these
-//  operations
-//  */
-// typedef enum {
-//     OP_PRINT = 0,
-//     OP_LEN,
-// } SlashTypeOp;
-
-#endif /* SLASH_OP_H */
+void slash_num_print(SlashValue *value)
+{
+    if (value->num == (int)value->num)
+	printf("%d", (int)value->num);
+    else
+	printf("%f", value->num);
+}

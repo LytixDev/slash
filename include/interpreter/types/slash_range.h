@@ -18,12 +18,17 @@
 #define SLASH_RANGE_H
 
 #include <stdint.h>
+#include <stdlib.h>
 
+typedef struct slash_value_t SlashValue; // Forward declaration of SlashValue
 
 typedef struct {
     int32_t start;
     int32_t end;
 } SlashRange;
+
+
+void slash_range_print(SlashValue *value);
 
 
 #endif /* SLASH_RANGE_H */

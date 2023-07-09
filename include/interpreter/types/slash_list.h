@@ -42,13 +42,19 @@ void slash_list_append_list(SlashList *list, SlashList *to_append);
 
 SlashValue *slash_list_get(SlashList *list, size_t idx);
 
-bool slash_list_set(SlashList *list, SlashValue val, size_t idx);
+bool slash_list_set(SlashList *list, SlashValue *val, size_t idx);
 
 /* NOTE: function assumes ret_ptr is NOT initialized */
 void slash_list_from_ranged_copy(SlashList *ret_ptr, SlashList *to_copy, SlashRange range);
 
 bool slash_list_eq(SlashList *a, SlashList *b);
 
-void slash_list_print(SlashList *list);
+/* common slash value functions */
+// typedef void   (*SlashItemAssignFunc)(SlashValue *, SlashValue *, SlashValue *);
+void slash_list_print(SlashValue *value);
+size_t *slash_list_len(SlashValue *value);
+SlashValue *slash_list_item_get(SlashValue *collection, SlashValue *index);
+void slash_list_item_assign(SlashValue *collection, SlashValue *index, SlashValue *new_value);
+
 
 #endif /* SLASH_LIST_H */

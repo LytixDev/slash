@@ -47,10 +47,13 @@ equality        -> comparison (( "!=" | "==" ) comparison )* ;
 comparison      -> term (( ">" | ">=" | "<" | "<=" ) term )* ;
 term            -> factor (( "-" | "+" ) factor )* ;
 factor          -> unary ;
-unary           -> access ;
+unary           -> item_access ;
 
-access          -> ACCESS ( "[" NUMBER | ( NUMBER? ".." NUMBER ) | STRING "]" )?
-                |  primary;
+item_access     -> ACCESS "[" expression "]"
+                |  access ;
+
+access          -> ACCESS
+                |  primary ;
 
 primary         -> STRING 
                 |  SHLIT

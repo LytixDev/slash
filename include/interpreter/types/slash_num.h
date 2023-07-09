@@ -14,26 +14,11 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef SLASH_TUPLE_H
-#define SLASH_TUPLE_H
-
-#include <stdlib.h>
+#ifndef SLASH_NUM_H
+#define SLASH_NUM_H
 
 typedef struct slash_value_t SlashValue; // Forward declaration of SlashValue
 
-/*
- * Tuples are ordered and unchangeable.
- * Other than that they behave similarly, and are generally inspired by, tuples in Python.
- */
-typedef struct {
-    size_t size;
-    SlashValue *values;
-} SlashTuple;
+void slash_num_print(SlashValue *value);
 
-
-void slash_tuple_print(SlashValue *value);
-
-size_t *slash_tuple_len(SlashValue *value);
-
-
-#endif /* SLASH_TUPLE_H */
+#endif /* SLASH_NUM_H */
