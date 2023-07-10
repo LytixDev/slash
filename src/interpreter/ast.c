@@ -25,8 +25,9 @@
 
 
 const size_t expr_size_table[] = {
-    sizeof(UnaryExpr),	    sizeof(BinaryExpr),	  sizeof(LiteralExpr), sizeof(AccessExpr),
-    sizeof(ItemAccessExpr), sizeof(SubshellExpr), sizeof(ListExpr),    sizeof(MapExpr),
+    sizeof(UnaryExpr),	sizeof(BinaryExpr),	sizeof(LiteralExpr),
+    sizeof(AccessExpr), sizeof(ItemAccessExpr), sizeof(SubshellExpr),
+    sizeof(ListExpr),	sizeof(MapExpr),	sizeof(MethodExpr),
 };
 
 const size_t stmt_size_table[] = { sizeof(ExpressionStmt), sizeof(VarStmt),  sizeof(LoopStmt),
@@ -34,8 +35,8 @@ const size_t stmt_size_table[] = { sizeof(ExpressionStmt), sizeof(VarStmt),  siz
 				   sizeof(AssignStmt),	   sizeof(BlockStmt) };
 
 char *expr_type_str_map[EXPR_ENUM_COUNT] = {
-    "EXPR_UNARY",    "EXPR_BINARY", "EXPR_LITERAL", "EXPR_ACCESS",
-    "EXPR_SUBSHELL", "EXPR_LIST",   "EXPR_MAP",
+    "EXPR_UNARY",    "EXPR_BINARY", "EXPR_LITERAL", "EXPR_ACCESS", "EXPR_ITEM_ACCESS",
+    "EXPR_SUBSHELL", "EXPR_LIST",   "EXPR_MAP",	    "EXPR_METHOD",
 };
 
 char *stmt_type_str_map[STMT_ENUM_COUNT] = {
@@ -162,6 +163,23 @@ static void ast_print_map(MapExpr *expr)
     }
 }
 
+static void ast_print_method(MethodExpr *expr)
+{
+    ast_print_expr(expr->obj);
+    putchar('.');
+    str_view_print(expr->method_name);
+    putchar('(');
+
+    if (expr->arg_exprs != NULL) {
+	LLItem *item;
+	ARENA_LL_FOR_EACH(expr->arg_exprs, item)
+	{
+	    ast_print_expr(item->value);
+	}
+    }
+    putchar(')');
+}
+
 static void ast_print_expression(ExpressionStmt *stmt)
 {
     ast_print_expr(stmt->expression);
@@ -272,6 +290,10 @@ static void ast_print_expr(Expr *expr)
 
     case EXPR_MAP:
 	ast_print_map((MapExpr *)expr);
+	break;
+
+    case EXPR_METHOD:
+	ast_print_method((MethodExpr *)expr);
 	break;
 
     default:

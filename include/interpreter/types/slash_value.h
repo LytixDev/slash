@@ -30,7 +30,7 @@
 #include "sac/sac.h"
 
 
-typedef enum {
+typedef enum slash_type_e {
     SLASH_BOOL = 0,
     SLASH_STR,
     SLASH_NUM,

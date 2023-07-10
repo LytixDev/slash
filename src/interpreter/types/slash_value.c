@@ -156,7 +156,7 @@ bool is_truthy(SlashValue *sv)
 	return sv->boolean;
 
     case SLASH_LIST:
-	return sv->list.underlying.size != 0;
+	return sv->list.underlying->size != 0;
 
     case SLASH_TUPLE:
 	return sv->tuple.size != 0;

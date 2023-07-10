@@ -23,6 +23,7 @@
 #include "interpreter/interpreter.h"
 #include "interpreter/lexer.h"
 #include "interpreter/scope.h"
+#include "interpreter/types/method.h"
 #include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
 #include "str_view.h"
@@ -288,6 +289,24 @@ static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
     return map;
 }
 
+static SlashValue eval_method(Interpreter *interpreter, MethodExpr *expr)
+{
+    SlashValue self = eval(interpreter, expr->obj);
+    // TODO: fix cursed manual conversion from str_view to cstr
+    size_t method_name_size = expr->method_name.size;
+    char method_name[method_name_size + 1];
+    memcpy(method_name, expr->method_name.view, method_name_size);
+    method_name[method_name_size] = 0;
+
+    /* get method */
+    MethodFunc func = get_method(&self, method_name);
+    if (func == NULL) {
+	slash_exit_interpreter_err("method does not exist :-(");
+    }
+
+    return func(&self);
+}
+
 
 /*
  * statment execution functions
@@ -434,7 +453,7 @@ static void exec_iter_loop_list(Interpreter *interpreter, IterLoopStmt *stmt, Sl
     var_define(interpreter->scope, &stmt->var_name, NULL);
 
     SlashValue *iterator_value;
-    for (size_t i = 0; i < iterable.underlying.size; i++) {
+    for (size_t i = 0; i < iterable.underlying->size; i++) {
 	iterator_value = slash_list_get(&iterable, i);
 	var_assign(interpreter->scope, &stmt->var_name, iterator_value);
 	exec_loop_block(interpreter, stmt->body_block);
@@ -548,6 +567,9 @@ static SlashValue eval(Interpreter *interpreter, Expr *expr)
 
     case EXPR_MAP:
 	return eval_map(interpreter, (MapExpr *)expr);
+
+    case EXPR_METHOD:
+	return eval_method(interpreter, (MethodExpr *)expr);
 
     default:
 	slash_exit_internal_err("interpreter: expr type not handled");

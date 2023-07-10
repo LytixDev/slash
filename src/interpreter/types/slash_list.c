@@ -25,47 +25,48 @@
 
 void slash_list_init(SlashList *list)
 {
-    arraylist_init(&list->underlying, sizeof(SlashValue));
+    list->underlying = malloc(sizeof(ArrayList));
+    arraylist_init(list->underlying, sizeof(SlashValue));
     // list->underlying_T = SLASH_NONE;
 }
 
 bool slash_list_append(SlashList *list, SlashValue val)
 {
-    return arraylist_append(&list->underlying, &val);
+    return arraylist_append(list->underlying, &val);
 }
 
 void slash_list_append_list(SlashList *list, SlashList *to_append)
 {
-    for (size_t i = 0; i < to_append->underlying.size; i++)
-	arraylist_append(&list->underlying, slash_list_get(to_append, i));
+    for (size_t i = 0; i < to_append->underlying->size; i++)
+	arraylist_append(list->underlying, slash_list_get(to_append, i));
 }
 
 bool slash_list_set(SlashList *list, SlashValue *val, size_t idx)
 {
-    return arraylist_set(&list->underlying, val, idx);
+    return arraylist_set(list->underlying, val, idx);
 }
 
 SlashValue *slash_list_get(SlashList *list, size_t idx)
 {
-    return arraylist_get(&list->underlying, idx);
+    return arraylist_get(list->underlying, idx);
 }
 
 void slash_list_from_ranged_copy(SlashList *ret_ptr, SlashList *to_copy, SlashRange range)
 {
     slash_list_init(ret_ptr);
-    assert(range.end <= to_copy->underlying.size);
+    assert(range.end <= to_copy->underlying->size);
     for (int i = range.start; i < range.end; i++)
-	arraylist_append(&ret_ptr->underlying, arraylist_get(&to_copy->underlying, i));
+	arraylist_append(ret_ptr->underlying, arraylist_get(to_copy->underlying, i));
 }
 
 bool slash_list_eq(SlashList *a, SlashList *b)
 {
-    if (a->underlying.size != b->underlying.size)
+    if (a->underlying->size != b->underlying->size)
 	return false;
 
     SlashValue *A;
     SlashValue *B;
-    for (size_t i = 0; i < a->underlying.size; i++) {
+    for (size_t i = 0; i < a->underlying->size; i++) {
 	A = slash_list_get(a, i);
 	B = slash_list_get(b, i);
 	if (!slash_value_eq(A, B))
@@ -75,18 +76,20 @@ bool slash_list_eq(SlashList *a, SlashList *b)
 }
 
 
+/* common functions */
+
 void slash_list_print(SlashValue *value)
 {
-    ArrayList underlying = value->list.underlying;
+    ArrayList *underlying = value->list.underlying;
     SlashValue *item;
 
     putchar('[');
 
-    for (size_t i = 0; i < underlying.size; i++) {
-	item = arraylist_get(&underlying, i);
+    for (size_t i = 0; i < underlying->size; i++) {
+	item = arraylist_get(underlying, i);
 	slash_print[item->type](item);
 
-	if (i != underlying.size - 1)
+	if (i != underlying->size - 1)
 	    printf(", ");
     }
     putchar(']');
@@ -94,7 +97,7 @@ void slash_list_print(SlashValue *value)
 
 size_t *slash_list_len(SlashValue *value)
 {
-    return &value->list.underlying.size;
+    return &value->list.underlying->size;
 }
 
 SlashValue slash_list_item_get(SlashValue *collection, SlashValue *index)
@@ -135,10 +138,26 @@ bool slash_list_item_in(SlashValue *collection, SlashValue *item)
 {
     assert(collection->type == SLASH_LIST);
 
-    ArrayList underlying = collection->list.underlying;
-    for (size_t i = 0; i < underlying.size; i++) {
-	if (slash_value_eq(arraylist_get(&underlying, i), item))
+    ArrayList *underlying = collection->list.underlying;
+    for (size_t i = 0; i < underlying->size; i++) {
+	if (slash_value_eq(arraylist_get(underlying, i), item))
 	    return true;
     }
     return false;
+}
+
+
+/* methods */
+SlashMethod slash_list_methods[SLASH_LIST_METHODS_COUNT] = {
+    (SlashMethod){ .name = "pop", .fp = slash_list_pop },
+};
+
+SlashValue slash_list_pop(SlashValue *self, ...)
+{
+    assert(self->type == SLASH_LIST);
+
+    ArrayList *underlying = self->list.underlying;
+    SlashValue popped_item;
+    arraylist_pop_and_copy(underlying, &popped_item);
+    return popped_item;
 }

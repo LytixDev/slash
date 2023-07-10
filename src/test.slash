@@ -1,5 +1,9 @@
-var names = ["Nicolai", "Sofie"]
+# initialize a list
 
-if "Nicolai" in $names {
-    "Nice"
-}
+var fruits = ["apple", "banana", "orange"]
+$fruits
+
+var last_elem = $fruits.pop()
+$last_elem
+
+$fruits

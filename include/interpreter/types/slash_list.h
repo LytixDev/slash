@@ -17,6 +17,7 @@
 #ifndef SLASH_LIST_H
 #define SLASH_LIST_H
 
+#include "interpreter/types/method.h"
 #include "interpreter/types/slash_range.h"
 #include "nicc/nicc.h"
 
@@ -30,7 +31,7 @@ typedef struct slash_value_t SlashValue; // Forward declaration of SlashValue
  * compare-function.
  */
 typedef struct {
-    ArrayList underlying;
+    ArrayList *underlying;
     // SlashValueType underlying_T;
 } SlashList;
 
@@ -55,6 +56,12 @@ size_t *slash_list_len(SlashValue *value);
 SlashValue slash_list_item_get(SlashValue *collection, SlashValue *index);
 void slash_list_item_assign(SlashValue *collection, SlashValue *index, SlashValue *new_value);
 bool slash_list_item_in(SlashValue *collection, SlashValue *item);
+
+/* slash list methods */
+#define SLASH_LIST_METHODS_COUNT 1
+extern SlashMethod slash_list_methods[SLASH_LIST_METHODS_COUNT];
+
+SlashValue slash_list_pop(SlashValue *self, ...);
 
 
 #endif /* SLASH_LIST_H */

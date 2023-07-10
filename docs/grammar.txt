@@ -36,11 +36,18 @@ block           -> "{" statement* "}" ;
 
 /* expressions */
 
+//TODO: currently just a linked list, should be its own expr?
+comma_sep_exprs -> (argument ",")*? ;
+
 argument        -> expression ;
 
-expression      -> contains
+
+expression      -> method_call
+                |  contains
                 |  equality
                 |  subshell ;
+
+method_call     -> expression "." IDENTIFIER "(" comma_sep_exprs ")" ;
 
 contains        -> expression "in" expression ;
 
@@ -72,8 +79,8 @@ number          -> NUMBER ;
 
 range           -> NUMBER? ".." NUMBER ;
 
-list            -> "[" ( expression "," )*? "]" ;
+list            -> "[" comma_sep_exprs "]" ;
 
 map             -> "[[" ( expression ":" expression "," )*? "]]"
 
-tuple           -> "((" (expression ",")*? "))" ;
+tuple           -> "((" comma_sep_exprs "))" ;

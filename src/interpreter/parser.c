@@ -27,6 +27,35 @@
 #include "str_view.h"
 
 
+/* grammar functions */
+static Stmt *declaration(Parser *parser);
+static Stmt *statement(Parser *parser);
+static Stmt *var_decl(Parser *parser);
+static Stmt *loop_stmt(Parser *parser);
+static Stmt *if_stmt(Parser *parser);
+static Stmt *cmd_stmt(Parser *parser);
+static Stmt *assignment_stmt(Parser *parser);
+static Stmt *expr_stmt(Parser *parser);
+static Stmt *block(Parser *parser);
+
+static Expr *argument(Parser *parser);
+static Expr *expression(Parser *parser);
+static Expr *subshell(Parser *parser);
+static Expr *equality(Parser *parser);
+static Expr *comparison(Parser *parser);
+static Expr *term(Parser *parser);
+static Expr *factor(Parser *parser);
+static Expr *unary(Parser *parser);
+static Expr *access(Parser *parser);
+static Expr *item_access(Parser *parser);
+static Expr *primary(Parser *parser);
+static Expr *bool_lit(Parser *parser);
+static Expr *number(Parser *parser);
+static Expr *range(Parser *parser);
+static Expr *map(Parser *parser);
+static Expr *list_or_tuple_or_map(Parser *parser, bool is_list);
+
+
 /* util/helper functions */
 static Token *peek(Parser *parser)
 {
@@ -133,34 +162,25 @@ static bool match_either(Parser *parser, unsigned int n, ...)
 
 #define match(parser, ...) match_either(parser, VA_NUMBER_OF_ARGS(__VA_ARGS__), __VA_ARGS__)
 
+ArenaLL *comma_sep_exprs(Parser *parser)
+{
+    /*
+     * this function is only called when we expect comma seperated expression
+     */
+
+    ArenaLL *args = arena_ll_alloc(parser->ast_arena);
+    do {
+	arena_ll_append(args, expression(parser));
+	/* if no comma then we exit */
+	if (!match(parser, t_comma))
+	    break;
+    } while (!check(parser, t_eof));
+
+    return args;
+}
+
 
 /* grammar functions */
-static Stmt *declaration(Parser *parser);
-static Stmt *statement(Parser *parser);
-static Stmt *var_decl(Parser *parser);
-static Stmt *loop_stmt(Parser *parser);
-static Stmt *if_stmt(Parser *parser);
-static Stmt *cmd_stmt(Parser *parser);
-static Stmt *assignment_stmt(Parser *parser);
-static Stmt *expr_stmt(Parser *parser);
-static Stmt *block(Parser *parser);
-
-static Expr *argument(Parser *parser);
-static Expr *expression(Parser *parser);
-static Expr *subshell(Parser *parser);
-static Expr *equality(Parser *parser);
-static Expr *comparison(Parser *parser);
-static Expr *term(Parser *parser);
-static Expr *factor(Parser *parser);
-static Expr *unary(Parser *parser);
-static Expr *access(Parser *parser);
-static Expr *item_access(Parser *parser);
-static Expr *primary(Parser *parser);
-static Expr *bool_lit(Parser *parser);
-static Expr *number(Parser *parser);
-static Expr *range(Parser *parser);
-static Expr *map(Parser *parser);
-static Expr *list_or_tuple_or_map(Parser *parser, bool is_list);
 
 static Stmt *declaration(Parser *parser)
 {
@@ -346,14 +366,30 @@ static Expr *expression(Parser *parser)
     else
 	left = subshell(parser);
 
-    if (!match(parser, t_in))
-	return left;
+    if (match(parser, t_in)) {
+	BinaryExpr *expr = (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY);
+	expr->left = left;
+	expr->operator_ = t_in;
+	expr->right = expression(parser);
+	return (Expr *)expr;
+    }
 
-    BinaryExpr *expr = (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY);
-    expr->left = left;
-    expr->operator_ = t_in;
-    expr->right = expression(parser);
-    return (Expr *)expr;
+    if (match(parser, t_dot)) {
+	MethodExpr *expr = (MethodExpr *)expr_alloc(parser->ast_arena, EXPR_METHOD);
+	Token *method_name = consume(parser, t_identifier, "expected method name");
+	expr->obj = left;
+	expr->method_name = method_name->lexeme;
+	consume(parser, t_lparen, "expected left paren");
+	if (!match(parser, t_rparen)) {
+	    expr->arg_exprs = comma_sep_exprs(parser);
+	    consume(parser, t_rparen, "expected right paren");
+	} else {
+	    expr->arg_exprs = NULL;
+	}
+	return (Expr *)expr;
+    }
+
+    return left;
 }
 
 static Expr *subshell(Parser *parser)
@@ -556,14 +592,14 @@ static Expr *list_or_tuple_or_map(Parser *parser, bool is_tuple)
 	return (Expr *)expr;
     }
 
-    expr->exprs = arena_ll_alloc(parser->ast_arena);
-    do {
-	arena_ll_append(expr->exprs, expression(parser));
-	/* "ignore" single trailing comma */
-	match(parser, t_comma);
-    } while (!check(parser, terminator));
+    /* if next is not terminator, parse list initializer */
+    if (!match(parser, terminator)) {
+	expr->exprs = comma_sep_exprs(parser);
+	consume(parser, terminator, "Expected list terminator after arg list");
+    } else {
+	expr->exprs = NULL;
+    }
 
-    consume(parser, terminator, "Expected list terminator");
     if (is_tuple)
 	consume(parser, t_rparen, "Expected '))' to terminate tuple");
     return (Expr *)expr;
