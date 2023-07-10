@@ -17,6 +17,7 @@
 #ifndef SLASH_TUPLE_H
 #define SLASH_TUPLE_H
 
+#include "nicc/nicc.h"
 #include <stdlib.h>
 
 typedef struct slash_value_t SlashValue; // Forward declaration of SlashValue
@@ -31,9 +32,12 @@ typedef struct {
 } SlashTuple;
 
 
-void slash_tuple_print(SlashValue *value);
+/* common slash value functions */
 
+void slash_tuple_print(SlashValue *value);
 size_t *slash_tuple_len(SlashValue *value);
+SlashValue slash_tuple_item_get(SlashValue *collection, SlashValue *index);
+bool slash_tuple_item_in(SlashValue *collection, SlashValue *item);
 
 
 #endif /* SLASH_TUPLE_H */

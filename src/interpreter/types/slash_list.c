@@ -97,16 +97,24 @@ size_t *slash_list_len(SlashValue *value)
     return &value->list.underlying.size;
 }
 
-SlashValue *slash_list_item_get(SlashValue *collection, SlashValue *index)
+SlashValue slash_list_item_get(SlashValue *collection, SlashValue *index)
 {
     assert(collection->type == SLASH_LIST);
-    if (index->type != SLASH_NUM) {
-	slash_exit_interpreter_err("list indices must be numbers");
+    if (!(index->type == SLASH_NUM || index->type == SLASH_RANGE)) {
+	slash_exit_interpreter_err("list indices must be number or range");
 	ASSERT_NOT_REACHED;
     }
 
-    size_t idx = (size_t)index->num;
-    return slash_list_get(&collection->list, idx);
+    if (index->type == SLASH_NUM) {
+	size_t idx = (size_t)index->num;
+	return *slash_list_get(&collection->list, idx);
+    }
+
+    SlashValue ranged_copy;
+    ranged_copy.type = SLASH_LIST;
+    slash_list_init(&ranged_copy.list);
+    slash_list_from_ranged_copy(&ranged_copy.list, &collection->list, index->range);
+    return ranged_copy;
 }
 
 void slash_list_item_assign(SlashValue *collection, SlashValue *index, SlashValue *new_value)
@@ -114,11 +122,23 @@ void slash_list_item_assign(SlashValue *collection, SlashValue *index, SlashValu
     assert(collection->type == SLASH_LIST);
 
     if (index->type != SLASH_NUM) {
-	slash_exit_interpreter_err("list indices must be numbers");
+	slash_exit_interpreter_err("list indices must be number");
 	ASSERT_NOT_REACHED;
     }
 
     // TODO: cursed double to index
     size_t idx = (size_t)index->num;
     slash_list_set(&collection->list, new_value, idx);
+}
+
+bool slash_list_item_in(SlashValue *collection, SlashValue *item)
+{
+    assert(collection->type == SLASH_LIST);
+
+    ArrayList underlying = collection->list.underlying;
+    for (size_t i = 0; i < underlying.size; i++) {
+	if (slash_value_eq(arraylist_get(&underlying, i), item))
+	    return true;
+    }
+    return false;
 }

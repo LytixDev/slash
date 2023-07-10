@@ -38,8 +38,11 @@ block           -> "{" statement* "}" ;
 
 argument        -> expression ;
 
-expression      -> equality
+expression      -> contains
+                |  equality
                 |  subshell ;
+
+contains        -> expression "in" expression ;
 
 subshell        -> "(" cmd_stmt ")" ;
 

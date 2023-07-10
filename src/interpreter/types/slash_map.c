@@ -14,10 +14,12 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <assert.h>
+#include <stdio.h>
+
 #include "interpreter/types/slash_map.h"
 #include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
-#include <stdio.h>
 
 void slash_map_init(SlashMap *map)
 {
@@ -31,9 +33,14 @@ void slash_map_put(SlashMap *map, SlashValue *key, SlashValue *value)
 
 SlashValue *slash_map_get(SlashMap *map, SlashValue *key)
 {
-    return hashmap_get(&map->underlying, key, sizeof(SlashValue));
+    SlashValue *value = hashmap_get(&map->underlying, key, sizeof(SlashValue));
+    if (value == NULL)
+	return &slash_glob_none;
+    return value;
 }
 
+
+/* common slash value functions */
 void slash_map_print(SlashValue *value)
 {
     printf("[[");
@@ -42,6 +49,8 @@ void slash_map_print(SlashValue *value)
     struct hm_bucket_t *bucket;
     struct hm_entry_t entry;
 
+    bool first_print = true;
+
     for (int i = 0; i < N_BUCKETS(m->size_log2); i++) {
 	bucket = &m->buckets[i];
 	for (int j = 0; j < HM_BUCKET_SIZE; j++) {
@@ -49,12 +58,15 @@ void slash_map_print(SlashValue *value)
 	    if (entry.key == NULL)
 		continue;
 
+	    if (!first_print)
+		printf(", ");
+	    first_print = false;
+
 	    k = entry.key;
 	    v = entry.value;
 	    slash_print[k->type](k);
-	    putchar(':');
+	    printf(": ");
 	    slash_print[v->type](v);
-	    printf(", ");
 	}
     }
     printf("]]");
@@ -63,4 +75,53 @@ void slash_map_print(SlashValue *value)
 size_t *slash_map_len(SlashValue *value)
 {
     return (size_t *)&value->map.underlying.len;
+}
+
+SlashValue slash_map_item_get(SlashValue *collection, SlashValue *index)
+{
+    assert(collection->type == SLASH_MAP);
+
+    return *slash_map_get(&collection->map, index);
+}
+
+void slash_map_item_assign(SlashValue *collection, SlashValue *index, SlashValue *new_value)
+{
+    assert(collection->type == SLASH_MAP);
+    slash_map_put(&collection->map, index, new_value);
+}
+
+bool slash_map_item_in(SlashValue *collection, SlashValue *item)
+{
+    assert(collection->type == SLASH_MAP);
+    /* "in" means that the item is a key in the dict */
+
+    SlashMap map = collection->map;
+    SlashValue *value = hashmap_get(&map.underlying, item, sizeof(SlashValue));
+    return value != NULL;
+}
+
+
+/* methods */
+SlashTuple slash_map_get_keys(SlashMap *map)
+{
+    SlashTuple map_keys = { map->underlying.len, .values = NULL };
+    map_keys.values = malloc(sizeof(SlashValue) * map_keys.size);
+
+    HashMap *m = &map->underlying;
+    struct hm_bucket_t *bucket;
+    struct hm_entry_t entry;
+    size_t counter = 0;
+
+    for (int i = 0; i < N_BUCKETS(m->size_log2); i++) {
+	bucket = &m->buckets[i];
+	for (int j = 0; j < HM_BUCKET_SIZE; j++) {
+	    entry = bucket->entries[j];
+	    if (entry.key == NULL)
+		continue;
+
+	    map_keys.values[counter++] = *(SlashValue *)entry.key;
+	}
+    }
+
+    return map_keys;
 }

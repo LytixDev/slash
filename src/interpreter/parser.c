@@ -337,16 +337,23 @@ static Expr *argument(Parser *parser)
 
 static Expr *expression(Parser *parser)
 {
+    // TODO: need to figure out if '(' should be parsed as a tuple, subshell or grouping (TODO)
+    Expr *left;
     if (!match(parser, t_lparen))
-	return equality(parser);
+	left = equality(parser);
+    else if (match(parser, t_lparen))
+	left = list_or_tuple_or_map(parser, true);
+    else
+	left = subshell(parser);
 
-    /*
-     * need to figure out if '(' should be parsed as a tuple, subshell or grouping (TODO)
-     */
-    if (match(parser, t_lparen))
-	return list_or_tuple_or_map(parser, true);
+    if (!match(parser, t_in))
+	return left;
 
-    return subshell(parser);
+    BinaryExpr *expr = (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY);
+    expr->left = left;
+    expr->operator_ = t_in;
+    expr->right = expression(parser);
+    return (Expr *)expr;
 }
 
 static Expr *subshell(Parser *parser)

@@ -63,10 +63,13 @@ bool is_truthy(SlashValue *value);
 
 bool slash_value_eq(SlashValue *a, SlashValue *b);
 
+// SlashToStrFunc
+// SlashToReprFunc
 typedef void (*SlashPrintFunc)(SlashValue *);
 typedef size_t (*SlashLenFunc)(SlashValue *);
-typedef SlashValue *(*SlashItemGetFunc)(SlashValue *, SlashValue *);
+typedef SlashValue (*SlashItemGetFunc)(SlashValue *, SlashValue *);
 typedef void (*SlashItemAssignFunc)(SlashValue *, SlashValue *, SlashValue *);
+typedef bool (*SlashItemInFunc)(SlashValue *, SlashValue *);
 
 /*
  * Table containing function pointers implementing print for each type
@@ -83,6 +86,11 @@ extern SlashLenFunc slash_len[SLASH_TYPE_COUNT];
 extern SlashItemGetFunc slash_item_get[SLASH_TYPE_COUNT];
 
 extern SlashItemAssignFunc slash_item_assign[SLASH_TYPE_COUNT];
+
+extern SlashItemInFunc slash_item_in[SLASH_TYPE_COUNT];
+
+
+extern SlashValue slash_glob_none;
 
 
 #endif /* SLASH_VALUE_H */

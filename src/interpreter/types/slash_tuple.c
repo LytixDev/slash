@@ -14,8 +14,10 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <assert.h>
 #include <stdio.h>
 
+#include "common.h"
 #include "interpreter/types/slash_tuple.h"
 #include "interpreter/types/slash_value.h"
 
@@ -38,4 +40,36 @@ void slash_tuple_print(SlashValue *value)
 size_t *slash_tuple_len(SlashValue *value)
 {
     return &value->tuple.size;
+}
+
+SlashValue slash_tuple_item_get(SlashValue *collection, SlashValue *index)
+{
+    assert(collection->type == SLASH_TUPLE);
+    SlashTuple tuple = collection->tuple;
+
+    if (index->type != SLASH_NUM) {
+	slash_exit_interpreter_err("list indices must be numbers");
+	ASSERT_NOT_REACHED;
+    }
+
+    size_t idx = (size_t)index->num;
+    if (idx > tuple.size) {
+	slash_exit_interpreter_err("list indices must be numbers");
+	ASSERT_NOT_REACHED;
+    }
+
+    return tuple.values[idx];
+}
+
+bool slash_tuple_item_in(SlashValue *collection, SlashValue *item)
+{
+    assert(collection->type == SLASH_TUPLE);
+    SlashTuple tuple = collection->tuple;
+
+    for (size_t i = 0; i < tuple.size; i++) {
+	if (slash_value_eq(&tuple.values[i], item))
+	    return true;
+    }
+
+    return false;
 }

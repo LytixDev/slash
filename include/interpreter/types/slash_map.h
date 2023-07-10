@@ -17,6 +17,7 @@
 #ifndef SLASH_MAP_H
 #define SLASH_MAP_H
 
+#include "interpreter/types/slash_tuple.h"
 #include "nicc/nicc.h"
 
 typedef struct slash_value_t SlashValue; // Forward declaration of SlashValue
@@ -31,9 +32,16 @@ void slash_map_put(SlashMap *map, SlashValue *key, SlashValue *value);
 /* returns NULL if key does not have an associated value */
 SlashValue *slash_map_get(SlashMap *map, SlashValue *key);
 
+/* common slash value functions */
 /* O(n) */
 void slash_map_print(SlashValue *value);
-
 size_t *slash_map_len(SlashValue *value);
+SlashValue slash_map_item_get(SlashValue *collection, SlashValue *index);
+void slash_map_item_assign(SlashValue *collection, SlashValue *index, SlashValue *new_value);
+bool slash_map_item_in(SlashValue *collection, SlashValue *item);
+
+/* methods on slash map */
+SlashTuple slash_map_get_keys(SlashMap *map);
+
 
 #endif /* SLASH_MAP_H */

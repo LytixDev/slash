@@ -1,11 +1,5 @@
-var a = [-1, 1, 2, 3]
+var names = ["Nicolai", "Sofie"]
 
-$a[0] = 0
-
-$a += 4
-$a += [5, 6]
-
-$a[0] -= 1
-$a[0] += 2
-
-$a
+if "Nicolai" in $names {
+    "Nice"
+}

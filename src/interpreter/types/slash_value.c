@@ -18,13 +18,16 @@
 #include <stdio.h>
 
 #include "common.h"
+#include "interpreter/types/slash_tuple.h"
 #include "interpreter/types/slash_value.h"
 #include "sac/sac.h"
 #include "str_view.h"
 
+SlashValue slash_glob_none = (SlashValue){ .type = SLASH_NONE };
 
 void slash_print_none(void)
 {
+    printf("none");
 }
 
 void slash_print_not_defined(SlashValue *value)
@@ -39,7 +42,12 @@ void slash_item_get_not_defined(void)
 
 void slash_item_assign_not_defined(void)
 {
-    slash_exit_interpreter_err("item assignment nt defined for this type");
+    slash_exit_interpreter_err("item assignment not defined for this type");
+}
+
+void slash_item_in_not_defined(void)
+{
+    slash_exit_interpreter_err("item in not defined for this type");
 }
 
 SlashPrintFunc slash_print[SLASH_TYPE_COUNT] = {
@@ -77,9 +85,9 @@ SlashItemGetFunc slash_item_get[SLASH_TYPE_COUNT] = {
     /* list */
     (SlashItemGetFunc)slash_list_item_get,
     /* tuple */
-    (SlashItemGetFunc)slash_item_get_not_defined,
+    (SlashItemGetFunc)slash_tuple_item_get,
     /* map */
-    (SlashItemGetFunc)slash_item_get_not_defined,
+    (SlashItemGetFunc)slash_map_item_get,
     /* none */
     (SlashItemGetFunc)slash_item_get_not_defined,
 };
@@ -100,9 +108,30 @@ SlashItemAssignFunc slash_item_assign[SLASH_TYPE_COUNT] = {
     /* tuple */
     (SlashItemAssignFunc)slash_item_assign_not_defined,
     /* map */
-    (SlashItemAssignFunc)slash_item_assign_not_defined,
+    (SlashItemAssignFunc)slash_map_item_assign,
     /* none */
     (SlashItemAssignFunc)slash_item_assign_not_defined,
+};
+
+SlashItemInFunc slash_item_in[SLASH_TYPE_COUNT] = {
+    /* bool */
+    (SlashItemInFunc)slash_item_in_not_defined,
+    /* str */
+    (SlashItemInFunc)slash_item_in_not_defined,
+    /* num */
+    (SlashItemInFunc)slash_item_in_not_defined,
+    /* shlit */
+    (SlashItemInFunc)slash_item_in_not_defined,
+    /* range */
+    (SlashItemInFunc)slash_item_in_not_defined,
+    /* list */
+    (SlashItemInFunc)slash_list_item_in,
+    /* tuple */
+    (SlashItemInFunc)slash_tuple_item_in,
+    /* map */
+    (SlashItemInFunc)slash_map_item_in,
+    /* none */
+    (SlashItemInFunc)slash_item_in_not_defined,
 };
 
 

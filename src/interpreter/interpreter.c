@@ -105,7 +105,7 @@ static SlashValue eval_unary(Interpreter *interpreter, UnaryExpr *expr)
     return (SlashValue){ 0 };
 }
 
-static SlashValue eval_binary_values(SlashValue left, SlashValue right, TokenType operator)
+static SlashValue cmp_binary_values(SlashValue left, SlashValue right, TokenType operator)
 {
     SlashValue result = { 0 };
 
@@ -169,7 +169,13 @@ static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
 {
     SlashValue left = eval(interpreter, expr->left);
     SlashValue right = eval(interpreter, expr->right);
-    return eval_binary_values(left, right, expr->operator_);
+    if (expr->operator_ != t_in)
+	return cmp_binary_values(left, right, expr->operator_);
+
+    /* left "IN" right */
+    SlashItemInFunc func = slash_item_in[right.type];
+    bool rc = func(&right, &left);
+    return (SlashValue){ .type = SLASH_BOOL, .boolean = rc };
 }
 
 static SlashValue eval_literal(Interpreter *interpreter, LiteralExpr *expr)
@@ -196,8 +202,8 @@ static SlashValue eval_item_access(Interpreter *interpreter, ItemAccessExpr *exp
     SlashValue *collection = value.value;
 
     SlashItemGetFunc func = slash_item_get[collection->type];
-    SlashValue *item = func(collection, &access_index);
-    return *item;
+    SlashValue item = func(collection, &access_index);
+    return item;
 }
 
 static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
@@ -369,7 +375,7 @@ static void exec_item_assign(Interpreter *interpreter, AssignStmt *stmt)
     SlashValue current_item_value = eval_item_access(interpreter, access);
     /* convert from += to + and -= to - */
     TokenType operator= stmt->assignment_op == t_plus_equal ? t_plus : t_minus;
-    new_value = eval_binary_values(current_item_value, new_value, operator);
+    new_value = cmp_binary_values(current_item_value, new_value, operator);
 
     SlashItemAssignFunc func = slash_item_assign[collection->type];
     func(collection, &access_index, &new_value);
@@ -402,7 +408,7 @@ static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
 
     /* convert from += to + and -= to - */
     TokenType operator= stmt->assignment_op == t_plus_equal ? t_plus : t_minus;
-    new_value = eval_binary_values(*current.value, new_value, operator);
+    new_value = cmp_binary_values(*current.value, new_value, operator);
     var_assign(interpreter->scope, &var_name, &new_value);
 }
 
@@ -435,6 +441,23 @@ static void exec_iter_loop_list(Interpreter *interpreter, IterLoopStmt *stmt, Sl
     }
 }
 
+static void exec_iter_loop_map(Interpreter *interpreter, IterLoopStmt *stmt, SlashMap iterable)
+{
+    SlashTuple keys = slash_map_get_keys(&iterable);
+    if (keys.size == 0)
+	return;
+
+    SlashValue iterator_value = slash_glob_none;
+    /* define the loop variable that holds the current iterator value */
+    var_define(interpreter->scope, &stmt->var_name, &iterator_value);
+
+    for (size_t i = 0; i < keys.size; i++) {
+	iterator_value = keys.values[i];
+	var_assign(interpreter->scope, &stmt->var_name, &iterator_value);
+	exec_loop_block(interpreter, stmt->body_block);
+    }
+}
+
 static void exec_iter_loop_str(Interpreter *interpreter, IterLoopStmt *stmt, StrView iterable)
 {
     StrView str = { .view = iterable.view, .size = 1 };
@@ -453,14 +476,14 @@ static void exec_iter_loop_str(Interpreter *interpreter, IterLoopStmt *stmt, Str
     /* don't need to undefine the iterator value as the scope will be destroyed imminently */
 }
 
-static void exec_iter_loop_range(Interpreter *interpreter, IterLoopStmt *stmt, SlashRange *iterable)
+static void exec_iter_loop_range(Interpreter *interpreter, IterLoopStmt *stmt, SlashRange iterable)
 {
-    SlashValue iterator_value = { .type = SLASH_NUM, .num = iterable->start };
+    SlashValue iterator_value = { .type = SLASH_NUM, .num = iterable.start };
 
     /* define the loop variable that holds the current iterator value */
     var_define(interpreter->scope, &stmt->var_name, &iterator_value);
 
-    while (iterator_value.num != iterable->end) {
+    while (iterator_value.num != iterable.end) {
 	exec_loop_block(interpreter, stmt->body_block);
 	iterator_value.num++;
 	// TODO: bloat? we could store a reference instead of a copy to the iterator_value
@@ -477,14 +500,22 @@ static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
     interpreter->scope = &loop_scope;
 
     SlashValue underlying = eval(interpreter, stmt->underlying_iterable);
-    if (underlying.type == SLASH_STR) {
+    switch (underlying.type) {
+    case SLASH_STR:
 	exec_iter_loop_str(interpreter, stmt, underlying.str);
-    } else if (underlying.type == SLASH_RANGE) {
-	exec_iter_loop_range(interpreter, stmt, &underlying.range);
-    } else if (underlying.type == SLASH_LIST) {
+	break;
+    case SLASH_LIST:
 	exec_iter_loop_list(interpreter, stmt, underlying.list);
-    } else {
+	break;
+    case SLASH_MAP:
+	exec_iter_loop_map(interpreter, stmt, underlying.map);
+	break;
+    case SLASH_RANGE:
+	exec_iter_loop_range(interpreter, stmt, underlying.range);
+	break;
+    default:
 	slash_exit_interpreter_err("type can't be iterated over");
+	ASSERT_NOT_REACHED;
     }
 
     interpreter->scope = loop_scope.enclosing;

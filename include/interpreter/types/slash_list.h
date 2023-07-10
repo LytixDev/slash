@@ -50,11 +50,11 @@ void slash_list_from_ranged_copy(SlashList *ret_ptr, SlashList *to_copy, SlashRa
 bool slash_list_eq(SlashList *a, SlashList *b);
 
 /* common slash value functions */
-// typedef void   (*SlashItemAssignFunc)(SlashValue *, SlashValue *, SlashValue *);
 void slash_list_print(SlashValue *value);
 size_t *slash_list_len(SlashValue *value);
-SlashValue *slash_list_item_get(SlashValue *collection, SlashValue *index);
+SlashValue slash_list_item_get(SlashValue *collection, SlashValue *index);
 void slash_list_item_assign(SlashValue *collection, SlashValue *index, SlashValue *new_value);
+bool slash_list_item_in(SlashValue *collection, SlashValue *item);
 
 
 #endif /* SLASH_LIST_H */

@@ -20,7 +20,9 @@
 
 void slash_str_print(SlashValue *value)
 {
+    putchar('"');
     str_view_print(value->str);
+    putchar('"');
 }
 
 size_t *slash_str_len(SlashValue *value)
