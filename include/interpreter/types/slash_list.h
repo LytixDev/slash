@@ -53,15 +53,15 @@ bool slash_list_eq(SlashList *a, SlashList *b);
 /* common slash value functions */
 void slash_list_print(SlashValue *value);
 size_t *slash_list_len(SlashValue *value);
-SlashValue slash_list_item_get(SlashValue *collection, SlashValue *index);
-void slash_list_item_assign(SlashValue *collection, SlashValue *index, SlashValue *new_value);
-bool slash_list_item_in(SlashValue *collection, SlashValue *item);
+SlashValue slash_list_item_get(SlashValue *self, SlashValue *index);
+void slash_list_item_assign(SlashValue *self, SlashValue *index, SlashValue *new_value);
+bool slash_list_item_in(SlashValue *self, SlashValue *item);
 
 /* slash list methods */
 #define SLASH_LIST_METHODS_COUNT 1
 extern SlashMethod slash_list_methods[SLASH_LIST_METHODS_COUNT];
 
-SlashValue slash_list_pop(SlashValue *self, ...);
+SlashValue slash_list_pop(SlashValue *self, size_t argc, SlashValue *argv);
 
 
 #endif /* SLASH_LIST_H */

@@ -77,25 +77,25 @@ size_t *slash_map_len(SlashValue *value)
     return (size_t *)&value->map.underlying.len;
 }
 
-SlashValue slash_map_item_get(SlashValue *collection, SlashValue *index)
+SlashValue slash_map_item_get(SlashValue *self, SlashValue *index)
 {
-    assert(collection->type == SLASH_MAP);
+    assert(self->type == SLASH_MAP);
 
-    return *slash_map_get(&collection->map, index);
+    return *slash_map_get(&self->map, index);
 }
 
-void slash_map_item_assign(SlashValue *collection, SlashValue *index, SlashValue *new_value)
+void slash_map_item_assign(SlashValue *self, SlashValue *index, SlashValue *new_value)
 {
-    assert(collection->type == SLASH_MAP);
-    slash_map_put(&collection->map, index, new_value);
+    assert(self->type == SLASH_MAP);
+    slash_map_put(&self->map, index, new_value);
 }
 
-bool slash_map_item_in(SlashValue *collection, SlashValue *item)
+bool slash_map_item_in(SlashValue *self, SlashValue *item)
 {
-    assert(collection->type == SLASH_MAP);
+    assert(self->type == SLASH_MAP);
     /* "in" means that the item is a key in the dict */
 
-    SlashMap map = collection->map;
+    SlashMap map = self->map;
     SlashValue *value = hashmap_get(&map.underlying, item, sizeof(SlashValue));
     return value != NULL;
 }

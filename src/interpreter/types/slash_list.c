@@ -15,6 +15,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <assert.h>
+#include <stdarg.h>
 #include <stdio.h>
 
 #include "common.h"
@@ -100,9 +101,9 @@ size_t *slash_list_len(SlashValue *value)
     return &value->list.underlying->size;
 }
 
-SlashValue slash_list_item_get(SlashValue *collection, SlashValue *index)
+SlashValue slash_list_item_get(SlashValue *self, SlashValue *index)
 {
-    assert(collection->type == SLASH_LIST);
+    assert(self->type == SLASH_LIST);
     if (!(index->type == SLASH_NUM || index->type == SLASH_RANGE)) {
 	slash_exit_interpreter_err("list indices must be number or range");
 	ASSERT_NOT_REACHED;
@@ -110,19 +111,19 @@ SlashValue slash_list_item_get(SlashValue *collection, SlashValue *index)
 
     if (index->type == SLASH_NUM) {
 	size_t idx = (size_t)index->num;
-	return *slash_list_get(&collection->list, idx);
+	return *slash_list_get(&self->list, idx);
     }
 
     SlashValue ranged_copy;
     ranged_copy.type = SLASH_LIST;
     slash_list_init(&ranged_copy.list);
-    slash_list_from_ranged_copy(&ranged_copy.list, &collection->list, index->range);
+    slash_list_from_ranged_copy(&ranged_copy.list, &self->list, index->range);
     return ranged_copy;
 }
 
-void slash_list_item_assign(SlashValue *collection, SlashValue *index, SlashValue *new_value)
+void slash_list_item_assign(SlashValue *self, SlashValue *index, SlashValue *new_value)
 {
-    assert(collection->type == SLASH_LIST);
+    assert(self->type == SLASH_LIST);
 
     if (index->type != SLASH_NUM) {
 	slash_exit_interpreter_err("list indices must be number");
@@ -131,14 +132,14 @@ void slash_list_item_assign(SlashValue *collection, SlashValue *index, SlashValu
 
     // TODO: cursed double to index
     size_t idx = (size_t)index->num;
-    slash_list_set(&collection->list, new_value, idx);
+    slash_list_set(&self->list, new_value, idx);
 }
 
-bool slash_list_item_in(SlashValue *collection, SlashValue *item)
+bool slash_list_item_in(SlashValue *self, SlashValue *item)
 {
-    assert(collection->type == SLASH_LIST);
+    assert(self->type == SLASH_LIST);
 
-    ArrayList *underlying = collection->list.underlying;
+    ArrayList *underlying = self->list.underlying;
     for (size_t i = 0; i < underlying->size; i++) {
 	if (slash_value_eq(arraylist_get(underlying, i), item))
 	    return true;
@@ -152,12 +153,29 @@ SlashMethod slash_list_methods[SLASH_LIST_METHODS_COUNT] = {
     (SlashMethod){ .name = "pop", .fp = slash_list_pop },
 };
 
-SlashValue slash_list_pop(SlashValue *self, ...)
+SlashValue slash_list_pop(SlashValue *self, size_t argc, SlashValue *argv)
 {
     assert(self->type == SLASH_LIST);
 
     ArrayList *underlying = self->list.underlying;
     SlashValue popped_item;
-    arraylist_pop_and_copy(underlying, &popped_item);
+
+    if (match_signature("", argc, argv)) {
+	arraylist_pop_and_copy(underlying, &popped_item);
+	return popped_item;
+    }
+
+    if (!match_signature("n", argc, argv)) {
+	slash_exit_interpreter_err("bad method args");
+    }
+
+    /* argc must be 1 and type of argv must be num */
+    SlashValue key = argv[0];
+    size_t idx = (size_t)key.num;
+    if (idx < 0 || idx > underlying->size - 1) {
+	slash_exit_interpreter_err("index out of range");
+    }
+    arraylist_get_copy(underlying, idx, &popped_item);
+    arraylist_rm(underlying, idx);
     return popped_item;
 }

@@ -3,7 +3,7 @@
 var fruits = ["apple", "banana", "orange"]
 $fruits
 
-var last_elem = $fruits.pop()
+var last_elem = $fruits.pop(1)
 $last_elem
 
 $fruits

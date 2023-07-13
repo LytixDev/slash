@@ -42,10 +42,10 @@ size_t *slash_tuple_len(SlashValue *value)
     return &value->tuple.size;
 }
 
-SlashValue slash_tuple_item_get(SlashValue *collection, SlashValue *index)
+SlashValue slash_tuple_item_get(SlashValue *self, SlashValue *index)
 {
-    assert(collection->type == SLASH_TUPLE);
-    SlashTuple tuple = collection->tuple;
+    assert(self->type == SLASH_TUPLE);
+    SlashTuple tuple = self->tuple;
 
     if (index->type != SLASH_NUM) {
 	slash_exit_interpreter_err("list indices must be numbers");
@@ -61,10 +61,10 @@ SlashValue slash_tuple_item_get(SlashValue *collection, SlashValue *index)
     return tuple.values[idx];
 }
 
-bool slash_tuple_item_in(SlashValue *collection, SlashValue *item)
+bool slash_tuple_item_in(SlashValue *self, SlashValue *item)
 {
-    assert(collection->type == SLASH_TUPLE);
-    SlashTuple tuple = collection->tuple;
+    assert(self->type == SLASH_TUPLE);
+    SlashTuple tuple = self->tuple;
 
     for (size_t i = 0; i < tuple.size; i++) {
 	if (slash_value_eq(&tuple.values[i], item))

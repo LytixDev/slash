@@ -200,10 +200,10 @@ static SlashValue eval_item_access(Interpreter *interpreter, ItemAccessExpr *exp
     SlashValue access_index = eval(interpreter, expr->access_value);
 
     ScopeAndValue value = var_get(interpreter->scope, &var_name);
-    SlashValue *collection = value.value;
+    SlashValue *self = value.value;
 
-    SlashItemGetFunc func = slash_item_get[collection->type];
-    SlashValue item = func(collection, &access_index);
+    SlashItemGetFunc func = slash_item_get[self->type];
+    SlashValue item = func(self, &access_index);
     return item;
 }
 
@@ -299,12 +299,30 @@ static SlashValue eval_method(Interpreter *interpreter, MethodExpr *expr)
     method_name[method_name_size] = 0;
 
     /* get method */
-    MethodFunc func = get_method(&self, method_name);
-    if (func == NULL) {
+    MethodFunc method = get_method(&self, method_name);
+    if (method == NULL) {
 	slash_exit_interpreter_err("method does not exist :-(");
     }
 
-    return func(&self);
+    /*
+     * first argument will always be the object that the method is called "on"
+     * second argument will always be the number of following arguments (argc)
+     */
+    if (expr->arg_exprs == NULL)
+	return method(&self, 0, NULL);
+
+    SlashValue argv[expr->arg_exprs->size];
+    size_t i = 0;
+    LLItem *item;
+    ARENA_LL_FOR_EACH(expr->arg_exprs, item)
+    {
+	SlashValue sv = eval(interpreter, item->value);
+	argv[i++] = sv;
+    }
+
+    assert(i == expr->arg_exprs->size);
+
+    return method(&self, i, argv);
 }
 
 
@@ -381,12 +399,12 @@ static void exec_item_assign(Interpreter *interpreter, AssignStmt *stmt)
     SlashValue new_value = eval(interpreter, stmt->value);
 
     ScopeAndValue current = var_get(interpreter->scope, &var_name);
-    /* the underlying collection who's index (access_index) we're trying to modify */
-    SlashValue *collection = current.value;
+    /* the underlying self who's index (access_index) we're trying to modify */
+    SlashValue *self = current.value;
 
     if (stmt->assignment_op == t_equal) {
-	SlashItemAssignFunc func = slash_item_assign[collection->type];
-	func(collection, &access_index, &new_value);
+	SlashItemAssignFunc func = slash_item_assign[self->type];
+	func(self, &access_index, &new_value);
 	return;
     }
 
@@ -396,8 +414,8 @@ static void exec_item_assign(Interpreter *interpreter, AssignStmt *stmt)
     TokenType operator= stmt->assignment_op == t_plus_equal ? t_plus : t_minus;
     new_value = cmp_binary_values(current_item_value, new_value, operator);
 
-    SlashItemAssignFunc func = slash_item_assign[collection->type];
-    func(collection, &access_index, &new_value);
+    SlashItemAssignFunc func = slash_item_assign[self->type];
+    func(self, &access_index, &new_value);
 }
 
 static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)

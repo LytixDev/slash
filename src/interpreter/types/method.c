@@ -14,10 +14,25 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "interpreter/types/method.h"
-#include "common.h"
-#include "interpreter/types/slash_value.h"
 #include <string.h>
+
+#include "common.h"
+#include "interpreter/types/method.h"
+#include "interpreter/types/slash_value.h"
+
+
+char slash_type_to_char[SLASH_TYPE_COUNT] = {
+    'b', // bool
+    's', // str
+    'n', // num
+    '-', // shlit
+    'r', // range
+    'l', // list
+    't', // tuple
+    'm', // map
+    '-', // none
+};
+
 
 MethodFunc get_method(SlashValue *self, char *method_name)
 {
@@ -44,4 +59,54 @@ MethodFunc get_method(SlashValue *self, char *method_name)
 	    return current.fp;
     }
     return NULL;
+}
+
+/*
+ * count occurences of whitespace + 1
+ */
+static size_t signature_arg_count(char *signature)
+{
+    assert(signature != NULL);
+
+    if (signature[0] == 0)
+	return 0;
+
+    size_t count = 1;
+    for (char c = *signature; c != 0; c = *(++signature)) {
+	if (c == ' ')
+	    count++;
+    }
+    return count;
+}
+
+bool match_signature(char *signature, size_t argc, SlashValue *argv)
+{
+    size_t signature_argc = signature_arg_count(signature);
+    if (signature_argc != argc)
+	return false;
+
+    /* split on whitespace */
+    char *arg = strtok(signature, " ");
+    size_t i = 0;
+
+    while (arg != NULL) {
+	char type = slash_type_to_char[argv[i].type];
+	bool okay = false;
+	while (*arg != 0 && *arg != ' ') {
+	    if (*signature == 'a' || *signature == type) {
+		okay = true;
+		break;
+	    }
+	    arg++;
+	}
+
+	/* while loop finished without finding a valid type */
+	if (!okay)
+	    return false;
+
+	arg = strtok(NULL, " ");
+	i++;
+    }
+
+    return true;
 }

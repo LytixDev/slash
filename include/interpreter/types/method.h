@@ -17,12 +17,13 @@
 #ifndef SLASH_METHOD_H
 #define SLASH_METHOD_H
 
+#include <stdbool.h>
 #include <stdlib.h> // size_t decl
+
 
 typedef struct slash_value_t SlashValue; // Forward declaration of SlashValue
 
-
-typedef SlashValue (*MethodFunc)(SlashValue *self, ...);
+typedef SlashValue (*MethodFunc)(SlashValue *self, size_t argc, SlashValue *argv);
 
 typedef struct {
     char *name;
@@ -30,5 +31,24 @@ typedef struct {
 } SlashMethod;
 
 MethodFunc get_method(SlashValue *self, char *method_name);
+
+/*
+ * Slash supports method overloading.
+ * This function returns if the provided arguments (argv) match the format of the given signature.
+ * The signature is represented using a string.
+ *
+ * Every char denotes a type. (see slash_type_to_char in method.c)
+ * a -> any
+ * n -> num
+ * s -> str
+ * etc.
+ * A whitespace is used to seperate each argument.
+ *
+ * Examples:
+ *      ""      -> empty signature
+ *      "a"     -> takes in one argument of any time
+ *      "n n"   -> takes in two arguments, both of type SlashNum
+ */
+bool match_signature(char *signature, size_t argc, SlashValue *argv);
 
 #endif /* SLASH_METHOD_H */
