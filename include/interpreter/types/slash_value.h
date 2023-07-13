@@ -65,11 +65,11 @@ bool slash_value_eq(SlashValue *a, SlashValue *b);
 
 // SlashToStrFunc
 // SlashToReprFunc
-typedef void (*SlashPrintFunc)(SlashValue *);
-typedef size_t (*SlashLenFunc)(SlashValue *);
-typedef SlashValue (*SlashItemGetFunc)(SlashValue *, SlashValue *);
-typedef void (*SlashItemAssignFunc)(SlashValue *, SlashValue *, SlashValue *);
-typedef bool (*SlashItemInFunc)(SlashValue *, SlashValue *);
+typedef void (*SlashPrintFunc)(SlashValue *self);
+typedef size_t (*SlashLenFunc)(SlashValue *self);
+typedef SlashValue (*SlashItemGetFunc)(SlashValue *self, SlashValue *);
+typedef void (*SlashItemAssignFunc)(SlashValue *self, SlashValue *, SlashValue *);
+typedef bool (*SlashItemInFunc)(SlashValue *self, SlashValue *);
 
 /*
  * Table containing function pointers implementing print for each type

@@ -1,9 +1,10 @@
-# initialize a list
-
-var fruits = ["apple", "banana", "orange"]
+var fruits = ["apple", "banana", "orange", "pear"]
 $fruits
 
-var last_elem = $fruits.pop(1)
-$last_elem
+var popped = $fruits.pop()
+$popped
+$fruits
 
+$popped = $fruits.pop(0)
+$popped
 $fruits
