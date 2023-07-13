@@ -14,20 +14,32 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <assert.h>
 
-#include "interpreter/scope.h"
 #include "common.h"
+#include "interpreter/scope.h"
 #include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
 #include "sac/sac.h"
 #include "str_view.h"
 
 
+static void set_globals(Scope *scope)
+{
+    assert(scope->enclosing == NULL);
+
+    StrView ifs = { .view = "IFS", .size = 3 };
+    SlashValue ifs_value = { .type = SLASH_STR, .str = (StrView){ .view = "\n\t ", .size = 3 } };
+    var_define(scope, &ifs, &ifs_value);
+}
+
 void scope_init_global(Scope *scope, Arena *arena)
 {
     scope->arena_tmp = m_arena_tmp_init(arena);
     scope->enclosing = NULL;
     hashmap_init(&scope->values);
+    arraylist_init(&scope->owning, sizeof(MemObj *));
+    set_globals(scope);
 }
 
 void scope_init(Scope *scope, Scope *enclosing)
@@ -35,12 +47,27 @@ void scope_init(Scope *scope, Scope *enclosing)
     scope->arena_tmp = m_arena_tmp_init(enclosing->arena_tmp.arena);
     scope->enclosing = enclosing;
     hashmap_init(&scope->values);
+    arraylist_init(&scope->owning, sizeof(SlashValue *));
 }
 
 void scope_destroy(Scope *scope)
 {
+    for (size_t i = 0; i < scope->owning.size; i++) {
+	MemObj *mem_obj = arraylist_get(&scope->owning, i);
+	mem_obj->free_func(mem_obj->ptr);
+    }
+    arraylist_free(&scope->owning);
+
     m_arena_tmp_release(scope->arena_tmp);
     hashmap_free(&scope->values);
+}
+
+void scope_register_owning(Scope *scope, void *ptr, void (*free_func)(void *))
+{
+    MemObj *obj = scope_alloc(scope, sizeof(MemObj));
+    obj->ptr = ptr;
+    obj->free_func = free_func;
+    arraylist_append(&scope->owning, obj);
 }
 
 void *scope_alloc(Scope *scope, size_t size)

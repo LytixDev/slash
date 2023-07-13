@@ -1,0 +1,4 @@
+#!/bin/slash
+loop file in (find -name "*.c" -o -name "*.h") {
+    clang-format -i -style=file $file
+}

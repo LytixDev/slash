@@ -28,7 +28,7 @@ typedef struct slash_value_t SlashValue; // Forward declaration of SlashValue
  */
 typedef struct {
     size_t size;
-    SlashValue *values;
+    SlashValue *values; // arena allocated on the scope
 } SlashTuple;
 
 

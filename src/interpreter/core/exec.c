@@ -32,7 +32,7 @@ int exec_program(char **argv)
     return return_code;
 }
 
-int exec_capture(char **argv, char buffer[1024])
+int exec_capture(char **argv, char buffer[4096])
 {
     int status;
     int return_code = 0;
@@ -51,6 +51,6 @@ int exec_capture(char **argv, char buffer[1024])
 
     waitpid(new_pid, &status, 0);
     close(pipefd[1]);
-    read(pipefd[0], buffer, 1024);
+    read(pipefd[0], buffer, 4096);
     return return_code;
 }

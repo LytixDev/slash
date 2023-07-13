@@ -15,6 +15,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <stdio.h>
+#include <string.h>
 
 #include "arena_ll.h"
 #include "common.h"
@@ -35,7 +36,7 @@ static void exec(Interpreter *interpreter, Stmt *stmt);
 /*
  * helpers
  */
-static void exec_loop_block(Interpreter *interpreter, BlockStmt *stmt)
+static void exec_block_body(Interpreter *interpreter, BlockStmt *stmt)
 {
     LLItem *item;
     ARENA_LL_FOR_EACH(stmt->statements, item)
@@ -210,7 +211,7 @@ static SlashValue eval_item_access(Interpreter *interpreter, ItemAccessExpr *exp
 static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
 {
     // TODO: dynamic buffer
-    char buffer[1024];
+    char buffer[4096];
     // TODO: currently assuming expr->stmt is of type CmdStmt
     char **argv_owning = cmd_args_fmt(interpreter, (CmdStmt *)expr->stmt);
     exec_capture(argv_owning, buffer);
@@ -253,7 +254,7 @@ static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
 	return eval_tuple(interpreter, expr);
 
     SlashValue value = { .type = SLASH_LIST };
-    slash_list_init(&value.list);
+    slash_list_init(interpreter->scope, &value.list);
 
     if (expr->exprs == NULL)
 	return value;
@@ -383,7 +384,7 @@ static void exec_block(Interpreter *interpreter, BlockStmt *stmt)
     scope_init(&block_scope, interpreter->scope);
     interpreter->scope = &block_scope;
 
-    exec_loop_block(interpreter, stmt);
+    exec_block_body(interpreter, stmt);
 
     interpreter->scope = block_scope.enclosing;
     scope_destroy(&block_scope);
@@ -457,7 +458,7 @@ static void exec_loop(Interpreter *interpreter, LoopStmt *stmt)
 
     SlashValue r = eval(interpreter, stmt->condition);
     while (is_truthy(&r)) {
-	exec_loop_block(interpreter, stmt->body_block);
+	exec_block_body(interpreter, stmt->body_block);
 	r = eval(interpreter, stmt->condition);
     }
 
@@ -474,7 +475,7 @@ static void exec_iter_loop_list(Interpreter *interpreter, IterLoopStmt *stmt, Sl
     for (size_t i = 0; i < iterable.underlying->size; i++) {
 	iterator_value = slash_list_get(&iterable, i);
 	var_assign(interpreter->scope, &stmt->var_name, iterator_value);
-	exec_loop_block(interpreter, stmt->body_block);
+	exec_block_body(interpreter, stmt->body_block);
     }
 }
 
@@ -491,24 +492,51 @@ static void exec_iter_loop_map(Interpreter *interpreter, IterLoopStmt *stmt, Sla
     for (size_t i = 0; i < keys.size; i++) {
 	iterator_value = keys.values[i];
 	var_assign(interpreter->scope, &stmt->var_name, &iterator_value);
-	exec_loop_block(interpreter, stmt->body_block);
+	exec_block_body(interpreter, stmt->body_block);
     }
 }
 
 static void exec_iter_loop_str(Interpreter *interpreter, IterLoopStmt *stmt, StrView iterable)
 {
-    StrView str = { .view = iterable.view, .size = 1 };
+    StrView str = { .view = iterable.view, .size = 0 };
     SlashValue iterator_value = { .type = SLASH_STR, .str = str };
 
-    /* define the loop variable that holds the current iterator value */
-    var_define(interpreter->scope, &stmt->var_name, &iterator_value);
+    // TODO: fix this I am writing under the influence
+    char underlying[iterable.size + 1];
+    memcpy(underlying, iterable.view, iterable.size);
+    underlying[iterable.size] = 0;
 
-    /* increase while the mem addr of view is less than the final mem addr of the iterable */
-    while (iterator_value.str.view < iterable.view + iterable.size) {
-	exec_loop_block(interpreter, stmt->body_block);
-	iterator_value.str.view++;
+    ScopeAndValue lol = var_get(interpreter->scope, &(StrView){ .view = "IFS", .size = 3 });
+    StrView ifs = lol.value->str;
+
+    char ifs_char[ifs.size + 1];
+    memcpy(ifs_char, ifs.view, ifs.size);
+    ifs_char[ifs.size] = 0;
+
+
+    var_define(interpreter->scope, &stmt->var_name, &iterator_value);
+    char *t = strtok(underlying, ifs_char);
+    while (t != NULL) {
+	str = (StrView){ .view = t, .size = strlen(t) };
+	iterator_value.str = str;
 	var_assign(interpreter->scope, &stmt->var_name, &iterator_value);
+	exec_block_body(interpreter, stmt->body_block);
+	t = strtok(NULL, ifs_char);
     }
+
+
+    // StrView str = { .view = iterable.view, .size = 1 };
+    // SlashValue iterator_value = { .type = SLASH_STR, .str = str };
+
+    ///* define the loop variable that holds the current iterator value */
+    // var_define(interpreter->scope, &stmt->var_name, &iterator_value);
+
+    ///* increase while the mem addr of view is less than the final mem addr of the iterable */
+    // while (iterator_value.str.view < iterable.view + iterable.size) {
+    //     exec_block_body(interpreter, stmt->body_block);
+    //     iterator_value.str.view++;
+    //     var_assign(interpreter->scope, &stmt->var_name, &iterator_value);
+    // }
 
     /* don't need to undefine the iterator value as the scope will be destroyed imminently */
 }
@@ -521,7 +549,7 @@ static void exec_iter_loop_range(Interpreter *interpreter, IterLoopStmt *stmt, S
     var_define(interpreter->scope, &stmt->var_name, &iterator_value);
 
     while (iterator_value.num != iterable.end) {
-	exec_loop_block(interpreter, stmt->body_block);
+	exec_block_body(interpreter, stmt->body_block);
 	iterator_value.num++;
 	// TODO: bloat? we could store a reference instead of a copy to the iterator_value
 	var_assign(interpreter->scope, &stmt->var_name, &iterator_value);

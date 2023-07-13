@@ -17,6 +17,7 @@
 #ifndef SLASH_LIST_H
 #define SLASH_LIST_H
 
+#include "interpreter/scope.h"
 #include "interpreter/types/method.h"
 #include "interpreter/types/slash_range.h"
 #include "nicc/nicc.h"
@@ -35,8 +36,8 @@ typedef struct {
     // SlashValueType underlying_T;
 } SlashList;
 
-void slash_list_init(SlashList *list);
-// void slash_list_copy(SlashList *list);
+void slash_list_init(Scope *scope, SlashList *list);
+void slash_list_free(SlashList *list);
 
 bool slash_list_append(SlashList *list, SlashValue val);
 void slash_list_append_list(SlashList *list, SlashList *to_append);
@@ -46,7 +47,8 @@ SlashValue *slash_list_get(SlashList *list, size_t idx);
 bool slash_list_set(SlashList *list, SlashValue *val, size_t idx);
 
 /* NOTE: function assumes ret_ptr is NOT initialized */
-void slash_list_from_ranged_copy(SlashList *ret_ptr, SlashList *to_copy, SlashRange range);
+void slash_list_from_ranged_copy(Scope *scope, SlashList *ret_ptr, SlashList *to_copy,
+				 SlashRange range);
 
 bool slash_list_eq(SlashList *a, SlashList *b);
 

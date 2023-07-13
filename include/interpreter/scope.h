@@ -17,18 +17,18 @@
 #ifndef SCOPE_H
 #define SCOPE_H
 
-#include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
 #include "sac/sac.h"
 #include "str_view.h"
 
+typedef struct slash_value_t SlashValue; // Forward declaration of SlashValue
 
 typedef struct scope_t Scope;
 struct scope_t {
     Scope *enclosing; // if NULL then there is no enclosing scope and is the global scope
-    // TODO: this can actually be an ArenaTmp
     ArenaTmp arena_tmp; // arena to put any temporary data on
-    struct hashmap_t values; // key: StrView, value: SlashValue (actual objects, not pointers)
+    HashMap values; // key: StrView, value: SlashValue (actual objects, not pointers)
+    ArrayList owning; // list of pointers to values that must be freed on scope_destroy
 };
 
 typedef struct {
@@ -36,10 +36,16 @@ typedef struct {
     SlashValue *value;
 } ScopeAndValue;
 
+typedef struct {
+    void *ptr;
+    void (*free_func)(void *);
+} MemObj;
+
 
 void scope_init_global(Scope *scope, Arena *arena);
 void scope_init(Scope *scope, Scope *enclosing);
 void scope_destroy(Scope *scope);
+void scope_register_owning(Scope *scope, void *ptr, void (*free_func)(void *));
 void *scope_alloc(Scope *scope, size_t size);
 
 /*
