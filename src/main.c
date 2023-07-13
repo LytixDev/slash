@@ -55,16 +55,22 @@ int main(int argc, char **argv)
 
     /* lex */
     ArrayList tokens = lex(input, counter + 1);
+#ifdef DEBUG
     tokens_print(&tokens);
+#endif
 
     /* parse */
     Arena ast_arena;
     ast_arena_init(&ast_arena);
     ArrayList stmts = parse(&ast_arena, &tokens);
+#ifdef DEBUG
     ast_print(&stmts);
+#endif
 
     /* interpret */
+#ifdef DEBUG
     printf("--- interpreter ---\n");
+#endif
     interpret(&stmts);
 
     /* clean up */

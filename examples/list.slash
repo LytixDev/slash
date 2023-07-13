@@ -16,16 +16,16 @@ $fruits += "cheese"
 $fruits
 
 # length
-$fruits.length()
+# $fruits.length()
 
 # pop the last element from the list
-var last_elem = $fruits.pop()
+# var last_elem = $fruits.pop()
 
 # pop the third element of the list
-$fruits.pop(2)
+# $fruits.pop(2)
 
 # remove by value
-list.remove("apple")
+# list.remove("apple")
 
 # create a sliced copy
 var primes = [2, 3, 5, 7, 11, 13]

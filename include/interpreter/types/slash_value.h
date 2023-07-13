@@ -20,8 +20,13 @@
 #include <stdbool.h>
 
 #include "interpreter/lexer.h"
+#include "interpreter/types/slash_bool.h"
 #include "interpreter/types/slash_list.h"
+#include "interpreter/types/slash_map.h"
+#include "interpreter/types/slash_num.h"
 #include "interpreter/types/slash_range.h"
+#include "interpreter/types/slash_str.h"
+#include "interpreter/types/slash_tuple.h"
 #include "sac/sac.h"
 
 
@@ -32,29 +37,60 @@ typedef enum {
     SLASH_SHLIT,
     SLASH_RANGE,
     SLASH_LIST,
+    SLASH_TUPLE,
+    SLASH_MAP,
     SLASH_NONE,
-    SLASH_ANY,
-} SlashValueType;
-
+    SLASH_TYPE_COUNT,
+} SlashType;
 
 typedef struct slash_value_t {
-    SlashValueType type;
+    SlashType type;
     union {
 	StrView str;
 	bool boolean;
 	double num;
 	SlashRange range;
 	SlashList list;
+	SlashTuple tuple;
+	SlashMap map;
     };
 } SlashValue;
 
 
-SlashValue *slash_value_arena_alloc(Arena *arena, SlashValueType type);
+SlashValue *slash_value_arena_alloc(Arena *arena, SlashType type);
 
 bool is_truthy(SlashValue *value);
 
 bool slash_value_eq(SlashValue *a, SlashValue *b);
 
-void slash_value_print(SlashValue *value);
+// SlashToStrFunc
+// SlashToReprFunc
+typedef void (*SlashPrintFunc)(SlashValue *self);
+typedef size_t (*SlashLenFunc)(SlashValue *self);
+typedef SlashValue (*SlashItemGetFunc)(SlashValue *self, SlashValue *);
+typedef void (*SlashItemAssignFunc)(SlashValue *self, SlashValue *, SlashValue *);
+typedef bool (*SlashItemInFunc)(SlashValue *self, SlashValue *);
+
+/*
+ * Table containing function pointers implementing print for each type
+ *
+ * Example usage for printing a SlashValue:
+ * SlashValue value = ...
+ * print_func = slash_print[value.type]
+ * print_func(&value)
+ */
+extern SlashPrintFunc slash_print[SLASH_TYPE_COUNT];
+
+extern SlashLenFunc slash_len[SLASH_TYPE_COUNT];
+
+extern SlashItemGetFunc slash_item_get[SLASH_TYPE_COUNT];
+
+extern SlashItemAssignFunc slash_item_assign[SLASH_TYPE_COUNT];
+
+extern SlashItemInFunc slash_item_in[SLASH_TYPE_COUNT];
+
+
+extern SlashValue slash_glob_none;
+
 
 #endif /* SLASH_VALUE_H */

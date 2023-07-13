@@ -15,10 +15,17 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "interpreter/types/slash_value.h"
+#include "str_view.h"
 #include <stdio.h>
 
-
-void slash_range_print(SlashValue *value)
+void slash_str_print(SlashValue *value)
 {
-    printf("%d..%d", value->range.start, value->range.end);
+    putchar('"');
+    str_view_print(value->str);
+    putchar('"');
+}
+
+size_t *slash_str_len(SlashValue *value)
+{
+    return &value->str.size;
 }

@@ -31,6 +31,7 @@ StateFn lex_argument(Lexer *lexer);
 StateFn lex_number(Lexer *lexer);
 StateFn lex_string(Lexer *lexer);
 StateFn lex_identifier(Lexer *lexer);
+StateFn lex_access_indices(Lexer *lexer);
 StateFn lex_access(Lexer *lexer);
 StateFn lex_comment(Lexer *lexer);
 StateFn lex_subshell_start(Lexer *lexer);
@@ -245,30 +246,21 @@ static bool match_any(Lexer *lexer, char *expected)
     return false;
 }
 
-// static bool consume_single(Lexer *lexer, char accept)
-//{
-//     if (peek(lexer) == accept) {
-//	next(lexer);
-//	return true;
-//     }
-//     return false;
-// }
-
-static bool consume(Lexer *lexer, char *accept)
+static bool accept(Lexer *lexer, char *accept_list)
 {
     char c = next(lexer);
     do {
-	if (*accept == c)
+	if (*accept_list == c)
 	    return true;
-    } while (*accept++ != 0);
+    } while (*accept_list++ != 0);
 
     backup(lexer);
     return false;
 }
 
-static void consume_run(Lexer *lexer, char *accept)
+static void accept_run(Lexer *lexer, char *accept_list)
 {
-    while (consume(lexer, accept))
+    while (accept(lexer, accept_list))
 	;
 }
 
@@ -337,7 +329,9 @@ StateFn lex_any(Lexer *lexer)
 
 	/* one character tokens */
 	case '(':
-	    if (prev_token_type(lexer) != t_identifier)
+	    /* do not go into subshell parsing mode if tuple: came from '(' or next is '(' */
+	    if (!(prev_token_type(lexer) == t_identifier || prev_token_type(lexer) == t_lparen ||
+		  peek(lexer) == '('))
 		return STATE_FN(lex_subshell_start);
 	    emit(lexer, t_lparen);
 	    break;
@@ -469,7 +463,7 @@ StateFn lex_argument(Lexer *lexer)
 	case '\t':
 	case '\v':
 	    shlit_seperate(lexer);
-	    consume_run(lexer, " \t\v");
+	    accept_run(lexer, " \t\v");
 	    ignore(lexer);
 	    break;
 
@@ -512,21 +506,21 @@ StateFn lex_number(Lexer *lexer)
     char *digits = "0123456789";
 
     /* optional leading sign */
-    if (consume(lexer, "+-")) {
+    if (accept(lexer, "+-")) {
 	/* edge case where leading sign is not followed by a digit */
 	if (!match_any(lexer, digits))
 	    lex_panic(lexer, "optional leading sign must be followed by a digit");
     }
 
     /* hex and binary */
-    if (consume(lexer, "0")) {
-	if (consume(lexer, "xX"))
+    if (accept(lexer, "0")) {
+	if (accept(lexer, "xX"))
 	    digits = "0123456789abcdefABCDEF";
-	else if (consume(lexer, "bB"))
+	else if (accept(lexer, "bB"))
 	    digits = "01";
     }
 
-    consume_run(lexer, digits);
+    accept_run(lexer, digits);
 
     /* treating two '.' as a seperate token */
     if (peek_ahead(lexer, 1) != '.') {
@@ -534,8 +528,8 @@ StateFn lex_number(Lexer *lexer)
 	 * here we say any number can have a decimal part, of course, this is not
 	 * the case, and the parser will deal with this later
 	 */
-	if (consume(lexer, "."))
-	    consume_run(lexer, digits);
+	if (accept(lexer, "."))
+	    accept_run(lexer, digits);
     }
 
     emit(lexer, dt_num);
@@ -565,23 +559,21 @@ StateFn lex_identifier(Lexer *lexer)
     return STATE_FN(lex_argument);
 }
 
-StateFn lex_access(Lexer *lexer)
+StateFn lex_access_indices(Lexer *lexer)
 {
-    /* came from '$' which we want to ignore */
-    ignore(lexer);
+    /* came from '[' */
+    emit(lexer, t_lbracket);
 
-    // TODO: make sure there is at least one char here?
-    while (is_valid_identifier(next(lexer)))
-	;
-    backup(lexer);
-    emit(lexer, t_access);
-
-    /* optional element access */
-    if (!match(lexer, '[')) {
+    /* index as str */
+    if (match(lexer, '"')) {
+	lex_string(lexer);
+	if (!match(lexer, ']'))
+	    slash_exit_lex_err("expected ']' after variable access");
+	emit(lexer, t_rbracket);
 	return STATE_FN(lex_any);
     }
 
-    emit(lexer, t_lbracket);
+    /* index as num or range */
     bool some_indicy = false;
     if (is_numeric(peek(lexer))) {
 	lex_number(lexer);
@@ -605,6 +597,26 @@ StateFn lex_access(Lexer *lexer)
     if (!match(lexer, ']'))
 	slash_exit_lex_err("expected ']' after variable access");
     emit(lexer, t_rbracket);
+
+    return STATE_FN(lex_any);
+}
+
+StateFn lex_access(Lexer *lexer)
+{
+    /* came from '$' which we want to ignore */
+    ignore(lexer);
+
+    // TODO: make sure there is at least one char here?
+    while (is_valid_identifier(next(lexer)))
+	;
+    backup(lexer);
+    emit(lexer, t_access);
+
+    /* optional element access */
+    if (!match(lexer, '['))
+	return STATE_FN(lex_any);
+
+    lex_access_indices(lexer);
 
     return STATE_FN(lex_any);
 }

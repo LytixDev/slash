@@ -17,8 +17,10 @@
 #include "interpreter/types/slash_value.h"
 #include <stdio.h>
 
-
-void slash_range_print(SlashValue *value)
+void slash_num_print(SlashValue *value)
 {
-    printf("%d..%d", value->range.start, value->range.end);
+    if (value->num == (int)value->num)
+	printf("%d", (int)value->num);
+    else
+	printf("%f", value->num);
 }

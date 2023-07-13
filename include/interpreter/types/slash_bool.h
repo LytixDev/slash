@@ -14,11 +14,13 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "interpreter/types/slash_value.h"
-#include <stdio.h>
+#ifndef SLASH_BOOL_H
+#define SLASH_BOOL_H
+
+typedef struct slash_value_t SlashValue; // Forward declaration of SlashValue
 
 
-void slash_range_print(SlashValue *value)
-{
-    printf("%d..%d", value->range.start, value->range.end);
-}
+void slash_bool_print(SlashValue *value);
+
+
+#endif /* SLASH_BOOL_H */

@@ -15,10 +15,10 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include "interpreter/types/slash_value.h"
+#include <stdbool.h>
 #include <stdio.h>
 
-
-void slash_range_print(SlashValue *value)
+void slash_bool_print(SlashValue *value)
 {
-    printf("%d..%d", value->range.start, value->range.end);
+    printf("%s", value->boolean == true ? "true" : "false");
 }

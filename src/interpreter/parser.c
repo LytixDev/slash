@@ -27,6 +27,35 @@
 #include "str_view.h"
 
 
+/* grammar functions */
+static Stmt *declaration(Parser *parser);
+static Stmt *statement(Parser *parser);
+static Stmt *var_decl(Parser *parser);
+static Stmt *loop_stmt(Parser *parser);
+static Stmt *if_stmt(Parser *parser);
+static Stmt *cmd_stmt(Parser *parser);
+static Stmt *assignment_stmt(Parser *parser);
+static Stmt *expr_stmt(Parser *parser);
+static Stmt *block(Parser *parser);
+
+static Expr *argument(Parser *parser);
+static Expr *expression(Parser *parser);
+static Expr *subshell(Parser *parser);
+static Expr *equality(Parser *parser);
+static Expr *comparison(Parser *parser);
+static Expr *term(Parser *parser);
+static Expr *factor(Parser *parser);
+static Expr *unary(Parser *parser);
+static Expr *access(Parser *parser);
+static Expr *item_access(Parser *parser);
+static Expr *primary(Parser *parser);
+static Expr *bool_lit(Parser *parser);
+static Expr *number(Parser *parser);
+static Expr *range(Parser *parser);
+static Expr *map(Parser *parser);
+static Expr *list_or_tuple_or_map(Parser *parser, bool is_list);
+
+
 /* util/helper functions */
 static Token *peek(Parser *parser)
 {
@@ -36,6 +65,12 @@ static Token *peek(Parser *parser)
 static Token *previous(Parser *parser)
 {
     return arraylist_get(parser->tokens, parser->token_pos - 1);
+}
+
+/* lol */
+static Token *previous_previous(Parser *parser)
+{
+    return arraylist_get(parser->tokens, parser->token_pos - 2);
 }
 
 static bool is_at_end(Parser *parser)
@@ -127,32 +162,25 @@ static bool match_either(Parser *parser, unsigned int n, ...)
 
 #define match(parser, ...) match_either(parser, VA_NUMBER_OF_ARGS(__VA_ARGS__), __VA_ARGS__)
 
+ArenaLL *comma_sep_exprs(Parser *parser)
+{
+    /*
+     * this function is only called when we expect comma seperated expression
+     */
+
+    ArenaLL *args = arena_ll_alloc(parser->ast_arena);
+    do {
+	arena_ll_append(args, expression(parser));
+	/* if no comma then we exit */
+	if (!match(parser, t_comma))
+	    break;
+    } while (!check(parser, t_eof));
+
+    return args;
+}
+
 
 /* grammar functions */
-static Stmt *declaration(Parser *parser);
-static Stmt *statement(Parser *parser);
-static Stmt *var_decl(Parser *parser);
-static Stmt *loop_stmt(Parser *parser);
-static Stmt *if_stmt(Parser *parser);
-static Stmt *cmd_stmt(Parser *parser);
-static Stmt *assignment_stmt(Parser *parser);
-static Stmt *expr_stmt(Parser *parser);
-static Stmt *block(Parser *parser);
-
-static Expr *argument(Parser *parser);
-static Expr *expression(Parser *parser);
-static Expr *subshell(Parser *parser);
-static Expr *equality(Parser *parser);
-static Expr *comparison(Parser *parser);
-static Expr *term(Parser *parser);
-static Expr *factor(Parser *parser);
-static Expr *unary(Parser *parser);
-static Expr *access(Parser *parser);
-static Expr *primary(Parser *parser);
-static Expr *bool_lit(Parser *parser);
-static Expr *number(Parser *parser);
-static Expr *range(Parser *parser);
-static Expr *list(Parser *parser);
 
 static Stmt *declaration(Parser *parser)
 {
@@ -160,10 +188,7 @@ static Stmt *declaration(Parser *parser)
     /* ignore all leading newlines */
     ignore(parser, t_newline);
 
-    if (match(parser, t_var))
-	stmt = var_decl(parser);
-    else
-	stmt = statement(parser);
+    stmt = statement(parser);
 
     /* ignore all trailing newlines */
     ignore(parser, t_newline);
@@ -173,6 +198,9 @@ static Stmt *declaration(Parser *parser)
 
 static Stmt *statement(Parser *parser)
 {
+    if (match(parser, t_var))
+	return var_decl(parser);
+
     if (match(parser, t_loop))
 	return loop_stmt(parser);
 
@@ -185,8 +213,16 @@ static Stmt *statement(Parser *parser)
     if (match(parser, dt_shlit))
 	return cmd_stmt(parser);
 
-    /* returns expr_stmt if following tokens is not a valid assignment */
-    return assignment_stmt(parser);
+    /*
+     * TODO:
+     * this can't be a match due to the BNF.
+     * we have to call item_access() later that does not assume we came from
+     * t_access. This is bad and should be fixed.
+     */
+    if (check(parser, t_access))
+	return assignment_stmt(parser);
+
+    return expr_stmt(parser);
 }
 
 static Stmt *expr_stmt(Parser *parser)
@@ -196,6 +232,33 @@ static Stmt *expr_stmt(Parser *parser)
 
     ExpressionStmt *stmt = (ExpressionStmt *)stmt_alloc(parser->ast_arena, STMT_EXPRESSION);
     stmt->expression = expr;
+    return (Stmt *)stmt;
+}
+
+static Stmt *assignment_stmt(Parser *parser)
+{
+    /* know next is t_access */
+
+    // TODO: this is a hack
+    size_t pos = parser->token_pos;
+
+    // TODO: throw parse error if not AccessExpr or ItemAccessExpr ?
+    Expr *var = item_access(parser);
+    if (!match(parser, t_equal, t_plus_equal, t_minus_equal)) {
+	/* if next token after access is not an assignment op, then ignore everything we just did */
+	// TODO: can we just return the `var` as an ExpressionStmt ?
+	parser->token_pos = pos;
+	return expr_stmt(parser);
+    }
+
+    /* access part of assignment */
+    Token *assignment_op = previous(parser);
+    Expr *value = expression(parser);
+
+    AssignStmt *stmt = (AssignStmt *)stmt_alloc(parser->ast_arena, STMT_ASSIGN);
+    stmt->var = var;
+    stmt->assignment_op = assignment_op->type;
+    stmt->value = value;
     return (Stmt *)stmt;
 }
 
@@ -268,30 +331,6 @@ static Stmt *block(Parser *parser)
     return (Stmt *)stmt;
 }
 
-static Stmt *assignment_stmt(Parser *parser)
-{
-    if (!check(parser, t_access))
-	return expr_stmt(parser);
-
-    // TODO: this is a hack
-    size_t pos_pre = parser->token_pos;
-    AccessExpr *name = (AccessExpr *)access(parser);
-    if (!match(parser, t_equal, t_plus_equal, t_minus_equal)) {
-	parser->token_pos = pos_pre;
-	return expr_stmt(parser);
-    }
-
-    /* access part of assignment */
-    Token *assignment_op = previous(parser);
-    Expr *value = expression(parser);
-
-    AssignStmt *stmt = (AssignStmt *)stmt_alloc(parser->ast_arena, STMT_ASSIGN);
-    stmt->access = name;
-    stmt->assignment_op = assignment_op->type;
-    stmt->value = value;
-    return (Stmt *)stmt;
-}
-
 static Stmt *cmd_stmt(Parser *parser)
 {
     /* came from dt_shlit */
@@ -318,9 +357,39 @@ static Expr *argument(Parser *parser)
 
 static Expr *expression(Parser *parser)
 {
-    if (match(parser, t_lparen))
-	return subshell(parser);
-    return equality(parser);
+    // TODO: need to figure out if '(' should be parsed as a tuple, subshell or grouping (TODO)
+    Expr *left;
+    if (!match(parser, t_lparen))
+	left = equality(parser);
+    else if (match(parser, t_lparen))
+	left = list_or_tuple_or_map(parser, true);
+    else
+	left = subshell(parser);
+
+    if (match(parser, t_in)) {
+	BinaryExpr *expr = (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY);
+	expr->left = left;
+	expr->operator_ = t_in;
+	expr->right = expression(parser);
+	return (Expr *)expr;
+    }
+
+    if (match(parser, t_dot)) {
+	MethodExpr *expr = (MethodExpr *)expr_alloc(parser->ast_arena, EXPR_METHOD);
+	Token *method_name = consume(parser, t_identifier, "expected method name");
+	expr->obj = left;
+	expr->method_name = method_name->lexeme;
+	consume(parser, t_lparen, "expected left paren");
+	if (!match(parser, t_rparen)) {
+	    expr->arg_exprs = comma_sep_exprs(parser);
+	    consume(parser, t_rparen, "expected right paren");
+	} else {
+	    expr->arg_exprs = NULL;
+	}
+	return (Expr *)expr;
+    }
+
+    return left;
 }
 
 static Expr *subshell(Parser *parser)
@@ -393,42 +462,32 @@ static Expr *factor(Parser *parser)
 
 static Expr *unary(Parser *parser)
 {
-    return access(parser);
+    return item_access(parser);
 }
 
-static Expr *access(Parser *parser)
+static Expr *item_access(Parser *parser)
 {
     if (!match(parser, t_access))
 	return primary(parser);
 
+    if (!match(parser, t_lbracket))
+	return access(parser);
+
+    Token *variable_name = previous_previous(parser);
+    Expr *access_value = expression(parser);
+    consume(parser, t_rbracket, "expected ']' after variable item access");
+    ItemAccessExpr *expr = (ItemAccessExpr *)expr_alloc(parser->ast_arena, EXPR_ITEM_ACCESS);
+    expr->var_name = variable_name->lexeme;
+    expr->access_value = access_value;
+    return (Expr *)expr;
+}
+
+static Expr *access(Parser *parser)
+{
+    /* came from t_access */
     Token *variable_name = previous(parser);
     AccessExpr *expr = (AccessExpr *)expr_alloc(parser->ast_arena, EXPR_ACCESS);
     expr->var_name = variable_name->lexeme;
-
-    /* optional element access using brackets */
-    if (!match(parser, t_lbracket)) {
-	expr->access_type = ACCESS_NONE;
-	return (Expr *)expr;
-    }
-
-    int range_start_or_index = 0;
-    if (match(parser, dt_num)) {
-	Token *start_token = previous(parser);
-	range_start_or_index = str_view_to_int(start_token->lexeme);
-    }
-
-    if (match(parser, t_dot_dot)) {
-	consume(parser, dt_num, "expected number after ranged access");
-	Token *end = previous(parser);
-	expr->access_type = ACCESS_RANGE;
-	expr->range.start = range_start_or_index;
-	expr->range.end = str_view_to_int(end->lexeme);
-    } else {
-	expr->access_type = ACCESS_INDEX;
-	expr->index = range_start_or_index;
-    }
-
-    consume(parser, t_rbracket, "expected ']' after indexing");
     return (Expr *)expr;
 }
 
@@ -447,7 +506,7 @@ static Expr *primary(Parser *parser)
     }
 
     if (match(parser, t_lbracket))
-	return list(parser);
+	return list_or_tuple_or_map(parser, false);
 
     if (!match(parser, dt_str, dt_shlit))
 	slash_exit_parse_err("not a valid primary type");
@@ -462,12 +521,8 @@ static Expr *primary(Parser *parser)
 
 static Expr *bool_lit(Parser *parser)
 {
-    Token *token = previous(parser);
     LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
     expr->value = (SlashValue){ .type = SLASH_BOOL, .boolean = t_true ? true : false };
-    // SlashBool *value = (SlashBool *)slash_value_arena_alloc(parser->ast_arena, SLASH_BOOL);
-    // value->value = token->type == t_true ? true : false;
-    // expr->value = (SlashValue *)value;
     return (Expr *)expr;
 }
 
@@ -477,20 +532,6 @@ static Expr *number(Parser *parser)
     LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
     expr->value = (SlashValue){ .type = SLASH_NUM, .num = str_view_to_double(token->lexeme) };
     return (Expr *)expr;
-}
-
-ArrayList parse(Arena *ast_arena, ArrayList *tokens)
-{
-    Parser parser = { .ast_arena = ast_arena, .tokens = tokens, .token_pos = 0 };
-    ArrayList statements;
-    arraylist_init(&statements, sizeof(Stmt *));
-
-    while (!check(&parser, t_eof)) {
-	Stmt *stmt = declaration(&parser);
-	arraylist_append(&statements, &stmt);
-    }
-
-    return statements;
 }
 
 static Expr *range(Parser *parser)
@@ -512,24 +553,68 @@ static Expr *range(Parser *parser)
     return (Expr *)expr;
 }
 
-static Expr *list(Parser *parser)
+static Expr *map(Parser *parser)
 {
-    /* came from '[' */
+    /* came from '[[' */
+    MapExpr *expr = (MapExpr *)expr_alloc(parser->ast_arena, EXPR_MAP);
+    expr->key_value_pairs = arena_ll_alloc(parser->ast_arena);
+
+    do {
+	KeyValuePair *pair = m_arena_alloc_struct(parser->ast_arena, KeyValuePair);
+	pair->key = expression(parser);
+	consume(parser, t_colon, "expected colon ':' to denote value for key in map expression");
+	pair->value = expression(parser);
+	arena_ll_append(expr->key_value_pairs, pair);
+	if (!match(parser, t_comma))
+	    break;
+    } while (!check(parser, t_rbracket));
+
+    consume(parser, t_rbracket, "Expected ']]' to terminate map");
+    consume(parser, t_rbracket, "Expected ']]' to terminate map");
+    return (Expr *)expr;
+}
+
+static Expr *list_or_tuple_or_map(Parser *parser, bool is_tuple)
+{
+    /* came from '[' or '((' */
+    if (match(parser, t_lbracket))
+	return map(parser);
+
     ListExpr *expr = (ListExpr *)expr_alloc(parser->ast_arena, EXPR_LIST);
+    expr->list_type = is_tuple ? SLASH_TUPLE : SLASH_LIST;
+    TokenType terminator = is_tuple ? t_rparen : t_rbracket;
 
     /* edge case: empty list */
-    if (match(parser, t_rbracket)) {
+    if (match(parser, terminator)) {
+	if (is_tuple)
+	    consume(parser, t_rparen, "Expected '))' to terminate tuple");
 	expr->exprs = NULL;
 	return (Expr *)expr;
     }
 
-    expr->exprs = arena_ll_alloc(parser->ast_arena);
-    do {
-	arena_ll_append(expr->exprs, expression(parser));
-	/* "ignore" single trailing comma */
-	match(parser, t_comma);
-    } while (!check(parser, t_rbracket));
+    /* if next is not terminator, parse list initializer */
+    if (!match(parser, terminator)) {
+	expr->exprs = comma_sep_exprs(parser);
+	consume(parser, terminator, "Expected list terminator after arg list");
+    } else {
+	expr->exprs = NULL;
+    }
 
-    consume(parser, t_rbracket, "Expected ']' to terminate list");
+    if (is_tuple)
+	consume(parser, t_rparen, "Expected '))' to terminate tuple");
     return (Expr *)expr;
+}
+
+ArrayList parse(Arena *ast_arena, ArrayList *tokens)
+{
+    Parser parser = { .ast_arena = ast_arena, .tokens = tokens, .token_pos = 0 };
+    ArrayList statements;
+    arraylist_init(&statements, sizeof(Stmt *));
+
+    while (!check(&parser, t_eof)) {
+	Stmt *stmt = declaration(&parser);
+	arraylist_append(&statements, &stmt);
+    }
+
+    return statements;
 }

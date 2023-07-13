@@ -25,8 +25,9 @@
 
 
 const size_t expr_size_table[] = {
-    sizeof(UnaryExpr),	sizeof(BinaryExpr),   sizeof(LiteralExpr),
-    sizeof(AccessExpr), sizeof(SubshellExpr), sizeof(ListExpr),
+    sizeof(UnaryExpr),	sizeof(BinaryExpr),	sizeof(LiteralExpr),
+    sizeof(AccessExpr), sizeof(ItemAccessExpr), sizeof(SubshellExpr),
+    sizeof(ListExpr),	sizeof(MapExpr),	sizeof(MethodExpr),
 };
 
 const size_t stmt_size_table[] = { sizeof(ExpressionStmt), sizeof(VarStmt),  sizeof(LoopStmt),
@@ -34,7 +35,8 @@ const size_t stmt_size_table[] = { sizeof(ExpressionStmt), sizeof(VarStmt),  siz
 				   sizeof(AssignStmt),	   sizeof(BlockStmt) };
 
 char *expr_type_str_map[EXPR_ENUM_COUNT] = {
-    "EXPR_UNARY", "EXPR_BINARY", "EXPR_LITERAL", "EXPR_ACCESS", "EXPR_SUBSHELL", "EXPR_LIST",
+    "EXPR_UNARY",    "EXPR_BINARY", "EXPR_LITERAL", "EXPR_ACCESS", "EXPR_ITEM_ACCESS",
+    "EXPR_SUBSHELL", "EXPR_LIST",   "EXPR_MAP",	    "EXPR_METHOD",
 };
 
 char *stmt_type_str_map[STMT_ENUM_COUNT] = {
@@ -122,15 +124,14 @@ static void ast_print_literal(LiteralExpr *expr)
 static void ast_print_access(AccessExpr *expr)
 {
     str_view_print(expr->var_name);
-    if (expr->access_type == ACCESS_INDEX) {
-	printf(".get(%d)", expr->index);
-    } else if (expr->access_type == ACCESS_KEY) {
-	printf(".get(");
-	str_view_print(expr->key);
-	printf(")");
-    } else if (expr->access_type == ACCESS_RANGE) {
-	printf(".get(%d..%d)", expr->range.start, expr->range.end);
-    }
+}
+
+static void ast_print_item_access(ItemAccessExpr *expr)
+{
+    str_view_print(expr->var_name);
+    putchar('[');
+    ast_print_expr(expr->access_value);
+    putchar(']');
 }
 
 static void ast_print_list(ListExpr *expr)
@@ -144,6 +145,39 @@ static void ast_print_list(ListExpr *expr)
 	ast_print_expr(item->value);
 	printf(", ");
     }
+}
+
+static void ast_print_map(MapExpr *expr)
+{
+    if (expr->key_value_pairs == NULL)
+	return;
+
+    LLItem *item;
+    KeyValuePair *pair;
+    ARENA_LL_FOR_EACH(expr->key_value_pairs, item)
+    {
+	pair = item->value;
+	ast_print_expr(pair->key);
+	printf(":");
+	ast_print_expr(pair->value);
+    }
+}
+
+static void ast_print_method(MethodExpr *expr)
+{
+    ast_print_expr(expr->obj);
+    putchar('.');
+    str_view_print(expr->method_name);
+    putchar('(');
+
+    if (expr->arg_exprs != NULL) {
+	LLItem *item;
+	ARENA_LL_FOR_EACH(expr->arg_exprs, item)
+	{
+	    ast_print_expr(item->value);
+	}
+    }
+    putchar(')');
 }
 
 static void ast_print_expression(ExpressionStmt *stmt)
@@ -210,7 +244,7 @@ static void ast_print_iter_loop(IterLoopStmt *stmt)
 
 static void ast_print_assign(AssignStmt *stmt)
 {
-    ast_print_expr(stmt->access);
+    ast_print_expr(stmt->var);
     if (stmt->assignment_op == t_equal)
 	printf(" = ");
     else if (stmt->assignment_op == t_plus_equal)
@@ -242,12 +276,24 @@ static void ast_print_expr(Expr *expr)
 	ast_print_access((AccessExpr *)expr);
 	break;
 
+    case EXPR_ITEM_ACCESS:
+	ast_print_item_access((ItemAccessExpr *)expr);
+	break;
+
     case EXPR_SUBSHELL:
 	ast_print_stmt(((SubshellExpr *)expr)->stmt);
 	break;
 
     case EXPR_LIST:
 	ast_print_list((ListExpr *)expr);
+	break;
+
+    case EXPR_MAP:
+	ast_print_map((MapExpr *)expr);
+	break;
+
+    case EXPR_METHOD:
+	ast_print_method((MethodExpr *)expr);
 	break;
 
     default:

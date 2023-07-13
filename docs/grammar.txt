@@ -36,10 +36,20 @@ block           -> "{" statement* "}" ;
 
 /* expressions */
 
+//TODO: currently just a linked list, should be its own expr?
+comma_sep_exprs -> (argument ",")*? ;
+
 argument        -> expression ;
 
-expression      -> equality
+
+expression      -> method_call
+                |  contains
+                |  equality
                 |  subshell ;
+
+method_call     -> expression "." IDENTIFIER "(" comma_sep_exprs ")" ;
+
+contains        -> expression "in" expression ;
 
 subshell        -> "(" cmd_stmt ")" ;
 
@@ -47,17 +57,21 @@ equality        -> comparison (( "!=" | "==" ) comparison )* ;
 comparison      -> term (( ">" | ">=" | "<" | "<=" ) term )* ;
 term            -> factor (( "-" | "+" ) factor )* ;
 factor          -> unary ;
-unary           -> access ;
+unary           -> item_access ;
 
-access          -> ACCESS ( "[" NUMBER ( ".." NUMBER )? "]" )?
-                |  primary;
+item_access     -> ACCESS "[" expression "]"
+                |  access ;
+
+access          -> ACCESS
+                |  primary ;
 
 primary         -> STRING 
                 |  SHLIT
                 |  bool_lit
                 |  number
                 |  range 
-                |  list ;
+                |  list
+                |  map ;
 
 bool_lit        -> "true" | "false ";
 
@@ -65,4 +79,8 @@ number          -> NUMBER ;
 
 range           -> NUMBER? ".." NUMBER ;
 
-list            -> "[" ( expression )*? "]" ;
+list            -> "[" comma_sep_exprs "]" ;
+
+map             -> "[[" ( expression ":" expression "," )*? "]]"
+
+tuple           -> "((" comma_sep_exprs "))" ;
