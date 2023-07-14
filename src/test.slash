@@ -1,17 +1,2 @@
-var fail = false
-loop file in (find -name "*.c" -o -name "*.h") {
-    clang-format --dry-run --Werror -style=file $file && fail = true
-}
-
-$fail && exit 1
-
-fail = False
-for root, _, files in os.walk("."):
-    for file in files:
-        if file.endswith((".c", ".h")):
-            rc = os.system("clang-format --dry-run --Werror -style=file " + root + "/" + file)
-            if rc != 0:
-                fail = True
-
-if fail:
-    exit(1)
+var wallpaper_loc = "/home/nic/Pictures/wallpapers/alt.jpg"
+feh --bg-fill $wallpaper_loc

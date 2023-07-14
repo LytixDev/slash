@@ -18,6 +18,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+extern char *
+    *environ; // TODO: currently we just inherit, but maybe we need to do something more fancy
 
 int exec_program(char **argv)
 {
@@ -26,7 +28,7 @@ int exec_program(char **argv)
 
     pid_t new_pid = fork();
     if (new_pid == 0)
-	return_code = execve(argv[0], argv, NULL);
+	return_code = execve(argv[0], argv, environ);
 
     waitpid(new_pid, &status, 0);
     return return_code;
@@ -46,7 +48,7 @@ int exec_capture(char **argv, char buffer[4096])
 	dup2(pipefd[1], 1);
 	dup2(pipefd[1], 2);
 	close(pipefd[1]);
-	return_code = execve(argv[0], argv, NULL);
+	return_code = execve(argv[0], argv, environ);
     }
 
     waitpid(new_pid, &status, 0);

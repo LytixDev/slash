@@ -513,7 +513,6 @@ static void exec_iter_loop_str(Interpreter *interpreter, IterLoopStmt *stmt, Str
     memcpy(ifs_char, ifs.view, ifs.size);
     ifs_char[ifs.size] = 0;
 
-
     var_define(interpreter->scope, &stmt->var_name, &iterator_value);
     char *t = strtok(underlying, ifs_char);
     while (t != NULL) {
@@ -523,20 +522,6 @@ static void exec_iter_loop_str(Interpreter *interpreter, IterLoopStmt *stmt, Str
 	exec_block_body(interpreter, stmt->body_block);
 	t = strtok(NULL, ifs_char);
     }
-
-
-    // StrView str = { .view = iterable.view, .size = 1 };
-    // SlashValue iterator_value = { .type = SLASH_STR, .str = str };
-
-    ///* define the loop variable that holds the current iterator value */
-    // var_define(interpreter->scope, &stmt->var_name, &iterator_value);
-
-    ///* increase while the mem addr of view is less than the final mem addr of the iterable */
-    // while (iterator_value.str.view < iterable.view + iterable.size) {
-    //     exec_block_body(interpreter, stmt->body_block);
-    //     iterator_value.str.view++;
-    //     var_assign(interpreter->scope, &stmt->var_name, &iterator_value);
-    // }
 
     /* don't need to undefine the iterator value as the scope will be destroyed imminently */
 }
