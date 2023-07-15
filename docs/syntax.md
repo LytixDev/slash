@@ -1,53 +1,45 @@
 # Types
 
-## String (str)
-`"string"`
-
-TODO:
-String buitins such as .lower, .upper, .split, slice?
-
-## Number (num)
-`3`
-`3.14`
-`0xff`
-`0b0110`
-
-## Range
-`1..5`
-
-## Shell Literal (shlit)
-`ls`
-`-la`
-
-## Boolean (bool)
-`true`
-`false`
-
-## List (list)
-Very similar to a list in Python.
-
-TODO:
-list builtins
 ```
-[1, 2, 3]
-["Baines", "Jagielka", "Distin", "Coleman"]
-[1, 2, "Baines"]  # A list can hold any data type
-```
+# strings (str)
+var str_t = "string"
 
-```
-var a = [1, 2, 3]
-var val1 = $a[0]
-var slice = $a[..2]
-```
+# numbers (num)
+var num_t = 3
+var pi = 3.14
+var hex = 0xff
+var bin = 0b0110
 
-# Comments
-```
-# this is a comment which is wholly ignored by the interpreter
+# ranges (range)
+var range_t = 1..5
+var r = ..3
+
+# boolean (bool)
+var b = true
+
+# list
+var l = [1, 2, 3]
+$l += 4
+$l += [5, 6, 7]
+
+var sliced = $l[..3]
+var first = $l[0]
+
+$l = [1, 2, "Baines"]  # A list can hold any data type
+
+var popped = l.pop()  # every type also has builtin methods
+$popped = l.pop(0)  # method overloading
+
+# tuples
+var t  = ((1, 2, 3))
+
+# map
+var m = [["key": "value"]]
 ```
 
 
 # Variables
-Variables are defined using the `var` keyword. Prefix a variable with the `$` sign to get its value. Using the `$` sign to grab a variables value is called a variable interpolation the Slash-speak.
+Variables are defined using the `var` keyword. Prefix a variable with the `$` sign to get its value. Using the `$` sign to grab a variables value is called a variable access in Slash-speak.
 ```
 var a = "Hello World!"  # assigns "Hello World!" to the variable a
 echo $a
@@ -229,8 +221,8 @@ loop i in 1..10 {
 ```
 
 ```
-loop c in "Alice" {
-    echo $c  # prints A, l ... e
+loop file in (ls) {
+    echo $file
 }
 ```
 

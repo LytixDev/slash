@@ -1,2 +1,4 @@
-var wallpaper_loc = "/home/nic/Pictures/wallpapers/alt.jpg"
-feh --bg-fill $wallpaper_loc
+var system = (uname)
+if $system == "Linux" {
+    "well akthually youre using GNU/Linux"
+}
