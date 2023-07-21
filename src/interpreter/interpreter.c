@@ -272,7 +272,7 @@ static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
 static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
 {
     SlashValue map = { .type = SLASH_MAP };
-    slash_map_init(&map.map);
+    slash_map_init(interpreter->scope, &map.map);
 
     if (expr->key_value_pairs == NULL)
 	return map;

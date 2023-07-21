@@ -1,6 +1,14 @@
 # Slash
 ### - Keeping the good stuff from POSIX sh while improving on the crap parts
-Slash aims to be a simple yet powerful interactive shell scripting language. It breaks free from shackles of the POSIX standard that was standardized some 30 years ago in favor of a more modern language design.
+Slash aims to be a simple yet powerful interactive shell scripting language. It breaks free from the POSIX standard that was standardized some 30 years ago in favor of a more modern language design.
+
+Altough still in its infancy, Slash is already "somewhat" useful! For example, the script used to format the C source code for this project is this simple Slash script:
+```
+#!/bin/slash
+loop file in (find -name "*.c" -o -name "*.h") {
+    clang-format -i -style=file $file
+}
+```
 
 
 ## Quick start

@@ -46,10 +46,12 @@ typedef enum {
 typedef struct slash_value_t {
     SlashType type;
     union {
+	/* stored in place */
 	StrView str;
 	bool boolean;
 	double num;
 	SlashRange range;
+	/* pointers to heap allocated data */
 	SlashList list;
 	SlashTuple tuple;
 	SlashMap map;

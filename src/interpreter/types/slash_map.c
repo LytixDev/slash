@@ -21,9 +21,16 @@
 #include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
 
-void slash_map_init(SlashMap *map)
+
+void slash_map_init(Scope *scope, SlashMap *map)
 {
     hashmap_init(&map->underlying);
+    scope_register_owning(scope, &(SlashValue){ .type = SLASH_MAP, .map = *map });
+}
+
+void slash_map_free(SlashMap *map)
+{
+    hashmap_free(&map->underlying);
 }
 
 void slash_map_put(SlashMap *map, SlashValue *key, SlashValue *value)

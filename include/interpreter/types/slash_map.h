@@ -17,6 +17,7 @@
 #ifndef SLASH_MAP_H
 #define SLASH_MAP_H
 
+#include "interpreter/scope.h"
 #include "interpreter/types/slash_tuple.h"
 #include "nicc/nicc.h"
 
@@ -26,7 +27,8 @@ typedef struct {
     HashMap underlying;
 } SlashMap;
 
-void slash_map_init(SlashMap *map);
+void slash_map_init(Scope *scope, SlashMap *map);
+void slash_map_free(SlashMap *map);
 
 void slash_map_put(SlashMap *map, SlashValue *key, SlashValue *value);
 /* returns NULL if key does not have an associated value */

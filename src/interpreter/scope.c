@@ -23,10 +23,39 @@
 #include "sac/sac.h"
 #include "str_view.h"
 
+extern char **environ;
+
+
+static int get_char_pos(char *str, char m)
+{
+    int i = 0;
+    while (*str != 0) {
+	if (*str == m)
+	    return i;
+	i++;
+	str++;
+    }
+    return -1;
+}
+
+static void set_env_as_var(Scope *scope, char *env_entry)
+{
+    int pos = get_char_pos(env_entry, '=');
+    StrView key = { .view = env_entry, .size = pos };
+    SlashValue value = { .type = SLASH_STR,
+			 .str = (StrView){ .view = env_entry + pos + 1,
+					   .size = strlen(env_entry) - pos } };
+    var_define(scope, &key, &value);
+}
 
 static void set_globals(Scope *scope)
 {
     assert(scope->enclosing == NULL);
+
+    char *item;
+    char **environ_cpy = environ;
+    for (item = *environ_cpy; item != NULL; item = *(++environ_cpy))
+	set_env_as_var(scope, item);
 
     StrView ifs = { .view = "IFS", .size = 3 };
     SlashValue ifs_value = { .type = SLASH_STR, .str = (StrView){ .view = "\n\t ", .size = 3 } };
@@ -37,8 +66,9 @@ void scope_init_global(Scope *scope, Arena *arena)
 {
     scope->arena_tmp = m_arena_tmp_init(arena);
     scope->enclosing = NULL;
+    scope->depth = 0;
     hashmap_init(&scope->values);
-    arraylist_init(&scope->owning, sizeof(MemObj *));
+    arraylist_init(&scope->owning, sizeof(SlashValue));
     set_globals(scope);
 }
 
@@ -46,28 +76,34 @@ void scope_init(Scope *scope, Scope *enclosing)
 {
     scope->arena_tmp = m_arena_tmp_init(enclosing->arena_tmp.arena);
     scope->enclosing = enclosing;
+    scope->depth = enclosing->depth + 1;
     hashmap_init(&scope->values);
-    arraylist_init(&scope->owning, sizeof(SlashValue *));
+    arraylist_init(&scope->owning, sizeof(SlashValue));
 }
 
 void scope_destroy(Scope *scope)
 {
     for (size_t i = 0; i < scope->owning.size; i++) {
-	MemObj *mem_obj = arraylist_get(&scope->owning, i);
-	mem_obj->free_func(mem_obj->ptr);
+	SlashValue *sv = arraylist_get(&scope->owning, i);
+	assert(sv->type == SLASH_LIST || sv->type == SLASH_MAP);
+	if (sv->type == SLASH_LIST)
+	    slash_list_free(&sv->list);
+	else
+	    slash_map_free(&sv->map);
     }
     arraylist_free(&scope->owning);
-
     m_arena_tmp_release(scope->arena_tmp);
     hashmap_free(&scope->values);
 }
 
-void scope_register_owning(Scope *scope, void *ptr, void (*free_func)(void *))
+void scope_register_owning(Scope *scope, SlashValue *sv)
 {
-    MemObj *obj = scope_alloc(scope, sizeof(MemObj));
-    obj->ptr = ptr;
-    obj->free_func = free_func;
-    arraylist_append(&scope->owning, obj);
+    arraylist_append(&scope->owning, sv);
+}
+
+void scope_transfer_owning(Scope *owner, Scope *new_owner, SlashValue *sv)
+{
+    scope_register_owning(new_owner, sv);
 }
 
 void *scope_alloc(Scope *scope, size_t size)

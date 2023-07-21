@@ -18,8 +18,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-extern char *
-    *environ; // TODO: currently we just inherit, but maybe we need to do something more fancy
+extern char **environ;
 
 int exec_program(char **argv)
 {

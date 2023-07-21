@@ -1,4 +1,5 @@
-var system = (uname)
-if $system == "Linux" {
-    "well akthually youre using GNU/Linux"
-}
+DIR=$1
+wallpaper_loc="$HOME/Pictures/wallpapers/alt.jpg"
+
+cp "$(sxiv -o "$DIR")" "$wallpaper_loc"
+feh --bg-fill "$wallpaper_loc"
