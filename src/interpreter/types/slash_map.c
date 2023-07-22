@@ -86,7 +86,7 @@ size_t *slash_map_len(SlashValue *value)
     return (size_t *)&value->map.underlying->len;
 }
 
-SlashValue slash_map_item_get(SlashValue *self, SlashValue *index)
+SlashValue slash_map_item_get(Scope *scope, SlashValue *self, SlashValue *index)
 {
     assert(self->type == SLASH_MAP);
 

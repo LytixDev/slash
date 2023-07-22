@@ -55,7 +55,7 @@ bool slash_list_eq(SlashList *a, SlashList *b);
 /* common slash value functions */
 void slash_list_print(SlashValue *value);
 size_t *slash_list_len(SlashValue *value);
-SlashValue slash_list_item_get(SlashValue *self, SlashValue *index);
+SlashValue slash_list_item_get(Scope *scope, SlashValue *self, SlashValue *index);
 void slash_list_item_assign(SlashValue *self, SlashValue *index, SlashValue *new_value);
 bool slash_list_item_in(SlashValue *self, SlashValue *item);
 

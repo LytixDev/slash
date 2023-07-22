@@ -60,7 +60,7 @@ size_t *slash_tuple_len(SlashValue *value)
     return &value->tuple.size;
 }
 
-SlashValue slash_tuple_item_get(SlashValue *self, SlashValue *index)
+SlashValue slash_tuple_item_get(Scope *scope, SlashValue *self, SlashValue *index)
 {
     assert(self->type == SLASH_TUPLE);
     SlashTuple tuple = self->tuple;

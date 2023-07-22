@@ -39,7 +39,7 @@ SlashValue *slash_map_get(SlashMap *map, SlashValue *key);
 /* O(n) */
 void slash_map_print(SlashValue *value);
 size_t *slash_map_len(SlashValue *value);
-SlashValue slash_map_item_get(SlashValue *self, SlashValue *index);
+SlashValue slash_map_item_get(Scope *scope, SlashValue *self, SlashValue *index);
 void slash_map_item_assign(SlashValue *self, SlashValue *index, SlashValue *new_value);
 bool slash_map_item_in(SlashValue *self, SlashValue *item);
 

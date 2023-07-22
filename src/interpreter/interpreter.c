@@ -204,7 +204,7 @@ static SlashValue eval_item_access(Interpreter *interpreter, ItemAccessExpr *exp
     SlashValue *self = value.value;
 
     SlashItemGetFunc func = slash_item_get[self->type];
-    SlashValue item = func(self, &access_index);
+    SlashValue item = func(interpreter->scope, self, &access_index);
     return item;
 }
 

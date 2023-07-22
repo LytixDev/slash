@@ -109,7 +109,7 @@ size_t *slash_list_len(SlashValue *value)
     return &value->list.underlying->size;
 }
 
-SlashValue slash_list_item_get(SlashValue *self, SlashValue *index)
+SlashValue slash_list_item_get(Scope *scope, SlashValue *self, SlashValue *index)
 {
     assert(self->type == SLASH_LIST);
     if (!(index->type == SLASH_NUM || index->type == SLASH_RANGE)) {
@@ -122,13 +122,9 @@ SlashValue slash_list_item_get(SlashValue *self, SlashValue *index)
 	return *slash_list_get(&self->list, idx);
     }
 
-    slash_exit_interpreter_err("todo");
-
-    // SlashValue ranged_copy;
-    // ranged_copy.type = SLASH_LIST;
-    // slash_list_init(&ranged_copy.list);
-    // slash_list_from_ranged_copy(&ranged_copy.list, &self->list, index->range);
-    // return ranged_copy;
+    SlashList ranged_copy;
+    slash_list_from_ranged_copy(scope, &ranged_copy, &self->list, index->range);
+    return (SlashValue){ .type = SLASH_LIST, .list = ranged_copy };
 }
 
 void slash_list_item_assign(SlashValue *self, SlashValue *index, SlashValue *new_value)

@@ -40,7 +40,7 @@ void slash_tuple_free(SlashTuple *tuple);
 
 void slash_tuple_print(SlashValue *value);
 size_t *slash_tuple_len(SlashValue *value);
-SlashValue slash_tuple_item_get(SlashValue *self, SlashValue *index);
+SlashValue slash_tuple_item_get(Scope *scope, SlashValue *self, SlashValue *index);
 bool slash_tuple_item_in(SlashValue *self, SlashValue *item);
 
 
