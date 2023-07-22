@@ -1,10 +1,10 @@
-var fruits = ["apple", "banana", "orange", "pear"]
-$fruits
+var pear = "pear"
+var fruits = ["apple", "banana", "orange", $pear]
 
-var popped = $fruits.pop()
-$popped
-$fruits
+loop fruit in $fruits {
+    $fruit
+}
 
-$popped = $fruits.pop(0)
-$popped
-$fruits
+var primes = [2, 3, 5, 7, 11, 13]
+var sliced = $primes[1..4]
+echo $sliced

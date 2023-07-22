@@ -305,7 +305,7 @@ static bool is_alpha(char c)
 
 static bool is_valid_identifier(char c)
 {
-    return is_numeric(c) || is_alpha(c) || c == '_';
+    return is_numeric(c) || is_alpha(c) || c == '_' || c == '-';
 }
 
 

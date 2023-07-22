@@ -38,6 +38,9 @@ bear:
 	@bear -- make
 
 format:
+	./format.slash # you will need slash installed to do this
+
+format-py:
 	python format.py
 
 $(OBJDIR):

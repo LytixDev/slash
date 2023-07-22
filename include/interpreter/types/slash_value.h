@@ -43,13 +43,18 @@ typedef enum {
     SLASH_TYPE_COUNT,
 } SlashType;
 
+#define SLASH_TYPE_DYNAMIC(slash_type) \
+    (slash_type == SLASH_MAP || slash_type == SLASH_LIST || slash_type == SLASH_TUPLE)
+
 typedef struct slash_value_t {
     SlashType type;
     union {
+	/* stored in place */
 	StrView str;
 	bool boolean;
 	double num;
 	SlashRange range;
+	/* pointers to heap allocated data */
 	SlashList list;
 	SlashTuple tuple;
 	SlashMap map;
@@ -67,7 +72,7 @@ bool slash_value_eq(SlashValue *a, SlashValue *b);
 // SlashToReprFunc
 typedef void (*SlashPrintFunc)(SlashValue *self);
 typedef size_t (*SlashLenFunc)(SlashValue *self);
-typedef SlashValue (*SlashItemGetFunc)(SlashValue *self, SlashValue *);
+typedef SlashValue (*SlashItemGetFunc)(Scope *scope, SlashValue *self, SlashValue *);
 typedef void (*SlashItemAssignFunc)(SlashValue *self, SlashValue *, SlashValue *);
 typedef bool (*SlashItemInFunc)(SlashValue *self, SlashValue *);
 

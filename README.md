@@ -1,5 +1,15 @@
 # Slash
-Slash aims to be a very simple yet powerful interactive shell scripting language. It breaks free from shackles of the POSIX standard that was standardized some 30 years ago in favor of a more modern language design.
+### - Keeping the good stuff from POSIX sh while improving on the crap parts
+Slash aims to be a simple yet powerful interactive shell scripting language. It breaks free from the POSIX standard that was standardized some 30 years ago in favor of a more modern language design.
+
+Altough still in its infancy, Slash is already "somewhat" useful! For example, the script used to format the C source code for this project is this simple Slash script:
+```
+#!/bin/slash
+loop file in (find -name "*.c" -o -name "*.h") {
+    clang-format -i -style=file $file
+}
+```
+
 
 ## Quick start
 ```sh
@@ -18,13 +28,12 @@ Design document of the language can be found [here](https://github.com/LytixDev/
 Raw expressions are evaluted and printed out to the terminal.
 ```
 0xff + 1    # prints 256
-10 - -1     # prints 11
 0xff == 255 # prints 'true'
 ```
 You want to do the same in POSIX sh? That would look something like:
 ```sh
-echo $((0xff + 1))  # prints 256
-# or
+echo $((0xff + 1))
+
 if [ $((0xff)) -eq 255 ]; then
     echo "true"
 else
@@ -32,6 +41,7 @@ else
 fi
 ```
 This verbosity is really annoying and makes the POSIX shell a poor choice for quick mafs. One major goal for Slash is empowering (buzzy buzzy) the user to do simple and more complex calculations ergonomically (buzzy buzzy).
+
 ### C-style, but no parentheses or semicolons
 ``` 
 var system = (uname)  # '(...)' is exactly the same as the POSIX '$(...)' 
@@ -39,15 +49,16 @@ if $system == "Linux" {
     echo "well akthually youre using GNU/Linux"
 }
 ```
-### Keeping the good stuff from POSIX sh while improving on the crap parts
+
+### "Keeping the good stuff from POSIX sh while improving on the crap parts"
 ```
 (ls | wc -l) as num >= 50 && echo "Big directory!"
 ```
 
 ### Loop
 ```
-loop c in "Alice" {
-    echo $c
+loop file in (ls) {
+    echo $file
 }
 ```
 ```
@@ -86,21 +97,21 @@ var result = fib(n=5)
 ```
 
 ### Inspiration and Influences
-C, Python, Go, Fish, Nushell and POSIX sh of course.
+1. Powerful and orthogonal builtin types like Python
+2. The delights from POSIX sh without the jank.
 
-The lexer is heavily influenced by [this brilliant talk](https://www.youtube.com/watch?v=HxaD_trXwRE) by Rob Pike. The rest of the interpreter takes inspiration from the book [Crafting Interpreters](https://craftinginterpreters.com/) by Robert Nystrom.
+
+The lexer is heavily influenced by [this talk](https://www.youtube.com/watch?v=HxaD_trXwRE) by Rob Pike. The rest of the interpreter takes inspiration from the book [Crafting Interpreters](https://craftinginterpreters.com/) by Robert Nystrom.
 
 ## Goals
 - Functioning interactive shell.
 - REPL.
-- Simple yet powerful for basic calcuations.
+- Simple yet powerful for basic calculations.
 - Modern language features, like `for-each-esque loop`.
 - Modern syntax C-style syntax.
 - More performant than the likes of BASH and ZSH (of course, these shells are POSIX compliant, so this is an apples to oranges type comparison)
 - Simple and hackable interpreter.
 - Have fun writing C code :-)
 
-## Status
-Currently variable assignment, basic arihtmetic, if-elif-else, loops, list, slices, ranges.
 ## Contact
 mail to nicolahb at stud dot ntnu dot no

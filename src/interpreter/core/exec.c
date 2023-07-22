@@ -18,6 +18,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+extern char **environ;
 
 int exec_program(char **argv)
 {
@@ -26,13 +27,13 @@ int exec_program(char **argv)
 
     pid_t new_pid = fork();
     if (new_pid == 0)
-	return_code = execve(argv[0], argv, NULL);
+	return_code = execve(argv[0], argv, environ);
 
     waitpid(new_pid, &status, 0);
     return return_code;
 }
 
-int exec_capture(char **argv, char buffer[1024])
+int exec_capture(char **argv, char buffer[4096])
 {
     int status;
     int return_code = 0;
@@ -46,11 +47,11 @@ int exec_capture(char **argv, char buffer[1024])
 	dup2(pipefd[1], 1);
 	dup2(pipefd[1], 2);
 	close(pipefd[1]);
-	return_code = execve(argv[0], argv, NULL);
+	return_code = execve(argv[0], argv, environ);
     }
 
     waitpid(new_pid, &status, 0);
     close(pipefd[1]);
-    read(pipefd[0], buffer, 1024);
+    read(pipefd[0], buffer, 4096);
     return return_code;
 }

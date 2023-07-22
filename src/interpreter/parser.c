@@ -521,8 +521,10 @@ static Expr *primary(Parser *parser)
 
 static Expr *bool_lit(Parser *parser)
 {
+    Token *token = previous(parser);
     LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
-    expr->value = (SlashValue){ .type = SLASH_BOOL, .boolean = t_true ? true : false };
+    expr->value =
+	(SlashValue){ .type = SLASH_BOOL, .boolean = token->type == t_true ? true : false };
     return (Expr *)expr;
 }
 

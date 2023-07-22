@@ -21,19 +21,28 @@
 #include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
 
-void slash_map_init(SlashMap *map)
+
+void slash_map_init(Scope *scope, SlashMap *map)
 {
-    hashmap_init(&map->underlying);
+    map->underlying = malloc(sizeof(HashMap));
+    hashmap_init(map->underlying);
+    scope_register_owning(scope, &(SlashValue){ .type = SLASH_MAP, .map = *map });
+}
+
+void slash_map_free(SlashMap *map)
+{
+    hashmap_free(map->underlying);
+    free(map->underlying);
 }
 
 void slash_map_put(SlashMap *map, SlashValue *key, SlashValue *value)
 {
-    hashmap_put(&map->underlying, key, sizeof(SlashValue), value, sizeof(SlashValue), true);
+    hashmap_put(map->underlying, key, sizeof(SlashValue), value, sizeof(SlashValue), true);
 }
 
 SlashValue *slash_map_get(SlashMap *map, SlashValue *key)
 {
-    SlashValue *value = hashmap_get(&map->underlying, key, sizeof(SlashValue));
+    SlashValue *value = hashmap_get(map->underlying, key, sizeof(SlashValue));
     if (value == NULL)
 	return &slash_glob_none;
     return value;
@@ -44,7 +53,7 @@ SlashValue *slash_map_get(SlashMap *map, SlashValue *key)
 void slash_map_print(SlashValue *value)
 {
     printf("[[");
-    HashMap *m = &value->map.underlying;
+    HashMap *m = value->map.underlying;
     SlashValue *k, *v;
     struct hm_bucket_t *bucket;
     struct hm_entry_t entry;
@@ -74,10 +83,10 @@ void slash_map_print(SlashValue *value)
 
 size_t *slash_map_len(SlashValue *value)
 {
-    return (size_t *)&value->map.underlying.len;
+    return (size_t *)&value->map.underlying->len;
 }
 
-SlashValue slash_map_item_get(SlashValue *self, SlashValue *index)
+SlashValue slash_map_item_get(Scope *scope, SlashValue *self, SlashValue *index)
 {
     assert(self->type == SLASH_MAP);
 
@@ -96,18 +105,18 @@ bool slash_map_item_in(SlashValue *self, SlashValue *item)
     /* "in" means that the item is a key in the dict */
 
     SlashMap map = self->map;
-    SlashValue *value = hashmap_get(&map.underlying, item, sizeof(SlashValue));
+    SlashValue *value = hashmap_get(map.underlying, item, sizeof(SlashValue));
     return value != NULL;
 }
 
 
 /* methods */
-SlashTuple slash_map_get_keys(SlashMap *map)
+SlashTuple slash_map_get_keys(Scope *scope, SlashMap *map)
 {
-    SlashTuple map_keys = { map->underlying.len, .values = NULL };
-    map_keys.values = malloc(sizeof(SlashValue) * map_keys.size);
+    SlashTuple map_keys;
+    slash_tuple_init(scope, &map_keys, map->underlying->len);
 
-    HashMap *m = &map->underlying;
+    HashMap *m = map->underlying;
     struct hm_bucket_t *bucket;
     struct hm_entry_t entry;
     size_t counter = 0;

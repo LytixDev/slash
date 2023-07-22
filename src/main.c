@@ -25,7 +25,7 @@
 #define NICC_IMPLEMENTATION
 #include "nicc/nicc.h"
 
-#define input_size 4096
+#define MAX_INPUT_SIZE 4096
 
 
 int main(int argc, char **argv)
@@ -34,7 +34,7 @@ int main(int argc, char **argv)
     if (argc > 1)
 	file_path = argv[1];
 
-    char input[input_size];
+    char input[MAX_INPUT_SIZE];
     FILE *fp = fopen(file_path, "r");
     if (fp == NULL) {
 	fprintf(stderr, "error opening file %s\n", file_path);
@@ -46,7 +46,7 @@ int main(int argc, char **argv)
     do {
 	c = fgetc(fp);
 	input[counter++] = c;
-	if (counter == input_size)
+	if (counter == MAX_INPUT_SIZE)
 	    break;
     } while (c != EOF);
 

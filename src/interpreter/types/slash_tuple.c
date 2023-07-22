@@ -18,9 +18,27 @@
 #include <stdio.h>
 
 #include "common.h"
+#include "interpreter/scope.h"
 #include "interpreter/types/slash_tuple.h"
 #include "interpreter/types/slash_value.h"
 
+
+void slash_tuple_init(Scope *scope, SlashTuple *tuple, size_t size)
+{
+    tuple->size = size;
+    if (size == 0) {
+	tuple->values = NULL;
+    } else {
+	tuple->values = malloc(sizeof(SlashValue) * size);
+    }
+    scope_register_owning(scope, &(SlashValue){ .type = SLASH_TUPLE, .tuple = *tuple });
+}
+
+void slash_tuple_free(SlashTuple *tuple)
+{
+    if (tuple->values != NULL)
+	free(tuple->values);
+}
 
 void slash_tuple_print(SlashValue *value)
 {
@@ -42,7 +60,7 @@ size_t *slash_tuple_len(SlashValue *value)
     return &value->tuple.size;
 }
 
-SlashValue slash_tuple_item_get(SlashValue *self, SlashValue *index)
+SlashValue slash_tuple_item_get(Scope *scope, SlashValue *self, SlashValue *index)
 {
     assert(self->type == SLASH_TUPLE);
     SlashTuple tuple = self->tuple;

@@ -17,18 +17,19 @@
 #ifndef SCOPE_H
 #define SCOPE_H
 
-#include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
 #include "sac/sac.h"
 #include "str_view.h"
 
+typedef struct slash_value_t SlashValue; // Forward declaration of SlashValue
 
 typedef struct scope_t Scope;
 struct scope_t {
     Scope *enclosing; // if NULL then there is no enclosing scope and is the global scope
-    // TODO: this can actually be an ArenaTmp
+    size_t depth; // the amount of enclosing scopes
     ArenaTmp arena_tmp; // arena to put any temporary data on
-    struct hashmap_t values; // key: StrView, value: SlashValue (actual objects, not pointers)
+    HashMap values; // key: StrView, value: SlashValue (actual objects, not pointers)
+    LinkedList owning; // owning references to SlashValue's that must be freed on scope_destroy
 };
 
 typedef struct {
@@ -40,6 +41,7 @@ typedef struct {
 void scope_init_global(Scope *scope, Arena *arena);
 void scope_init(Scope *scope, Scope *enclosing);
 void scope_destroy(Scope *scope);
+void scope_register_owning(Scope *scope, SlashValue *sv);
 void *scope_alloc(Scope *scope, size_t size);
 
 /*
@@ -48,12 +50,21 @@ void *scope_alloc(Scope *scope, size_t size);
  */
 void var_define(Scope *scope, StrView *key, SlashValue *value);
 void var_undefine(Scope *scope, StrView *key);
+
 /*
+ * variable assignment for values that are stored in place, i.e non references.
  * a variable may be defined in an enclosing scope, meaning var_define is not sufficient.
  * var_assign attempts to find the scope of the variable before updating its value
  */
-void var_assign(Scope *scope, StrView *key, SlashValue *value);
-/* returns the variable (if exists) with the scope it lives on */
+void var_assign_simple(Scope *scope, StrView *key, SlashValue *value);
+/*
+ * assigns the value to the variable who's key/name is var_name.
+ * transfers the ownership of the reference value of the variable if neededed.
+ * if not it calls var_assign_simple.
+ */
+void var_assign(StrView *var_name, Scope *var_owner, Scope *current, SlashValue *value);
+
+/* returns the variable (if exists) with its owning scope */
 ScopeAndValue var_get(Scope *scope, StrView *key);
 
 

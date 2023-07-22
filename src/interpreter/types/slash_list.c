@@ -19,16 +19,23 @@
 #include <stdio.h>
 
 #include "common.h"
+#include "interpreter/scope.h"
 #include "interpreter/types/slash_list.h"
 #include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
 
 
-void slash_list_init(SlashList *list)
+void slash_list_init(Scope *scope, SlashList *list)
 {
     list->underlying = malloc(sizeof(ArrayList));
     arraylist_init(list->underlying, sizeof(SlashValue));
-    // list->underlying_T = SLASH_NONE;
+    scope_register_owning(scope, &(SlashValue){ .type = SLASH_LIST, .list = *list });
+}
+
+void slash_list_free(SlashList *list)
+{
+    arraylist_free(list->underlying);
+    free(list->underlying);
 }
 
 bool slash_list_append(SlashList *list, SlashValue val)
@@ -52,9 +59,10 @@ SlashValue *slash_list_get(SlashList *list, size_t idx)
     return arraylist_get(list->underlying, idx);
 }
 
-void slash_list_from_ranged_copy(SlashList *ret_ptr, SlashList *to_copy, SlashRange range)
+void slash_list_from_ranged_copy(Scope *scope, SlashList *ret_ptr, SlashList *to_copy,
+				 SlashRange range)
 {
-    slash_list_init(ret_ptr);
+    slash_list_init(scope, ret_ptr);
     assert(range.end <= to_copy->underlying->size);
     for (int i = range.start; i < range.end; i++)
 	arraylist_append(ret_ptr->underlying, arraylist_get(to_copy->underlying, i));
@@ -101,7 +109,7 @@ size_t *slash_list_len(SlashValue *value)
     return &value->list.underlying->size;
 }
 
-SlashValue slash_list_item_get(SlashValue *self, SlashValue *index)
+SlashValue slash_list_item_get(Scope *scope, SlashValue *self, SlashValue *index)
 {
     assert(self->type == SLASH_LIST);
     if (!(index->type == SLASH_NUM || index->type == SLASH_RANGE)) {
@@ -114,11 +122,9 @@ SlashValue slash_list_item_get(SlashValue *self, SlashValue *index)
 	return *slash_list_get(&self->list, idx);
     }
 
-    SlashValue ranged_copy;
-    ranged_copy.type = SLASH_LIST;
-    slash_list_init(&ranged_copy.list);
-    slash_list_from_ranged_copy(&ranged_copy.list, &self->list, index->range);
-    return ranged_copy;
+    SlashList ranged_copy;
+    slash_list_from_ranged_copy(scope, &ranged_copy, &self->list, index->range);
+    return (SlashValue){ .type = SLASH_LIST, .list = ranged_copy };
 }
 
 void slash_list_item_assign(SlashValue *self, SlashValue *index, SlashValue *new_value)
