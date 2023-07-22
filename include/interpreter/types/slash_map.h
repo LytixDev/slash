@@ -24,8 +24,9 @@
 typedef struct slash_value_t SlashValue; // Forward declaration of SlashValue
 
 typedef struct {
-    HashMap underlying;
+    HashMap *underlying;
 } SlashMap;
+
 
 void slash_map_init(Scope *scope, SlashMap *map);
 void slash_map_free(SlashMap *map);
@@ -43,7 +44,7 @@ void slash_map_item_assign(SlashValue *self, SlashValue *index, SlashValue *new_
 bool slash_map_item_in(SlashValue *self, SlashValue *item);
 
 /* methods on slash map */
-SlashTuple slash_map_get_keys(SlashMap *map);
+SlashTuple slash_map_get_keys(Scope *scope, SlashMap *map);
 
 
 #endif /* SLASH_MAP_H */

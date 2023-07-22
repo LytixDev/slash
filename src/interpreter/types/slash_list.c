@@ -27,7 +27,7 @@
 
 void slash_list_init(Scope *scope, SlashList *list)
 {
-    list->underlying = scope_alloc(scope, sizeof(ArrayList));
+    list->underlying = malloc(sizeof(ArrayList));
     arraylist_init(list->underlying, sizeof(SlashValue));
     scope_register_owning(scope, &(SlashValue){ .type = SLASH_LIST, .list = *list });
 }
@@ -35,6 +35,7 @@ void slash_list_init(Scope *scope, SlashList *list)
 void slash_list_free(SlashList *list)
 {
     arraylist_free(list->underlying);
+    free(list->underlying);
 }
 
 bool slash_list_append(SlashList *list, SlashValue val)

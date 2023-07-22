@@ -43,6 +43,9 @@ typedef enum {
     SLASH_TYPE_COUNT,
 } SlashType;
 
+#define SLASH_TYPE_DYNAMIC(slash_type) \
+    (slash_type == SLASH_MAP || slash_type == SLASH_LIST || slash_type == SLASH_TUPLE)
+
 typedef struct slash_value_t {
     SlashType type;
     union {

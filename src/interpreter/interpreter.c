@@ -228,14 +228,14 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
 
 static SlashValue eval_tuple(Interpreter *interpreter, ListExpr *expr)
 {
-    SlashTuple tuple = { .size = expr->exprs->size, .values = NULL };
+    SlashTuple tuple;
+    slash_tuple_init(interpreter->scope, &tuple, expr->exprs->size);
+
     /* size is 0 */
     if (expr->exprs == NULL) {
 	assert(tuple.size == 0);
 	return (SlashValue){ .type = SLASH_TUPLE, .tuple = tuple };
     }
-
-    tuple.values = scope_alloc(interpreter->scope, sizeof(SlashValue) * tuple.size);
 
     size_t i = 0;
     LLItem *item;
@@ -433,21 +433,21 @@ static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
 
     AccessExpr *access = (AccessExpr *)stmt->var;
     StrView var_name = access->var_name;
-    ScopeAndValue current = var_get(interpreter->scope, &var_name);
-    if (current.value == NULL)
+    ScopeAndValue variable = var_get(interpreter->scope, &var_name);
+    if (variable.value == NULL)
 	slash_exit_interpreter_err("cannot modify undefined variable");
 
     SlashValue new_value = eval(interpreter, stmt->value);
 
     if (stmt->assignment_op == t_equal) {
-	var_assign(interpreter->scope, &var_name, &new_value);
+	var_assign(&var_name, variable.scope, interpreter->scope, &new_value);
 	return;
     }
 
     /* convert from += to + and -= to - */
     TokenType operator= stmt->assignment_op == t_plus_equal ? t_plus : t_minus;
-    new_value = cmp_binary_values(*current.value, new_value, operator);
-    var_assign(interpreter->scope, &var_name, &new_value);
+    new_value = cmp_binary_values(*variable.value, new_value, operator);
+    var_assign(&var_name, variable.scope, interpreter->scope, &new_value);
 }
 
 static void exec_loop(Interpreter *interpreter, LoopStmt *stmt)
@@ -474,14 +474,14 @@ static void exec_iter_loop_list(Interpreter *interpreter, IterLoopStmt *stmt, Sl
     SlashValue *iterator_value;
     for (size_t i = 0; i < iterable.underlying->size; i++) {
 	iterator_value = slash_list_get(&iterable, i);
-	var_assign(interpreter->scope, &stmt->var_name, iterator_value);
+	var_assign_simple(interpreter->scope, &stmt->var_name, iterator_value);
 	exec_block_body(interpreter, stmt->body_block);
     }
 }
 
 static void exec_iter_loop_map(Interpreter *interpreter, IterLoopStmt *stmt, SlashMap iterable)
 {
-    SlashTuple keys = slash_map_get_keys(&iterable);
+    SlashTuple keys = slash_map_get_keys(interpreter->scope, &iterable);
     if (keys.size == 0)
 	return;
 
@@ -491,7 +491,7 @@ static void exec_iter_loop_map(Interpreter *interpreter, IterLoopStmt *stmt, Sla
 
     for (size_t i = 0; i < keys.size; i++) {
 	iterator_value = keys.values[i];
-	var_assign(interpreter->scope, &stmt->var_name, &iterator_value);
+	var_assign_simple(interpreter->scope, &stmt->var_name, &iterator_value);
 	exec_block_body(interpreter, stmt->body_block);
     }
 }
@@ -518,7 +518,7 @@ static void exec_iter_loop_str(Interpreter *interpreter, IterLoopStmt *stmt, Str
     while (t != NULL) {
 	str = (StrView){ .view = t, .size = strlen(t) };
 	iterator_value.str = str;
-	var_assign(interpreter->scope, &stmt->var_name, &iterator_value);
+	var_assign_simple(interpreter->scope, &stmt->var_name, &iterator_value);
 	exec_block_body(interpreter, stmt->body_block);
 	t = strtok(NULL, ifs_char);
     }
@@ -536,8 +536,7 @@ static void exec_iter_loop_range(Interpreter *interpreter, IterLoopStmt *stmt, S
     while (iterator_value.num != iterable.end) {
 	exec_block_body(interpreter, stmt->body_block);
 	iterator_value.num++;
-	// TODO: bloat? we could store a reference instead of a copy to the iterator_value
-	var_assign(interpreter->scope, &stmt->var_name, &iterator_value);
+	var_assign_simple(interpreter->scope, &stmt->var_name, &iterator_value);
     }
 
     /* don't need to undefine the iterator value as the scope will be destroyed imminently */

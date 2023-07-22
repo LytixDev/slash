@@ -1,5 +1,5 @@
-DIR=$1
-wallpaper_loc="$HOME/Pictures/wallpapers/alt.jpg"
+var a = [[1:10, 2:20]]
 
-cp "$(sxiv -o "$DIR")" "$wallpaper_loc"
-feh --bg-fill "$wallpaper_loc"
+loop key in $a {
+    $key
+}

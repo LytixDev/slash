@@ -29,7 +29,7 @@ struct scope_t {
     size_t depth; // the amount of enclosing scopes
     ArenaTmp arena_tmp; // arena to put any temporary data on
     HashMap values; // key: StrView, value: SlashValue (actual objects, not pointers)
-    ArrayList owning; // list of SlashValue's that must be freed on scope_destroy
+    LinkedList owning; // owning references to SlashValue's that must be freed on scope_destroy
 };
 
 typedef struct {
@@ -50,12 +50,21 @@ void *scope_alloc(Scope *scope, size_t size);
  */
 void var_define(Scope *scope, StrView *key, SlashValue *value);
 void var_undefine(Scope *scope, StrView *key);
+
 /*
+ * variable assignment for values that are stored in place, i.e non references.
  * a variable may be defined in an enclosing scope, meaning var_define is not sufficient.
  * var_assign attempts to find the scope of the variable before updating its value
  */
-void var_assign(Scope *scope, StrView *key, SlashValue *value);
-/* returns the variable (if exists) with the scope it lives on */
+void var_assign_simple(Scope *scope, StrView *key, SlashValue *value);
+/*
+ * assigns the value to the variable who's key/name is var_name.
+ * transfers the ownership of the reference value of the variable if neededed.
+ * if not it calls var_assign_simple.
+ */
+void var_assign(StrView *var_name, Scope *var_owner, Scope *current, SlashValue *value);
+
+/* returns the variable (if exists) with its owning scope */
 ScopeAndValue var_get(Scope *scope, StrView *key);
 
 
