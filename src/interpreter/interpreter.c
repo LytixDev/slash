@@ -16,6 +16,7 @@
  */
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "arena_ll.h"
 #include "common.h"
@@ -88,7 +89,7 @@ static char **cmd_args_fmt(Interpreter *interpreter, CmdStmt *stmt)
 static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt)
 {
     char **argv_owning = cmd_args_fmt(interpreter, stmt);
-    exec_program(argv_owning);
+    exec_program(interpreter->stream_ctx, argv_owning);
     free(argv_owning);
 }
 
@@ -210,19 +211,28 @@ static SlashValue eval_item_access(Interpreter *interpreter, ItemAccessExpr *exp
 
 static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
 {
-    // TODO: dynamic buffer
-    char buffer[4096];
-    // TODO: currently assuming expr->stmt is of type CmdStmt
-    char **argv_owning = cmd_args_fmt(interpreter, (CmdStmt *)expr->stmt);
-    exec_capture(argv_owning, buffer);
-    free(argv_owning);
+    /* pipe output will be written to */
+    int fd[2];
+    pipe(fd);
 
-    /* create SlashStr from result of buffer */
-    // TODO: this is ugly!
-    size_t size = strlen(buffer);
+    StreamCtx *stream_ctx = interpreter->stream_ctx;
+    int original_write_fd = stream_ctx->write_fd;
+    /* set the write fd to the newly created pipe */
+    stream_ctx->write_fd = fd[STREAM_WRITE_END];
+
+    exec(interpreter, expr->stmt);
+    /* restore original write fd */
+    stream_ctx->write_fd = original_write_fd;
+
+    // TODO: dynamic buffer
+    char buffer[4096] = { 0 };
+    read(fd[0], buffer, 4096);
+    close(fd[0]);
+    close(fd[1]);
+
+    size_t size = strlen(buffer) - 1; // TODO: -1 because we always seem to have an unwanted '\n'?
     char *str_view = scope_alloc(interpreter->scope, size);
     strncpy(str_view, buffer, size);
-
     return (SlashValue){ .type = SLASH_STR, .str = { .view = str_view, .size = size } };
 }
 
@@ -335,7 +345,7 @@ static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
     SlashValue value = eval(interpreter, stmt->expression);
     SlashPrintFunc print_func = slash_print[value.type];
     print_func(&value);
-    putchar('\n');
+    // putchar('\n');
 }
 
 static void exec_var(Interpreter *interpreter, VarStmt *stmt)
@@ -448,6 +458,32 @@ static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
     TokenType operator= stmt->assignment_op == t_plus_equal ? t_plus : t_minus;
     new_value = cmp_binary_values(*variable.value, new_value, operator);
     var_assign(&var_name, variable.scope, interpreter->scope, &new_value);
+}
+
+static void exec_pipeline(Interpreter *interpreter, PipelineStmt *stmt)
+{
+    int fd[2];
+    pipe(fd);
+
+    StreamCtx *stream_ctx = interpreter->stream_ctx;
+    /* store a copy of the final write file descriptor */
+    int final_out_fd = stream_ctx->write_fd;
+
+    stream_ctx->write_fd = fd[STREAM_WRITE_END];
+    exec_cmd(interpreter, stmt->left);
+
+    /* push fie descriptors onto active_fds list/stack */
+    arraylist_append(&stream_ctx->active_fds, &fd[0]);
+    arraylist_append(&stream_ctx->active_fds, &fd[1]);
+
+    stream_ctx->write_fd = final_out_fd;
+    stream_ctx->read_fd = fd[STRAM_READ_END];
+
+    exec(interpreter, stmt->right);
+
+    /* pop file descriptors from list/stack */
+    arraylist_rm(&stream_ctx->active_fds, stream_ctx->active_fds.size - 1);
+    arraylist_rm(&stream_ctx->active_fds, stream_ctx->active_fds.size - 1);
 }
 
 static void exec_loop(Interpreter *interpreter, LoopStmt *stmt)
@@ -643,6 +679,10 @@ static void exec(Interpreter *interpreter, Stmt *stmt)
 	exec_assign(interpreter, (AssignStmt *)stmt);
 	break;
 
+    case STMT_PIPELINE:
+	exec_pipeline(interpreter, (PipelineStmt *)stmt);
+	break;
+
 
     default:
 	slash_exit_internal_err("interpreter: stmt type not handled");
@@ -658,10 +698,16 @@ int interpret(ArrayList *statements)
     scope_init_global(&interpreter.globals, &interpreter.arena);
     interpreter.scope = &interpreter.globals;
 
+    /* init default StreamCtx */
+    StreamCtx stream_ctx = { .read_fd = STDIN_FILENO, .write_fd = STDOUT_FILENO };
+    arraylist_init(&stream_ctx.active_fds, sizeof(int));
+    interpreter.stream_ctx = &stream_ctx;
+
     for (size_t i = 0; i < statements->size; i++)
 	exec(&interpreter, *(Stmt **)arraylist_get(statements, i));
 
     scope_destroy(&interpreter.globals);
+    arraylist_free(&stream_ctx.active_fds);
 
     return interpreter.exit_code;
 }

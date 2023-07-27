@@ -22,11 +22,21 @@
 #include "nicc/nicc.h"
 #include "sac/sac.h"
 
+#define STREAM_WRITE_END 1
+#define STRAM_READ_END 0
+
+typedef struct {
+    int read_fd; // the file descriptor we are reading from, defaulted to STDIN
+    int write_fd; // the file descriptor we are writing to, defaulted to STDOUT
+    ArrayList active_fds; // list/stack of open file descriptors that need to be closed on fork()
+} StreamCtx;
+
 typedef struct {
     Arena arena;
     Scope globals;
     Scope *scope;
     int exit_code;
+    StreamCtx *stream_ctx;
 } Interpreter;
 
 

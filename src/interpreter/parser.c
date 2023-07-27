@@ -33,6 +33,7 @@ static Stmt *statement(Parser *parser);
 static Stmt *var_decl(Parser *parser);
 static Stmt *loop_stmt(Parser *parser);
 static Stmt *if_stmt(Parser *parser);
+static Stmt *pipeline_stmt(Parser *parser);
 static Stmt *cmd_stmt(Parser *parser);
 static Stmt *assignment_stmt(Parser *parser);
 static Stmt *expr_stmt(Parser *parser);
@@ -211,7 +212,7 @@ static Stmt *statement(Parser *parser)
 	return block(parser);
 
     if (match(parser, dt_shlit))
-	return cmd_stmt(parser);
+	return pipeline_stmt(parser);
 
     /*
      * TODO:
@@ -331,6 +332,22 @@ static Stmt *block(Parser *parser)
     return (Stmt *)stmt;
 }
 
+static Stmt *pipeline_stmt(Parser *parser)
+{
+    /* came from dt_shlit */
+    Stmt *left = cmd_stmt(parser);
+    if (!match(parser, t_pipe))
+	return left;
+
+    consume(parser, dt_shlit, "expected shell literal after pipe symbol");
+    Stmt *right = pipeline_stmt(parser);
+
+    PipelineStmt *stmt = (PipelineStmt *)stmt_alloc(parser->ast_arena, STMT_PIPELINE);
+    stmt->left = (CmdStmt *)left;
+    stmt->right = right;
+    return (Stmt *)stmt;
+}
+
 static Stmt *cmd_stmt(Parser *parser)
 {
     /* came from dt_shlit */
@@ -397,7 +414,7 @@ static Expr *subshell(Parser *parser)
     /* came from '(' */
     consume(parser, dt_shlit, "Expected shell literal after '('");
     SubshellExpr *expr = (SubshellExpr *)expr_alloc(parser->ast_arena, EXPR_SUBSHELL);
-    expr->stmt = cmd_stmt(parser);
+    expr->stmt = pipeline_stmt(parser);
     consume(parser, t_rparen, "Expected ')' after subshell");
     return (Expr *)expr;
 }

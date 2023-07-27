@@ -30,9 +30,11 @@ const size_t expr_size_table[] = {
     sizeof(ListExpr),	sizeof(MapExpr),	sizeof(MethodExpr),
 };
 
-const size_t stmt_size_table[] = { sizeof(ExpressionStmt), sizeof(VarStmt),  sizeof(LoopStmt),
-				   sizeof(IterLoopStmt),   sizeof(IfStmt),   sizeof(CmdStmt),
-				   sizeof(AssignStmt),	   sizeof(BlockStmt) };
+const size_t stmt_size_table[] = {
+    sizeof(ExpressionStmt), sizeof(VarStmt),   sizeof(LoopStmt),
+    sizeof(IterLoopStmt),   sizeof(IfStmt),    sizeof(CmdStmt),
+    sizeof(AssignStmt),	    sizeof(BlockStmt), sizeof(PipelineStmt)
+};
 
 char *expr_type_str_map[EXPR_ENUM_COUNT] = {
     "EXPR_UNARY",    "EXPR_BINARY", "EXPR_LITERAL", "EXPR_ACCESS", "EXPR_ITEM_ACCESS",
@@ -40,9 +42,10 @@ char *expr_type_str_map[EXPR_ENUM_COUNT] = {
 };
 
 char *stmt_type_str_map[STMT_ENUM_COUNT] = {
-    "STMT_EXPRESSION", "STMT_VAR", "STMT_LOOP",	  "STMT_ITER_LOOP",
-    "STMT_IF",	       "STMT_CMD", "STMT_ASSIGN", "STMT_BLOCK",
+    "STMT_EXPRESSION", "STMT_VAR",    "STMT_LOOP",  "STMT_ITER_LOOP", "STMT_IF",
+    "STMT_CMD",	       "STMT_ASSIGN", "STMT_BLOCK", "STMT_PIPELINE",
 };
+
 
 Expr *expr_alloc(Arena *ast_arena, ExprType type)
 {
@@ -254,6 +257,13 @@ static void ast_print_assign(AssignStmt *stmt)
     ast_print_expr(stmt->value);
 }
 
+static void ast_print_pipeline(PipelineStmt *stmt)
+{
+    ast_print_stmt((Stmt *)stmt->left);
+    printf(" | ");
+    ast_print_stmt((Stmt *)stmt->right);
+}
+
 static void ast_print_expr(Expr *expr)
 {
     printf("%s", expr_type_str_map[expr->type]);
@@ -339,6 +349,10 @@ static void ast_print_stmt(Stmt *stmt)
 
     case STMT_ASSIGN:
 	ast_print_assign((AssignStmt *)stmt);
+	break;
+
+    case STMT_PIPELINE:
+	ast_print_pipeline((PipelineStmt *)stmt);
 	break;
 
     default:

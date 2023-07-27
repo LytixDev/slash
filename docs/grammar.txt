@@ -15,7 +15,7 @@ statement       -> expr_stmt
 var_declaration -> "var" IDENTIFIER "=" expression "\n" ;
 
 
-/* statemetns */
+/* statements */
 
 /* 
  * if optional ( IDENTIFIER "in" ) is present then the following expression must be iterable.
@@ -26,6 +26,8 @@ loop_stmt       -> "loop" ( IDENTIFIER "in" )? expression block
 if_stmt         -> "if" expression block (( "elif" expression block ) | ( "else" block ))? ;
 
 cmd_stmt        -> SHLIT ( argument* )? ;
+
+pipeline_stmt   -> cmd_stmt "|" pipeline_stmt ;
 
 assignment_stmt -> access ("=" | "+=" | "-=") expression ;
 
@@ -52,6 +54,7 @@ method_call     -> expression "." IDENTIFIER "(" comma_sep_exprs ")" ;
 contains        -> expression "in" expression ;
 
 subshell        -> "(" cmd_stmt ")" ;
+                |  "(" pipeline_stmt ")" ;
 
 equality        -> comparison (( "!=" | "==" ) comparison )* ;
 comparison      -> term (( ">" | ">=" | "<" | "<=" ) term )* ;

@@ -17,8 +17,8 @@
 #ifndef CORE_EXEC_H
 #define CORE_EXEC_H
 
-int exec_program(char **argv);
+#include "interpreter/interpreter.h"
 
-int exec_capture(char **argv, char buffer[1024]);
+int exec_program(StreamCtx *stream_ctx, char **argv);
 
 #endif /* CORE_EXEC_H */
