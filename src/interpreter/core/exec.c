@@ -18,40 +18,49 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include "interpreter/interpreter.h"
+#include "nicc/nicc.h"
+
 extern char **environ;
 
-int exec_program(char **argv)
+
+static void close_active_fds(ArrayList *active_fds)
 {
-    int status;
-    int return_code = 0;
-
-    pid_t new_pid = fork();
-    if (new_pid == 0)
-	return_code = execve(argv[0], argv, environ);
-
-    waitpid(new_pid, &status, 0);
-    return return_code;
+    for (size_t i = 0; i < active_fds->size; i++) {
+	int *fd = arraylist_get(active_fds, i);
+	close(*fd);
+    }
 }
 
-int exec_capture(char **argv, char buffer[4096])
+int exec_program(StreamCtx *stream_ctx, char **argv)
 {
+#ifdef EXEC_DEBUG
+#include <stdio.h>
+    char **argv_cpy = argv;
+    for (char *argv_cur = *argv_cpy; argv_cur != NULL;) {
+	printf("'%s'\n", argv_cur);
+	argv_cpy++;
+	argv_cur = *argv_cpy;
+    }
+#endif /* EXEC_DEBUG */
+
     int status;
     int return_code = 0;
-
-    int pipefd[2];
-    pipe(pipefd);
 
     pid_t new_pid = fork();
     if (new_pid == 0) {
-	close(pipefd[0]);
-	dup2(pipefd[1], 1);
-	dup2(pipefd[1], 2);
-	close(pipefd[1]);
+	if (stream_ctx->read_fd != STDIN_FILENO) {
+	    dup2(stream_ctx->read_fd, STDIN_FILENO);
+	}
+	if (stream_ctx->write_fd != STDOUT_FILENO) {
+	    dup2(stream_ctx->write_fd, STDOUT_FILENO);
+	}
+
+	close_active_fds(&stream_ctx->active_fds);
 	return_code = execve(argv[0], argv, environ);
     }
 
+    close_active_fds(&stream_ctx->active_fds);
     waitpid(new_pid, &status, 0);
-    close(pipefd[1]);
-    read(pipefd[0], buffer, 4096);
     return return_code;
 }
