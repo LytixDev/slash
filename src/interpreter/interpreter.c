@@ -230,7 +230,7 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
     close(fd[0]);
     close(fd[1]);
 
-    size_t size = strlen(buffer) - 1; // TODO: -1 because we always seem to have an unwanted '\n'?
+    size_t size = strlen(buffer);
     char *str_view = scope_alloc(interpreter->scope, size);
     strncpy(str_view, buffer, size);
     return (SlashValue){ .type = SLASH_STR, .str = { .view = str_view, .size = size } };

@@ -43,11 +43,16 @@ comma_sep_exprs -> (argument ",")*? ;
 
 argument        -> expression ;
 
+expression      -> equality ;
 
-expression      -> method_call
+equality        -> comparison (( "!=" | "==" ) comparison )* ;
+comparison      -> term (( ">" | ">=" | "<" | "<=" ) term )* ;
+term            -> factor (( "-" | "+" ) factor )* ;
+factor          -> unary ;
+unary           -> method_call
                 |  contains
-                |  equality
-                |  subshell ;
+                |  subshell
+                |  item_access ;
 
 method_call     -> expression "." IDENTIFIER "(" comma_sep_exprs ")" ;
 
@@ -55,12 +60,6 @@ contains        -> expression "in" expression ;
 
 subshell        -> "(" cmd_stmt ")" ;
                 |  "(" pipeline_stmt ")" ;
-
-equality        -> comparison (( "!=" | "==" ) comparison )* ;
-comparison      -> term (( ">" | ">=" | "<" | "<=" ) term )* ;
-term            -> factor (( "-" | "+" ) factor )* ;
-factor          -> unary ;
-unary           -> item_access ;
 
 item_access     -> ACCESS "[" expression "]"
                 |  access ;

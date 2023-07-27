@@ -1,3 +1,6 @@
-ls | wc -l
-var count = (ls -l | grep --color=auto slash | wc -l)
-echo $count
+var file = "test/e2e_tests/arith.slash"
+if (slash $file) == "10" {
+    printf true
+} else {
+    printf false
+}
