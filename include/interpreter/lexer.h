@@ -48,6 +48,7 @@ typedef enum {
     t_num,
     t_bool,
     t_none,
+    t_assert,
 
     /* single-character tokens */
     t_lparen,
@@ -99,7 +100,7 @@ typedef enum {
     t_enum_count,
 } TokenType;
 
-#define keywords_len (t_none + 1)
+#define keywords_len (t_assert + 1)
 
 extern char *token_type_str_map[t_enum_count];
 

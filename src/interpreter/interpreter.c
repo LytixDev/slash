@@ -486,6 +486,13 @@ static void exec_pipeline(Interpreter *interpreter, PipelineStmt *stmt)
     arraylist_rm(&stream_ctx->active_fds, stream_ctx->active_fds.size - 1);
 }
 
+static void exec_assert(Interpreter *interpreter, AssertStmt *stmt)
+{
+    SlashValue result = eval(interpreter, stmt->expr);
+    if (!is_truthy(&result))
+	slash_exit_interpreter_err("assertion failed");
+}
+
 static void exec_loop(Interpreter *interpreter, LoopStmt *stmt)
 {
     Scope loop_scope;
@@ -681,6 +688,10 @@ static void exec(Interpreter *interpreter, Stmt *stmt)
 
     case STMT_PIPELINE:
 	exec_pipeline(interpreter, (PipelineStmt *)stmt);
+	break;
+
+    case STMT_ASSERT:
+	exec_assert(interpreter, (AssertStmt *)stmt);
 	break;
 
 

@@ -1,6 +1,0 @@
-var file = "test/e2e_tests/arith.slash"
-if (slash $file) == "10" {
-    printf true
-} else {
-    printf false
-}
