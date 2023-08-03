@@ -56,5 +56,5 @@ var underlying = [1, 2, 3, 4, 5]
     var list1 = [1, 2, 3]
     var two = 2
     assert 1 in $list1
-    # assert $two in $list
+    assert $two in $list1
 }

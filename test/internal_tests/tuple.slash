@@ -1,1 +1,15 @@
 var t = ((1, 2, 3))
+loop value in $t {
+    # do something
+    assert $value
+}
+
+assert $t[0] == 1
+
+# assert out of bounds is none
+# assert $t[3] == none
+
+
+{
+    var t = ((1, 2, ((3, 4))))
+}

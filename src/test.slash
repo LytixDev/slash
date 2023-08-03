@@ -1,7 +1,2 @@
-var l = [1, 2, 3]
-{
-    var l2 = [4]
-    $l = $l2
-}
-[0]
-$l += [5]
+var a = "hello"
+echo "hello" $a

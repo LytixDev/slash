@@ -1,0 +1,5 @@
+var m = [["one": 1, "two": 2, 3: 3]]
+
+# does not work due to string view 
+# var one = $m["one"]
+# assert $one == 1

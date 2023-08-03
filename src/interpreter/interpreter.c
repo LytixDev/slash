@@ -371,10 +371,10 @@ static void exec_echo_temporary(Interpreter *interpreter, ArenaLL *args)
 
 static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
 {
-    if (str_view_eq(stmt->cmd_name, (StrView){ .view = "echo", .size = 4 })) {
-	exec_echo_temporary(interpreter, stmt->arg_exprs);
-	return;
-    }
+    //if (str_view_eq(stmt->cmd_name, (StrView){ .view = "echo", .size = 4 })) {
+    //    exec_echo_temporary(interpreter, stmt->arg_exprs);
+    //    return;
+    //}
 
     exec_program_stub(interpreter, stmt);
 }
@@ -528,6 +528,19 @@ static void exec_iter_loop_list(Interpreter *interpreter, IterLoopStmt *stmt, Sl
     }
 }
 
+static void exec_iter_loop_tuple(Interpreter *interpreter, IterLoopStmt *stmt, SlashTuple iterable)
+{
+    /* define the loop variable that holds the current iterator value */
+    var_define(interpreter->scope, &stmt->var_name, NULL);
+
+    SlashValue *iterator_value;
+    for (size_t i = 0; i < iterable.size; i++) {
+	iterator_value = &iterable.values[i];
+	var_assign_simple(interpreter->scope, &stmt->var_name, iterator_value);
+	exec_block_body(interpreter, stmt->body_block);
+    }
+}
+
 static void exec_iter_loop_map(Interpreter *interpreter, IterLoopStmt *stmt, SlashMap iterable)
 {
     SlashTuple keys = slash_map_get_keys(interpreter->scope, &iterable);
@@ -605,6 +618,9 @@ static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
     case SLASH_LIST:
 	exec_iter_loop_list(interpreter, stmt, underlying.list);
 	break;
+    case SLASH_TUPLE:
+        exec_iter_loop_tuple(interpreter, stmt, underlying.tuple);
+        break;
     case SLASH_MAP:
 	exec_iter_loop_map(interpreter, stmt, underlying.map);
 	break;
