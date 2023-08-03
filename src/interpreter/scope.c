@@ -89,12 +89,15 @@ void scope_destroy(Scope *scope)
     {
 	SlashValue *sv = item->data;
 	assert(SLASH_TYPE_DYNAMIC(sv->type));
+
 	if (sv->type == SLASH_LIST)
 	    slash_list_free(&sv->list);
 	else if (sv->type == SLASH_MAP)
 	    slash_map_free(&sv->map);
 	else
 	    slash_tuple_free(&sv->tuple);
+
+	free(item->data);
     }
     // TODO: here we can free every node after handling it above
     linkedlist_free(&scope->owning);
@@ -104,7 +107,12 @@ void scope_destroy(Scope *scope)
 
 void scope_register_owning(Scope *scope, SlashValue *sv)
 {
-    SlashValue *sva = scope_alloc(scope, sizeof(SlashValue));
+    // TODO: replace malloc with template list
+    // BUG: scope_alloc doesn't work here because later when we
+    // release the scope the address becomes invalid (can be overriden)
+    // The solution is that the owning list must hold values, not pointers
+    // SlashValue *sva = scope_alloc(scope, sizeof(SlashValue));
+    SlashValue *sva = malloc(sizeof(SlashValue));
     *sva = *sv;
     linkedlist_append(&scope->owning, sva);
 }

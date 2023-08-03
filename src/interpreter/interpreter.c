@@ -457,7 +457,13 @@ static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
     /* convert from += to + and -= to - */
     TokenType operator= stmt->assignment_op == t_plus_equal ? t_plus : t_minus;
     new_value = cmp_binary_values(*variable.value, new_value, operator);
-    var_assign(&var_name, variable.scope, interpreter->scope, &new_value);
+    /*
+     * 1. We know operator was either += or -=.
+     * 2. For dynamic types the binary compare will update the underlying object.
+     * Therefore we only assign if the variable type is not dynamic.
+     */
+    if (!SLASH_TYPE_DYNAMIC(variable.value->type))
+	var_assign(&var_name, variable.scope, interpreter->scope, &new_value);
 }
 
 static void exec_pipeline(Interpreter *interpreter, PipelineStmt *stmt)

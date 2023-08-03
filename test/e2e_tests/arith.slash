@@ -1,0 +1,5 @@
+assert 1 + 1 == 2
+assert 1 - 1 == 0
+assert 0 - -1 == 1
+assert 0xff + 1 == 256
+assert 0xff - 256 == -1

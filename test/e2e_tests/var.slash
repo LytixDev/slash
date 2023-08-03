@@ -1,0 +1,10 @@
+var a = "Hello World!"
+assert $a == "Hello World!"
+
+var pi = 3.14
+assert $pi == 3.14
+assert $pi != 3
+
+$pi = 3.1415
+assert $pi == 3.1415
+assert $pi != 3.14
