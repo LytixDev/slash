@@ -72,13 +72,20 @@ static char **cmd_args_fmt(Interpreter *interpreter, CmdStmt *stmt)
     ARENA_LL_FOR_EACH(stmt->arg_exprs, item)
     {
 	SlashValue v = eval(interpreter, item->value);
-	if (!(v.type == SLASH_STR || v.type == SLASH_SHLIT))
-	    slash_exit_interpreter_err("only support evaluing str args");
 
-	char *str = scope_alloc(interpreter->scope, v.str.size + 1);
-	memcpy(str, v.str.view, v.str.size);
-	str[v.str.size] = 0;
-	argv[i] = str;
+	// TODO: better num to str
+	if (v.type == SLASH_NUM) {
+	    char *str = scope_alloc(interpreter->scope, 128);
+	    sprintf(str, "%f", v.num);
+	    argv[i] = str;
+	} else if (v.type == SLASH_STR || v.type == SLASH_SHLIT) {
+	    char *str = scope_alloc(interpreter->scope, v.str.size + 1);
+	    memcpy(str, v.str.view, v.str.size);
+	    str[v.str.size] = 0;
+	    argv[i] = str;
+	} else {
+	    slash_exit_interpreter_err("only support evaluing str args");
+	}
 	i++;
     }
 
@@ -354,28 +361,8 @@ static void exec_var(Interpreter *interpreter, VarStmt *stmt)
     var_define(interpreter->scope, &stmt->name, &value);
 }
 
-static void exec_echo_temporary(Interpreter *interpreter, ArenaLL *args)
-{
-    // TODO: echo builtin, or something better than this at least
-    LLItem *item;
-    ARENA_LL_FOR_EACH(args, item)
-    {
-	SlashValue v = eval(interpreter, item->value);
-	SlashPrintFunc print_func = slash_print[v.type];
-	print_func(&v);
-	putchar(' ');
-    }
-
-    putchar('\n');
-}
-
 static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
 {
-    //if (str_view_eq(stmt->cmd_name, (StrView){ .view = "echo", .size = 4 })) {
-    //    exec_echo_temporary(interpreter, stmt->arg_exprs);
-    //    return;
-    //}
-
     exec_program_stub(interpreter, stmt);
 }
 
@@ -619,8 +606,8 @@ static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
 	exec_iter_loop_list(interpreter, stmt, underlying.list);
 	break;
     case SLASH_TUPLE:
-        exec_iter_loop_tuple(interpreter, stmt, underlying.tuple);
-        break;
+	exec_iter_loop_tuple(interpreter, stmt, underlying.tuple);
+	break;
     case SLASH_MAP:
 	exec_iter_loop_map(interpreter, stmt, underlying.map);
 	break;
