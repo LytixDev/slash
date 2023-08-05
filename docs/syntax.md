@@ -1,5 +1,5 @@
 ## Lexical Tokens
-Slash source code is lexed into tokens separated by whitespace and newlines. A token can therefore never span across multiple lines.
+Slash source code is lexed into tokens separated by whitespace, tabs and newlines. A token can therefore never span across multiple lines.
 
 ## Special Tokens
 ( ) [ ] { } * ~ \ , : ; ' & && = == | || ! !! < <= > >= . .. + += - -= @ @[ $
@@ -13,7 +13,7 @@ numbers: Can start with 0x (base16), 0b (base2) or nothing (base10) denoting the
 
 string: "" any characters enclosed inside double-qoutes
 
-identifiers: Must start with a letter (a, b, .. z) or underscore (_). Then can be followed by any letter, number character (0, 1, .. 9) underscore (_) or hyphen  (-).
+identifiers: Must start with a letter (a, b, .. z) or underscore (_) or hyphen (-). Then can be followed by any number character (0, 1, .. 9) and starting character.
 
 shell identifiers: Shell identifiers are less strict than regular identifiers. This is meant to loosly follow the POSIX standard of splitting identifiers. NOTE: not implemented.
 

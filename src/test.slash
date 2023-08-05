@@ -1,3 +1,1 @@
-loop i in ..3 {
-    echo $i
-}
+var a = 10; $a

@@ -106,13 +106,6 @@ static char peek_ahead(Lexer *lexer, int step)
     return lexer->input[idx];
 }
 
-// static char prev(Lexer *lexer)
-//{
-//     if (lexer->pos == 0)
-//	return -1;
-//     return lexer->input[lexer->pos - 1];
-// }
-
 static void ignore(Lexer *lexer)
 {
     lexer->start = lexer->pos;
@@ -239,6 +232,7 @@ StateFn lex_any(Lexer *lexer)
 	    ignore(lexer);
 	    break;
 
+        case ';':
 	case '\n':
 	    emit(lexer, t_newline);
 	    lexer->line_count++;
@@ -412,6 +406,7 @@ StateFn lex_argument(Lexer *lexer)
 	case '&':
 	case '|':
 	case '\n':
+        case ';':
 	    shident_seperate(lexer);
 	    return STATE_FN(lex_any);
 	}
