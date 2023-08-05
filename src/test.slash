@@ -1,2 +1,7 @@
-var a = "hello"
-echo "hello" $a
+# basic init, append and methods 
+var l = 1
+
+# assigning variable to list from a different scope
+{
+    $l = [1] # something else
+}

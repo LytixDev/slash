@@ -26,7 +26,12 @@ $(TARGET): $(OBJS)
 	@$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
 debug: CFLAGS = -Iinclude -Wall -Wpedantic -Wextra -Wshadow -std=c11 -g -DDEBUG
+debug: LDFLAGS = -fsanitize=address -fsanitize=undefined
 debug: $(TARGET)
+
+fuzz: CFLAGS += -fsanitize=address -fsanitize=undefined
+fuzz: LDFLAGS += -fsanitize=address -fsanitize=undefined
+fuzz: $(TARGET)
 
 clean:
 	rm -rf $(OBJDIR) $(TARGET) $(TARGET_CLIENT) $(TARGET_GUI) $(TARGET_GUI_MACOS)

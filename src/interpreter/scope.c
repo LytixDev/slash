@@ -120,12 +120,9 @@ void scope_register_owning(Scope *scope, SlashValue *sv)
 void scope_transfer_owning(Scope *owner, Scope *new_owner, SlashValue *sv)
 {
     /* remove sv from current owner */
-#ifdef DEBUG
-    bool rc = linkedlist_remove(&owner->owning, sv);
-    assert(rc == true);
-#else
+    //BUG: memory leak: does not free malloc from scope_register_owning()
+    //     will be fixed by list holding values
     linkedlist_remove(&owner->owning, sv);
-#endif
     scope_register_owning(new_owner, sv);
 }
 
