@@ -1,0 +1,6 @@
+var t = ((1, 2, 3))
+var idx = 0
+loop value in $t {
+    assert $value == $t[$idx]
+    $idx += 1
+}

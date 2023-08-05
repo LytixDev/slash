@@ -1,7 +1,6 @@
 # Nicolai Brand (lytix.dev), Callum Gran 2022-2023
 # See LICENSE for license info
 
-RC = .slashrc
 OBJDIR = .obj
 SRC = src
 DIRS := $(shell find $(SRC) -type d)
@@ -18,7 +17,6 @@ TARGET-FUZZ = slash-fuzz
 all: $(TARGET)
 
 $(OBJDIR)/%.o: %.c Makefile | $(OBJDIR)
-	@cp $(RC) ~
 	@echo [CC] $@
 	@$(CC) -c $(CFLAGS) $< -o $@
 
@@ -48,9 +46,6 @@ bear:
 
 format:
 	./format.slash # you will need slash installed to do this
-
-format-py:
-	python format.py
 
 $(OBJDIR):
 	$(foreach dir, $(DIRS), $(shell mkdir -p $(OBJDIR)/$(dir)))

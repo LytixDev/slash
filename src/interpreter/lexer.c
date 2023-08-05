@@ -463,21 +463,22 @@ StateFn lex_number(Lexer *lexer)
 	if (!match_any(lexer, (char *)(digits + 1)))
 	    lex_panic(lexer, "optional leading sign must be followed by a digit");
     }
-
     /* hex and binary */
     if (accept(lexer, "0")) {
-	if (accept(lexer, "xX"))
+	bool changed_base = false;
+	if (accept(lexer, "xX")) {
 	    digits = "_0123456789abcdefABCDEF";
-	else if (accept(lexer, "bB"))
+	    changed_base = true;
+	} else if (accept(lexer, "bB")) {
 	    digits = "_01";
+	    changed_base = true;
+	}
+	/* edge case: no valid digits */
+	if (changed_base && !match_any(lexer, (char *)(digits + 1)))
+	    lex_panic(lexer, "number must contain at least one valid digit");
     }
 
-    /* edge case: no valid digits */
-    if (!match_any(lexer, (char *)(digits + 1)))
-	lex_panic(lexer, "number must contain at least one valid digit");
-
     accept_run(lexer, digits);
-
     /* treating two '.' as a seperate token */
     if (peek_ahead(lexer, 1) != '.') {
 	/*
@@ -505,7 +506,7 @@ StateFn lex_identifier(Lexer *lexer)
     }
 
     TokenType previous = prev_token_type(lexer);
-    if (previous == t_var || previous == t_loop || previous == t_func || previous == t_comma) {
+    if (previous == t_var || previous == t_loop || previous == t_dot || previous == t_comma) {
 	emit(lexer, t_ident);
 	return STATE_FN(lex_any);
     }

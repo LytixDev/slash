@@ -138,8 +138,8 @@ typedef struct {
     size_t start; // start position of this token.
     size_t pos; // current position in the input.
 
-    size_t line_count; // what line we are on.
-    size_t pos_in_line; // position (column) in the line.
+    size_t line_count; // what line in the input we are on.
+    size_t pos_in_line;
 
     ArrayList tokens;
     HashMap keywords;

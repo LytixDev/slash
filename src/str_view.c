@@ -37,7 +37,7 @@ void str_view_println(StrView s)
     printf("%s\n", str);
 }
 
-// TODO: add base2 support
+// TODO: add base2 support, add '_' support
 double str_view_to_double(StrView s)
 {
     char str[s.size + 1];
