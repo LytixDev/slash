@@ -91,7 +91,7 @@
     X(minus)                   \
     X(minus_equal)             \
     X(at)                      \
-    X(at_lbrace)
+    X(at_lbracket)
 #define DATA_TYPE_TOKENS \
     X(dt_str)            \
     X(dt_num)            \

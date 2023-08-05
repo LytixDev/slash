@@ -86,6 +86,6 @@ range           -> NUMBER? ".." NUMBER ;
 
 list            -> "[" comma_sep_exprs "]" ;
 
-map             -> "[[" ( expression ":" expression "," )*? "]]"
+map             -> "@[" ( expression ":" expression "," )*? "]"
 
 tuple           -> "((" comma_sep_exprs "))" ;

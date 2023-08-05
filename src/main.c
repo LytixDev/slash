@@ -60,21 +60,21 @@ int main(int argc, char **argv)
 #endif
 
     /* parse */
-    Arena ast_arena;
-    ast_arena_init(&ast_arena);
-    ArrayList stmts = parse(&ast_arena, &tokens);
-#ifdef DEBUG
-    ast_print(&stmts);
-#endif
-
-    /* interpret */
-#ifdef DEBUG
-    printf("--- interpreter ---\n");
-#endif
-    interpret(&stmts);
-
-    /* clean up */
-    ast_arena_release(&ast_arena);
+//    Arena ast_arena;
+//    ast_arena_init(&ast_arena);
+//    ArrayList stmts = parse(&ast_arena, &tokens);
+//#ifdef DEBUG
+//    ast_print(&stmts);
+//#endif
+//
+//    /* interpret */
+//#ifdef DEBUG
+//    printf("--- interpreter ---\n");
+//#endif
+//    interpret(&stmts);
+//
+//    /* clean up */
+//    ast_arena_release(&ast_arena);
     arraylist_free(&tokens);
-    arraylist_free(&stmts);
+//    arraylist_free(&stmts);
 }
