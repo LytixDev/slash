@@ -133,8 +133,8 @@ typedef struct {
     size_t input_size; // size of input in bytes.
     size_t start; // start position of this token.
     size_t pos; // current position in the input.
-    ArrayList *tokens;
-    struct hashmap_t *keywords;
+    ArrayList tokens;
+    HashMap keywords;
 } Lexer;
 
 

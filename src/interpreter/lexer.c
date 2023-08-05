@@ -42,7 +42,7 @@ StateFn lex_subshell_end(Lexer *lexer);
 char *token_type_str_map[t_enum_count] = { SLASH_ALL_TOKENS };
 #undef X
 
-static void keywords_init(struct hashmap_t *keywords)
+static void keywords_init(HashMap *keywords)
 {
     /* init and populate hashmap with keyword strings */
     hashmap_init(keywords);
@@ -61,7 +61,7 @@ static void keywords_init(struct hashmap_t *keywords)
 
 static TokenType *keyword_get_from_start(Lexer *lexer)
 {
-    return hashmap_get(lexer->keywords, lexer->input + lexer->start, lexer->pos - lexer->start);
+    return hashmap_get(&lexer->keywords, lexer->input + lexer->start, lexer->pos - lexer->start);
 }
 
 void tokens_print(ArrayList *tokens)
@@ -176,10 +176,10 @@ static void accept_run(Lexer *lexer, char *accept_list)
 
 static TokenType prev_token_type(Lexer *lexer)
 {
-    size_t size = lexer->tokens->size;
+    size_t size = lexer->tokens.size;
     if (size == 0)
 	return t_error;
-    Token *token = arraylist_get(lexer->tokens, size - 1);
+    Token *token = arraylist_get(&lexer->tokens, size - 1);
     return token->type;
 }
 
@@ -195,7 +195,7 @@ static void lex_panic(Lexer *lexer, char *err_msg)
     fprintf(stderr, "LEX PANIC!\n");
     printf("--- lexer internal state --\n");
     printf("start: %zu. pos: %zu\ninput: %s", lexer->start, lexer->pos, lexer->input);
-    tokens_print(lexer->tokens);
+    tokens_print(&lexer->tokens);
     slash_exit_lex_err(err_msg);
 }
 
@@ -588,7 +588,7 @@ static void emit(Lexer *lexer, TokenType type)
     Token token = { .type = type,
 		    .lexeme = (StrView){ .view = lexer->input + lexer->start,
 					 .size = lexer->pos - lexer->start } };
-    arraylist_append(lexer->tokens, &token);
+    arraylist_append(&lexer->tokens, &token);
     lexer->start = lexer->pos;
 }
 
@@ -610,20 +610,15 @@ static void run(Lexer *lexer)
 
 ArrayList lex(char *input, size_t input_size)
 {
-    struct hashmap_t keywords;
-    keywords_init(&keywords);
-    ArrayList tokens;
-    arraylist_init(&tokens, sizeof(Token));
-
-
     Lexer lexer = { .input = input,
 		    .input_size = input_size,
 		    .pos = 0,
-		    .start = 0,
-		    .tokens = &tokens,
-		    .keywords = &keywords };
+		    .start = 0};
+    keywords_init(&lexer.keywords);
+    arraylist_init(&lexer.tokens, sizeof(Token));
+
     run(&lexer);
 
-    hashmap_free(&keywords);
-    return tokens;
+    hashmap_free(&lexer.keywords);
+    return lexer.tokens;
 }
