@@ -28,7 +28,7 @@ assert_stmt     -> "assert" expression ;
 
 if_stmt         -> "if" expression block (( "elif" expression block ) | ( "else" block ))? ;
 
-cmd_stmt        -> SHLIT ( argument* )? ;
+cmd_stmt        -> SHIDENT ( argument* )? ;
 
 pipeline_stmt   -> cmd_stmt "|" pipeline_stmt ;
 
@@ -71,7 +71,7 @@ access          -> ACCESS
                 |  primary ;
 
 primary         -> STRING 
-                |  SHLIT
+                |  SHIDENT
                 |  bool_lit
                 |  number
                 |  range 

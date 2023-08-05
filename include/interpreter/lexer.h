@@ -69,6 +69,7 @@
     X(backslash)           \
     X(comma)               \
     X(colon)               \
+    X(semicolon)           \
     X(qoute)
 #define ONE_OR_TWO_CHAR_TOKENS \
     X(anp)                     \
@@ -96,14 +97,14 @@
     X(dt_num)            \
     X(dt_range)          \
     X(dt_bool)           \
-    X(dt_shlit)          \
+    X(dt_shident)        \
     X(dt_list)           \
     X(dt_tuple)          \
     X(dt_map)            \
     X(dt_none)
 #define REST_TOKENS \
     X(access)       \
-    X(identifier)   \
+    X(ident)        \
     X(newline)      \
     X(eof)          \
     X(error)
@@ -126,6 +127,9 @@ extern char *token_type_str_map[t_enum_count];
 typedef struct {
     TokenType type;
     StrView lexeme;
+    size_t line;
+    size_t start; // position in line of first char of lexeme
+    size_t end; // position in line of final char of lexeme
 } Token;
 
 typedef struct {
@@ -133,6 +137,10 @@ typedef struct {
     size_t input_size; // size of input in bytes.
     size_t start; // start position of this token.
     size_t pos; // current position in the input.
+
+    size_t line_count; // what line we are on.
+    size_t pos_in_line; // position (column) in the line.
+
     ArrayList tokens;
     HashMap keywords;
 } Lexer;

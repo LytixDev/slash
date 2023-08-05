@@ -21,8 +21,7 @@ make
 ```
 
 ## Design
-
-Design document of the language can be found [here](https://github.com/LytixDev/slash/blob/main/docs/syntax.md). A semi scuffed document containing the context free grammar expression grammer can be found [here](https://github.com/LytixDev/slash/blob/main/docs/grammar.txt).
+A semi scuffed document containing the context free grammar expression grammer can be found [here](https://github.com/LytixDev/slash/blob/main/docs/grammar.txt).
 
 ### REPL-like
 Raw expressions are evaluted and printed out to the terminal.

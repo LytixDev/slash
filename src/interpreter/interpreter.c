@@ -78,7 +78,7 @@ static char **cmd_args_fmt(Interpreter *interpreter, CmdStmt *stmt)
 	    char *str = scope_alloc(interpreter->scope, 128);
 	    sprintf(str, "%f", v.num);
 	    argv[i] = str;
-	} else if (v.type == SLASH_STR || v.type == SLASH_SHLIT) {
+	} else if (v.type == SLASH_STR || v.type == SLASH_SHIDENT) {
 	    char *str = scope_alloc(interpreter->scope, v.str.size + 1);
 	    memcpy(str, v.str.view, v.str.size);
 	    str[v.str.size] = 0;

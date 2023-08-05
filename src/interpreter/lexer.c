@@ -38,7 +38,7 @@ StateFn lex_subshell_start(Lexer *lexer);
 StateFn lex_subshell_end(Lexer *lexer);
 
 #define MACRO_TO_STR(a) #a
-#define X(token) MACRO_TO_STR(t_##token)
+#define X(token) MACRO_TO_STR(t_##token),
 char *token_type_str_map[t_enum_count] = { SLASH_ALL_TOKENS };
 #undef X
 
@@ -66,11 +66,14 @@ static TokenType *keyword_get_from_start(Lexer *lexer)
 
 void tokens_print(ArrayList *tokens)
 {
+    printf("--------------\n");
+    printf("count\t| line, column\t| type\t\t| lexeme\n");
     printf("--- tokens ---\n");
 
     for (size_t i = 0; i < tokens->size; i++) {
 	Token *token = arraylist_get(tokens, i);
-	printf("[%zu] (%s) ", i, token_type_str_map[token->type]);
+	printf("[%zu]\t| [%zu, %zu-%zu]\t| %s  \t| ", i, token->line, token->start, token->end,
+	       token_type_str_map[token->type]);
 	if (token->type != t_newline)
 	    str_view_print(token->lexeme);
 	putchar('\n');
@@ -85,6 +88,7 @@ static char next(Lexer *lexer)
     if (lexer->input[lexer->pos] == 0)
 	return EOF;
 
+    lexer->pos_in_line++;
     return lexer->input[lexer->pos++];
 }
 
@@ -119,6 +123,8 @@ static void backup(Lexer *lexer)
     if (lexer->pos == 0)
 	lex_panic(lexer, "tried to backup at input position zero");
 
+    /* This is fine because we never increment line_count and then backup() */
+    lexer->pos_in_line--;
     lexer->pos--;
 }
 
@@ -183,11 +189,11 @@ static TokenType prev_token_type(Lexer *lexer)
     return token->type;
 }
 
-static void shlit_seperate(Lexer *lexer)
+static void shident_seperate(Lexer *lexer)
 {
     backup(lexer);
     if (lexer->start != lexer->pos)
-	emit(lexer, t_dt_shlit);
+	emit(lexer, t_dt_shident);
 }
 
 static void lex_panic(Lexer *lexer, char *err_msg)
@@ -235,12 +241,14 @@ StateFn lex_any(Lexer *lexer)
 
 	case '\n':
 	    emit(lexer, t_newline);
+	    lexer->line_count++;
+	    lexer->pos_in_line = 0;
 	    break;
 
 	/* one character tokens */
 	case '(':
 	    /* do not go into subshell parsing mode if tuple: came from '(' or next is '(' */
-	    if (!(prev_token_type(lexer) == t_identifier || prev_token_type(lexer) == t_lparen ||
+	    if (!(prev_token_type(lexer) == t_ident || prev_token_type(lexer) == t_lparen ||
 		  peek(lexer) == '('))
 		return STATE_FN(lex_subshell_start);
 	    emit(lexer, t_lparen);
@@ -372,39 +380,39 @@ StateFn lex_argument(Lexer *lexer)
 	case ' ':
 	case '\t':
 	case '\v':
-	    shlit_seperate(lexer);
+	    shident_seperate(lexer);
 	    accept_run(lexer, " \t\v");
 	    ignore(lexer);
 	    break;
 
 	case '(':
-	    shlit_seperate(lexer);
+	    shident_seperate(lexer);
 	    next(lexer);
 	    lex_subshell_start(lexer);
 	    break;
 
 	case '$':
-	    shlit_seperate(lexer);
+	    shident_seperate(lexer);
 	    next(lexer);
 	    lex_access(lexer);
 	    break;
 
 	case '"':
-	    shlit_seperate(lexer);
+	    shident_seperate(lexer);
 	    next(lexer);
 	    lex_string(lexer);
 	    break;
 
 	/* terminating characters */
 	case ')':
-	    shlit_seperate(lexer);
+	    shident_seperate(lexer);
 	    next(lexer);
 	    return STATE_FN(lex_subshell_end);
 	case EOF:
 	case '&':
 	case '|':
 	case '\n':
-	    shlit_seperate(lexer);
+	    shident_seperate(lexer);
 	    return STATE_FN(lex_any);
 	}
     }
@@ -461,11 +469,11 @@ StateFn lex_identifier(Lexer *lexer)
 
     if (previous == t_var || previous == t_loop || previous == t_func || previous == t_lparen ||
 	previous == t_comma || peek(lexer) == '(') {
-	emit(lexer, t_identifier);
+	emit(lexer, t_ident);
 	return STATE_FN(lex_any);
     }
 
-    emit(lexer, t_dt_shlit);
+    emit(lexer, t_dt_shident);
     return STATE_FN(lex_argument);
 }
 
@@ -585,9 +593,14 @@ StateFn lex_subshell_end(Lexer *lexer)
  */
 static void emit(Lexer *lexer, TokenType type)
 {
+    size_t token_length = lexer->pos - lexer->start;
     Token token = { .type = type,
-		    .lexeme = (StrView){ .view = lexer->input + lexer->start,
-					 .size = lexer->pos - lexer->start } };
+		    .lexeme =
+			(StrView){ .view = lexer->input + lexer->start, .size = token_length },
+		    .line = lexer->line_count,
+		    /* A single can not span across multiple lines, so this is fine . */
+		    .start = lexer->pos_in_line - token_length,
+		    .end = lexer->pos_in_line };
     arraylist_append(&lexer->tokens, &token);
     lexer->start = lexer->pos;
 }
@@ -613,7 +626,9 @@ ArrayList lex(char *input, size_t input_size)
     Lexer lexer = { .input = input,
 		    .input_size = input_size,
 		    .pos = 0,
-		    .start = 0};
+		    .start = 0,
+		    .line_count = 0,
+		    .pos_in_line = 0 };
     keywords_init(&lexer.keywords);
     arraylist_init(&lexer.tokens, sizeof(Token));
 

@@ -217,7 +217,7 @@ static Stmt *statement(Parser *parser)
     if (match(parser, t_lbrace))
 	return block(parser);
 
-    if (match(parser, t_dt_shlit))
+    if (match(parser, t_dt_shident))
 	return pipeline_stmt(parser);
 
     /*
@@ -271,7 +271,7 @@ static Stmt *assignment_stmt(Parser *parser)
 
 static Stmt *var_decl(Parser *parser)
 {
-    Token *name = consume(parser, t_identifier, "Expected variable name");
+    Token *name = consume(parser, t_ident, "Expected variable name");
     consume(parser, t_equal, "Expected variable definition");
     Expr *initializer = expression(parser);
     consume(parser, t_newline, "Expected line ending after variable definition");
@@ -285,7 +285,7 @@ static Stmt *var_decl(Parser *parser)
 static Stmt *loop_stmt(Parser *parser)
 {
     /* came from 'loop */
-    if (match(parser, t_identifier)) {
+    if (match(parser, t_ident)) {
 	/* loop IDENTIFIER in iterable { ... } */
 	Token *var_name = previous(parser);
 	consume(parser, t_in, "Expected 'in' keyword in loop");
@@ -349,12 +349,12 @@ static Stmt *block(Parser *parser)
 
 static Stmt *pipeline_stmt(Parser *parser)
 {
-    /* came from t_dt_shlit */
+    /* came from t_dt_shident */
     Stmt *left = cmd_stmt(parser);
     if (!match(parser, t_pipe))
 	return left;
 
-    consume(parser, t_dt_shlit, "expected shell literal after pipe symbol");
+    consume(parser, t_dt_shident, "expected shell literal after pipe symbol");
     Stmt *right = pipeline_stmt(parser);
 
     PipelineStmt *stmt = (PipelineStmt *)stmt_alloc(parser->ast_arena, STMT_PIPELINE);
@@ -365,7 +365,7 @@ static Stmt *pipeline_stmt(Parser *parser)
 
 static Stmt *cmd_stmt(Parser *parser)
 {
-    /* came from t_dt_shlit */
+    /* came from t_dt_shident */
     Token *cmd_name = previous(parser);
 
     CmdStmt *stmt = (CmdStmt *)stmt_alloc(parser->ast_arena, STMT_CMD);
@@ -395,7 +395,7 @@ static Expr *expression(Parser *parser)
 static Expr *subshell(Parser *parser)
 {
     /* came from '(' */
-    consume(parser, t_dt_shlit, "Expected shell literal after '('");
+    consume(parser, t_dt_shident, "Expected shell literal after '('");
     SubshellExpr *expr = (SubshellExpr *)expr_alloc(parser->ast_arena, EXPR_SUBSHELL);
     expr->stmt = pipeline_stmt(parser);
     consume(parser, t_rparen, "Expected ')' after subshell");
@@ -482,7 +482,7 @@ static Expr *unary(Parser *parser)
 
     if (match(parser, t_dot)) {
 	MethodExpr *expr = (MethodExpr *)expr_alloc(parser->ast_arena, EXPR_METHOD);
-	Token *method_name = consume(parser, t_identifier, "expected method name");
+	Token *method_name = consume(parser, t_ident, "expected method name");
 	expr->obj = left;
 	expr->method_name = method_name->lexeme;
 	consume(parser, t_lparen, "expected left paren");
@@ -542,13 +542,13 @@ static Expr *primary(Parser *parser)
     if (match(parser, t_lbracket))
 	return list_or_tuple_or_map(parser, false);
 
-    if (!match(parser, t_dt_str, t_dt_shlit))
+    if (!match(parser, t_dt_str, t_dt_shident))
 	slash_exit_parse_err("not a valid primary type");
 
-    /* str or shlit */
+    /* str or shident */
     Token *token = previous(parser);
     LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
-    expr->value = (SlashValue){ .type = token->type == t_dt_str ? SLASH_STR : SLASH_SHLIT,
+    expr->value = (SlashValue){ .type = token->type == t_dt_str ? SLASH_STR : SLASH_SHIDENT,
 				.str = token->lexeme };
     return (Expr *)expr;
 }

@@ -57,7 +57,7 @@ SlashPrintFunc slash_print[SLASH_TYPE_COUNT] = {
     (SlashPrintFunc)slash_str_print,
     /* num */
     (SlashPrintFunc)slash_num_print,
-    /* shlit */
+    /* shident */
     (SlashPrintFunc)slash_print_not_defined,
     /* range */
     (SlashPrintFunc)slash_range_print,
@@ -78,7 +78,7 @@ SlashItemGetFunc slash_item_get[SLASH_TYPE_COUNT] = {
     (SlashItemGetFunc)slash_item_get_not_defined,
     /* num */
     (SlashItemGetFunc)slash_item_get_not_defined,
-    /* shlit */
+    /* shident */
     (SlashItemGetFunc)slash_item_get_not_defined,
     /* range */
     (SlashItemGetFunc)slash_item_get_not_defined,
@@ -99,7 +99,7 @@ SlashItemAssignFunc slash_item_assign[SLASH_TYPE_COUNT] = {
     (SlashItemAssignFunc)slash_item_assign_not_defined,
     /* num */
     (SlashItemAssignFunc)slash_item_assign_not_defined,
-    /* shlit */
+    /* shident */
     (SlashItemAssignFunc)slash_item_assign_not_defined,
     /* range */
     (SlashItemAssignFunc)slash_item_assign_not_defined,
@@ -120,7 +120,7 @@ SlashItemInFunc slash_item_in[SLASH_TYPE_COUNT] = {
     (SlashItemInFunc)slash_item_in_not_defined,
     /* num */
     (SlashItemInFunc)slash_item_in_not_defined,
-    /* shlit */
+    /* shident */
     (SlashItemInFunc)slash_item_in_not_defined,
     /* range */
     (SlashItemInFunc)slash_item_in_not_defined,
@@ -146,7 +146,7 @@ bool is_truthy(SlashValue *sv)
 {
     switch (sv->type) {
     case SLASH_STR:
-    case SLASH_SHLIT:
+    case SLASH_SHIDENT:
 	return sv->str.size != 0;
 
     case SLASH_NUM:
@@ -178,7 +178,7 @@ bool slash_value_eq(SlashValue *a, SlashValue *b)
 
     switch (a->type) {
     case SLASH_STR:
-    case SLASH_SHLIT:
+    case SLASH_SHIDENT:
 	return str_view_eq(a->str, b->str);
 
     case SLASH_NUM:
