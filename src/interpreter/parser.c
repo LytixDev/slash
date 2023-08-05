@@ -217,7 +217,7 @@ static Stmt *statement(Parser *parser)
     if (match(parser, t_lbrace))
 	return block(parser);
 
-    if (match(parser, dt_shlit))
+    if (match(parser, t_dt_shlit))
 	return pipeline_stmt(parser);
 
     /*
@@ -349,12 +349,12 @@ static Stmt *block(Parser *parser)
 
 static Stmt *pipeline_stmt(Parser *parser)
 {
-    /* came from dt_shlit */
+    /* came from t_dt_shlit */
     Stmt *left = cmd_stmt(parser);
     if (!match(parser, t_pipe))
 	return left;
 
-    consume(parser, dt_shlit, "expected shell literal after pipe symbol");
+    consume(parser, t_dt_shlit, "expected shell literal after pipe symbol");
     Stmt *right = pipeline_stmt(parser);
 
     PipelineStmt *stmt = (PipelineStmt *)stmt_alloc(parser->ast_arena, STMT_PIPELINE);
@@ -365,7 +365,7 @@ static Stmt *pipeline_stmt(Parser *parser)
 
 static Stmt *cmd_stmt(Parser *parser)
 {
-    /* came from dt_shlit */
+    /* came from t_dt_shlit */
     Token *cmd_name = previous(parser);
 
     CmdStmt *stmt = (CmdStmt *)stmt_alloc(parser->ast_arena, STMT_CMD);
@@ -395,7 +395,7 @@ static Expr *expression(Parser *parser)
 static Expr *subshell(Parser *parser)
 {
     /* came from '(' */
-    consume(parser, dt_shlit, "Expected shell literal after '('");
+    consume(parser, t_dt_shlit, "Expected shell literal after '('");
     SubshellExpr *expr = (SubshellExpr *)expr_alloc(parser->ast_arena, EXPR_SUBSHELL);
     expr->stmt = pipeline_stmt(parser);
     consume(parser, t_rparen, "Expected ')' after subshell");
@@ -533,7 +533,7 @@ static Expr *primary(Parser *parser)
     if (check(parser, t_dot_dot))
 	return range(parser);
 
-    if (match(parser, dt_num)) {
+    if (match(parser, t_dt_num)) {
 	if (check(parser, t_dot_dot))
 	    return range(parser);
 	return number(parser);
@@ -542,13 +542,13 @@ static Expr *primary(Parser *parser)
     if (match(parser, t_lbracket))
 	return list_or_tuple_or_map(parser, false);
 
-    if (!match(parser, dt_str, dt_shlit))
+    if (!match(parser, t_dt_str, t_dt_shlit))
 	slash_exit_parse_err("not a valid primary type");
 
     /* str or shlit */
     Token *token = previous(parser);
     LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
-    expr->value = (SlashValue){ .type = token->type == dt_str ? SLASH_STR : SLASH_SHLIT,
+    expr->value = (SlashValue){ .type = token->type == t_dt_str ? SLASH_STR : SLASH_SHLIT,
 				.str = token->lexeme };
     return (Expr *)expr;
 }
@@ -574,13 +574,13 @@ static Expr *range(Parser *parser)
 {
     SlashRange range;
     Token *start_num_or_any = previous(parser);
-    if (start_num_or_any->type != dt_num)
+    if (start_num_or_any->type != t_dt_num)
 	range.start = 0;
     else
 	range.start = str_view_to_int(start_num_or_any->lexeme);
 
     consume(parser, t_dot_dot, "unreachable");
-    consume(parser, dt_num, "Expected end number in range expression");
+    consume(parser, t_dt_num, "Expected end number in range expression");
     Token *end_num = previous(parser);
     range.end = str_view_to_int(end_num->lexeme);
 

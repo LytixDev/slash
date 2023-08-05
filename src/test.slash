@@ -1,0 +1,3 @@
+loop i in ..3 {
+    echo $i
+}

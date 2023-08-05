@@ -37,126 +37,32 @@ StateFn lex_comment(Lexer *lexer);
 StateFn lex_subshell_start(Lexer *lexer);
 StateFn lex_subshell_end(Lexer *lexer);
 
-
-char *token_type_str_map[t_enum_count] = {
-    /* keywords */
-    "t_var",
-    "t_func",
-    "t_return",
-    "t_if",
-    "t_elif",
-    "t_else",
-    "t_loop",
-    "t_in",
-    "t_true",
-    "t_false",
-    "t_as",
-    "t_and",
-    "t_or",
-    "t_not",
-    "t_str",
-    "t_num",
-    "t_bool",
-    "t_none",
-    "t_assert",
-
-    /* single-character tokens */
-    "t_lparen",
-    "t_rparen",
-    "t_lbrace",
-    "t_rbrace",
-    "t_lbracket",
-    "t_rbracket",
-    "t_star",
-    "t_tilde",
-    "t_backslash",
-    "t_comma",
-    "t_colon",
-
-    /* one or two character tokens */
-    "t_anp",
-    "t_anp_anp",
-    "t_equal",
-    "t_equal_equal",
-    "t_pipe",
-    "t_pipe_pipe",
-    "t_bang",
-    "t_bang_equal",
-    "t_greater",
-    "t_greater_equal",
-    "t_less",
-    "t_less_equal",
-    "t_dot",
-    "t_dot_dot",
-    "t_plus",
-    "t_plus_equal",
-    "t_minus",
-    "t_minus_equal",
-
-    /* data types */
-    "dt_str",
-    "dt_num",
-    "dt_range",
-    "dt_bool",
-    "dt_shlit",
-    "dt_none",
-
-    "t_access",
-    "t_identifier",
-    "t_newline",
-    "t_eof",
-    "t_error",
-};
-
-static void keyword_set(struct hashmap_t *keywords, StrView key, TokenType val)
-{
-    hashmap_put(keywords, key.view, key.size, &val, sizeof(TokenType), true);
-}
-
-static TokenType *keyword_get_from_start(Lexer *lexer)
-{
-    return hashmap_get(lexer->keywords, lexer->input + lexer->start, lexer->pos - lexer->start);
-}
-
+#define MACRO_TO_STR(a) #a
+#define X(token) MACRO_TO_STR(t_##token)
+char *token_type_str_map[t_enum_count] = { SLASH_ALL_TOKENS };
+#undef X
 
 static void keywords_init(struct hashmap_t *keywords)
 {
     /* init and populate hashmap with keyword strings */
     hashmap_init(keywords);
 
-    // TODO: can use a big brain macro here, altough this is okay despite inelegant I suppose
-    /* hardcoding the sizes because strlen is demonic */
-    StrView keys[keywords_len] = {
-	{ .view = "var", .size = sizeof("var") - 1 },
-	{ .view = "func", .size = sizeof("func") - 1 },
-	{ .view = "return", .size = sizeof("return") - 1 },
-	{ .view = "if", .size = sizeof("if") - 1 },
-	{ .view = "elif", .size = sizeof("elif") - 1 },
-	{ .view = "else", .size = sizeof("else") - 1 },
-	{ .view = "loop", .size = sizeof("loop") - 1 },
-	{ .view = "in", .size = sizeof("in") - 1 },
-	{ .view = "true", .size = sizeof("true") - 1 },
-	{ .view = "false", .size = sizeof("false") - 1 },
-	{ .view = "as", .size = sizeof("as") - 1 },
-	{ .view = "and", .size = sizeof("and") - 1 },
-	{ .view = "or", .size = sizeof("or") - 1 },
-	{ .view = "not", .size = sizeof("not") - 1 },
-	{ .view = "str", .size = sizeof("str") - 1 },
-	{ .view = "num", .size = sizeof("num") - 1 },
-	{ .view = "bool", .size = sizeof("bool") - 1 },
-	{ .view = "none", .size = sizeof("none") - 1 },
-	{ .view = "assert", .size = sizeof("assert") - 1 },
-    };
+#define X(token)                                                                   \
+    do {                                                                           \
+	StrView view = { .view = #token, .size = sizeof(#token) - 1 };             \
+	TokenType tt = t_##token;                                                  \
+	hashmap_put(keywords, view.view, view.size, &tt, sizeof(TokenType), true); \
+    } while (0);
 
-    TokenType vals[keywords_len] = {
-	t_var, t_func, t_return, t_if,	t_elif, t_else, t_loop, t_in,	t_true,	  t_false,
-	t_as,  t_and,  t_or,	 t_not, t_str,	t_num,	t_bool, t_none, t_assert,
-    };
-
-    for (int i = 0; i < keywords_len; i++)
-	keyword_set(keywords, keys[i], vals[i]);
+    /* populats the hashmap by 'calling' the X macro on all keywords */
+    KEYWORD_TOKENS
+#undef X
 }
 
+static TokenType *keyword_get_from_start(Lexer *lexer)
+{
+    return hashmap_get(lexer->keywords, lexer->input + lexer->start, lexer->pos - lexer->start);
+}
 
 void tokens_print(ArrayList *tokens)
 {
@@ -281,7 +187,7 @@ static void shlit_seperate(Lexer *lexer)
 {
     backup(lexer);
     if (lexer->start != lexer->pos)
-	emit(lexer, dt_shlit);
+	emit(lexer, t_dt_shlit);
 }
 
 static void lex_panic(Lexer *lexer, char *err_msg)
@@ -536,7 +442,7 @@ StateFn lex_number(Lexer *lexer)
 	    accept_run(lexer, digits);
     }
 
-    emit(lexer, dt_num);
+    emit(lexer, t_dt_num);
     return STATE_FN(lex_any);
 }
 
@@ -559,7 +465,7 @@ StateFn lex_identifier(Lexer *lexer)
 	return STATE_FN(lex_any);
     }
 
-    emit(lexer, dt_shlit);
+    emit(lexer, t_dt_shlit);
     return STATE_FN(lex_argument);
 }
 
@@ -638,7 +544,7 @@ StateFn lex_string(Lexer *lexer)
 
     /* backup final qoute */
     backup(lexer);
-    emit(lexer, dt_str);
+    emit(lexer, t_dt_str);
     /* advance past final qoute and ignore it */
     next(lexer);
     ignore(lexer);
