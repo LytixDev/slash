@@ -77,7 +77,7 @@ void tokens_print(ArrayList *tokens)
     for (size_t i = 0; i < tokens->size; i++) {
 	Token *token = arraylist_get(tokens, i);
 	if (token->type == t_newline)
-            continue;
+	    continue;
 	printf("[%zu]\t| [%zu, %zu-%zu]\t| %s\t| ", i, token->line, token->start, token->end,
 	       token_type_str_map[token->type]);
 	str_view_print(token->lexeme);
@@ -219,7 +219,8 @@ static void lex_panic(Lexer *lexer, char *err_msg)
 {
     fprintf(stderr, "LEX PANIC!\n");
     fprintf(stderr, "--- lexer internal state --\n");
-    fprintf(stderr, "line: %zu. column: %zu\ninput: %s", lexer->line_count, lexer->pos_in_line, lexer->input);
+    fprintf(stderr, "line: %zu. column: %zu\ninput: %s", lexer->line_count, lexer->pos_in_line,
+	    lexer->input);
     tokens_print(&lexer->tokens);
     slash_exit_lex_err(err_msg);
 }
@@ -258,7 +259,7 @@ StateFn lex_any(Lexer *lexer)
 	    ignore(lexer);
 	    break;
 
-        case ';':
+	case ';':
 	case '\n':
 	    emit(lexer, t_newline);
 	    lexer->line_count++;
@@ -267,7 +268,7 @@ StateFn lex_any(Lexer *lexer)
 
 	/* one character tokens */
 	case '(':
-            /* returning lex_lparen would make no "practical" difference */
+	    /* returning lex_lparen would make no "practical" difference */
 	    emit(lexer, t_lparen);
 	    break;
 	case ')':
@@ -299,9 +300,9 @@ StateFn lex_any(Lexer *lexer)
 	case '\\':
 	    emit(lexer, t_backslash);
 	    break;
-        case '\'':
-            emit(lexer, t_qoute);
-            break;
+	case '\'':
+	    emit(lexer, t_qoute);
+	    break;
 
 	/* one or two character tokens */
 	case '=':
@@ -325,9 +326,9 @@ StateFn lex_any(Lexer *lexer)
 	case '.':
 	    emit(lexer, match(lexer, '.') ? t_dot_dot : t_dot);
 	    break;
-        case '@':
+	case '@':
 	    emit(lexer, match(lexer, '[') ? t_at_lbracket : t_at);
-            break;
+	    break;
 
 	case '+':
 	    if (match(lexer, '=')) {
@@ -391,15 +392,15 @@ StateFn lex_end(Lexer *lexer)
 
 StateFn lex_shell_arg_list(Lexer *lexer)
 {
-    /* 
+    /*
      * NOTE: Previous token was a shell identifier.
      *       We are quite strict in that we require identifiers to be alphanumeric plus '-' and '_'.
      *       The POSIX parsing rules will f.ex allow ']', 'abc]' and much more to to be a valid
      *       token here. This may be a problem, alltough I have not found a single shell command
-     *       that would not match our 'stricter' identifer requirements. The arguments to a shell 
+     *       that would not match our 'stricter' identifer requirements. The arguments to a shell
      *       command however need to be a lot more flexible.
      *
-     * Shell command example: grep -rs --color=auto "some_string" 
+     * Shell command example: grep -rs --color=auto "some_string"
      *  Here we don't want to parse '-' as t_minus etc.
      *
      * Lexing rules for shell arg list:
@@ -413,63 +414,67 @@ StateFn lex_shell_arg_list(Lexer *lexer)
      *  shell_arg_emit() is a helper function that will backup, emit and advance
      */
     while (1) {
-        char c = next(lexer);
-        switch (c) {
-        case ' ':
-        case '\t':
-        case '\v':
-            shell_arg_emit(lexer);
-            accept_run(lexer, " \t\v");
-            ignore(lexer);
-            break;
+	char c = next(lexer);
+	switch (c) {
+	case ' ':
+	case '\t':
+	case '\v':
+	    shell_arg_emit(lexer);
+	    accept_run(lexer, " \t\v");
+	    ignore(lexer);
+	    break;
 
-        case '$':
-            shell_arg_emit(lexer);
-            lex_access(lexer);
-            break;
-        case '"':
-            shell_arg_emit(lexer);
-            lex_string(lexer);
-            break;
+	case '$':
+	    shell_arg_emit(lexer);
+	    lex_access(lexer);
+	    break;
+	case '"':
+	    shell_arg_emit(lexer);
+	    lex_string(lexer);
+	    break;
 
-        case '(':
-            shell_arg_emit(lexer);
-            lex_lparen(lexer);
-            break;
-        case ')':
-            shell_arg_emit(lexer);
-            return STATE_FN(lex_rparen);
+	case '(':
+	    shell_arg_emit(lexer);
+	    lex_lparen(lexer);
+	    break;
+	case ')':
+	    shell_arg_emit(lexer);
+	    return STATE_FN(lex_rparen);
 
-        case '\n':
-        case ';':
-        case '|':
-        case '&':
-        case EOF:
-            shell_arg_emit(lexer);
-            backup(lexer);
-            return STATE_FN(lex_any);
-        }
+	case '\n':
+	case ';':
+	case '|':
+	case '&':
+	case EOF:
+	    shell_arg_emit(lexer);
+	    backup(lexer);
+	    return STATE_FN(lex_any);
+	}
     }
 }
 
 StateFn lex_number(Lexer *lexer)
 {
-    char *digits = "0123456789";
+    char *digits = "_0123456789";
 
     /* optional leading sign */
     if (accept(lexer, "+-")) {
-	/* edge case where leading sign is not followed by a digit */
-	if (!match_any(lexer, digits))
+	/* edge case: leading sign is not followed by a digit */
+	if (!match_any(lexer, (char *)(digits + 1)))
 	    lex_panic(lexer, "optional leading sign must be followed by a digit");
     }
 
     /* hex and binary */
     if (accept(lexer, "0")) {
 	if (accept(lexer, "xX"))
-	    digits = "0123456789abcdefABCDEF";
+	    digits = "_0123456789abcdefABCDEF";
 	else if (accept(lexer, "bB"))
-	    digits = "01";
+	    digits = "_01";
     }
+
+    /* edge case: no valid digits */
+    if (!match_any(lexer, (char *)(digits + 1)))
+	lex_panic(lexer, "number must contain at least one valid digit");
 
     accept_run(lexer, digits);
 
@@ -515,7 +520,7 @@ StateFn lex_access(Lexer *lexer)
     ignore(lexer);
 
     if (!is_valid_identifier(next(lexer)))
-        lex_panic(lexer, "invalid identifier access");
+	lex_panic(lexer, "invalid identifier access");
 
     while (is_valid_identifier(next(lexer)))
 	;

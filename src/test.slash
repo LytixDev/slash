@@ -1,5 +1,0 @@
-loop i in ..30 {
-    if $i == 10 {
-        break
-    }
-}
