@@ -31,9 +31,9 @@ const size_t expr_size_table[] = {
 };
 
 const size_t stmt_size_table[] = {
-    sizeof(ExpressionStmt), sizeof(VarStmt),   sizeof(LoopStmt),
-    sizeof(IterLoopStmt),   sizeof(IfStmt),    sizeof(CmdStmt),
-    sizeof(AssignStmt),	    sizeof(BlockStmt), sizeof(PipelineStmt)
+    sizeof(ExpressionStmt), sizeof(VarStmt),	sizeof(LoopStmt),   sizeof(IterLoopStmt),
+    sizeof(IfStmt),	    sizeof(CmdStmt),	sizeof(AssignStmt), sizeof(BlockStmt),
+    sizeof(PipelineStmt),   sizeof(AssignStmt),
 };
 
 char *expr_type_str_map[EXPR_ENUM_COUNT] = {
@@ -43,7 +43,7 @@ char *expr_type_str_map[EXPR_ENUM_COUNT] = {
 
 char *stmt_type_str_map[STMT_ENUM_COUNT] = {
     "STMT_EXPRESSION", "STMT_VAR",    "STMT_LOOP",  "STMT_ITER_LOOP", "STMT_IF",
-    "STMT_CMD",	       "STMT_ASSIGN", "STMT_BLOCK", "STMT_PIPELINE",
+    "STMT_CMD",	       "STMT_ASSIGN", "STMT_BLOCK", "STMT_PIPELINE",  "STMT_ASSERT",
 };
 
 
@@ -264,6 +264,12 @@ static void ast_print_pipeline(PipelineStmt *stmt)
     ast_print_stmt((Stmt *)stmt->right);
 }
 
+static void ast_print_assert(AssertStmt *stmt)
+{
+    printf("ASSERT");
+    ast_print_expr((Expr *)stmt->expr);
+}
+
 static void ast_print_expr(Expr *expr)
 {
     printf("%s", expr_type_str_map[expr->type]);
@@ -353,6 +359,10 @@ static void ast_print_stmt(Stmt *stmt)
 
     case STMT_PIPELINE:
 	ast_print_pipeline((PipelineStmt *)stmt);
+	break;
+
+    case STMT_ASSERT:
+	ast_print_assert((AssertStmt *)stmt);
 	break;
 
     default:

@@ -1,0 +1,18 @@
+#!/bin/slash
+make clean
+make fuzz
+# hack because './slash-fuzz' doesnt work yet
+sudo cp slash-fuzz /bin/slash-fuzz
+
+# var successes = 0
+# var tests = 0
+
+loop file in (find "test/internal_tests" -name "*.slash") {
+    echo $file
+    slash-fuzz $file
+    # $tests += 1
+    # $successes += 1
+}
+
+# echo $successes "out of" $tests "passed"
+echo "finished fuzz"

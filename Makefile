@@ -13,6 +13,7 @@ CFLAGS += -DNDEBUG
 
 .PHONY: format clean tags bear $(OBJDIR)
 TARGET = slash
+TARGET-FUZZ = slash-fuzz
 
 all: $(TARGET)
 
@@ -25,11 +26,19 @@ $(TARGET): $(OBJS)
 	@echo [LD] $@
 	@$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
+$(TARGET-FUZZ): $(OBJS)
+	@echo [LD] $@
+	@$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+
 debug: CFLAGS = -Iinclude -Wall -Wpedantic -Wextra -Wshadow -std=c11 -g -DDEBUG
 debug: $(TARGET)
 
+fuzz: CFLAGS += -fsanitize=address -fsanitize=undefined
+fuzz: LDFLAGS += -fsanitize=address -fsanitize=undefined
+fuzz: $(TARGET-FUZZ)
+
 clean:
-	rm -rf $(OBJDIR) $(TARGET) $(TARGET_CLIENT) $(TARGET_GUI) $(TARGET_GUI_MACOS)
+	rm -rf $(OBJDIR) $(TARGET) $(TARGET-FUZZ)
 
 tags:
 	@ctags -R

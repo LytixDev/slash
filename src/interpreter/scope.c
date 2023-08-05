@@ -68,7 +68,7 @@ void scope_init_global(Scope *scope, Arena *arena)
     scope->enclosing = NULL;
     scope->depth = 0;
     hashmap_init(&scope->values);
-    linkedlist_init(&scope->owning, sizeof(SlashValue));
+    arraylist_init(&scope->owning, sizeof(SlashValue));
     set_globals(scope);
 }
 
@@ -78,17 +78,17 @@ void scope_init(Scope *scope, Scope *enclosing)
     scope->enclosing = enclosing;
     scope->depth = enclosing->depth + 1;
     hashmap_init(&scope->values);
-    linkedlist_init(&scope->owning, sizeof(SlashValue));
+    arraylist_init(&scope->owning, sizeof(SlashValue));
 }
 
 void scope_destroy(Scope *scope)
 {
     /* free all owning references */
     struct linkedlist_item_t *item;
-    NICC_LL_FOR_EACH(&scope->owning, item)
-    {
-	SlashValue *sv = item->data;
+    for (size_t i = 0; i < scope->owning.size; i++) {
+	SlashValue *sv = arraylist_get(&scope->owning, i);
 	assert(SLASH_TYPE_DYNAMIC(sv->type));
+
 	if (sv->type == SLASH_LIST)
 	    slash_list_free(&sv->list);
 	else if (sv->type == SLASH_MAP)
@@ -96,28 +96,26 @@ void scope_destroy(Scope *scope)
 	else
 	    slash_tuple_free(&sv->tuple);
     }
-    // TODO: here we can free every node after handling it above
-    linkedlist_free(&scope->owning);
+    arraylist_free(&scope->owning);
     hashmap_free(&scope->values);
     m_arena_tmp_release(scope->arena_tmp);
 }
 
 void scope_register_owning(Scope *scope, SlashValue *sv)
 {
-    SlashValue *sva = scope_alloc(scope, sizeof(SlashValue));
-    *sva = *sv;
-    linkedlist_append(&scope->owning, sva);
+    arraylist_append(&scope->owning, sv);
 }
 
 void scope_transfer_owning(Scope *owner, Scope *new_owner, SlashValue *sv)
 {
     /* remove sv from current owner */
-#ifdef DEBUG
-    bool rc = linkedlist_remove(&owner->owning, sv);
-    assert(rc == true);
-#else
-    linkedlist_remove(&owner->owning, sv);
-#endif
+    for (size_t i = 0; i < owner->owning.size; i++) {
+	if (nicc_data_eq(arraylist_get(&owner->owning, i), sv, owner->owning.T_size)) {
+	    arraylist_rm(&owner->owning, i);
+	    break;
+	}
+    }
+
     scope_register_owning(new_owner, sv);
 }
 

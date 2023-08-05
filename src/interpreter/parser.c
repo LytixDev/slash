@@ -32,6 +32,7 @@ static Stmt *declaration(Parser *parser);
 static Stmt *statement(Parser *parser);
 static Stmt *var_decl(Parser *parser);
 static Stmt *loop_stmt(Parser *parser);
+static Stmt *assert_stmt(Parser *parser);
 static Stmt *if_stmt(Parser *parser);
 static Stmt *pipeline_stmt(Parser *parser);
 static Stmt *cmd_stmt(Parser *parser);
@@ -171,12 +172,14 @@ ArenaLL *comma_sep_exprs(Parser *parser)
 
     ArenaLL *args = arena_ll_alloc(parser->ast_arena);
     do {
+	ignore(parser, t_newline);
 	arena_ll_append(args, expression(parser));
 	/* if no comma then we exit */
 	if (!match(parser, t_comma))
 	    break;
     } while (!check(parser, t_eof));
 
+    ignore(parser, t_newline);
     return args;
 }
 
@@ -204,6 +207,9 @@ static Stmt *statement(Parser *parser)
 
     if (match(parser, t_loop))
 	return loop_stmt(parser);
+
+    if (match(parser, t_assert))
+	return assert_stmt(parser);
 
     if (match(parser, t_if))
 	return if_stmt(parser);
@@ -278,6 +284,7 @@ static Stmt *var_decl(Parser *parser)
 
 static Stmt *loop_stmt(Parser *parser)
 {
+    /* came from 'loop */
     if (match(parser, t_identifier)) {
 	/* loop IDENTIFIER in iterable { ... } */
 	Token *var_name = previous(parser);
@@ -298,6 +305,14 @@ static Stmt *loop_stmt(Parser *parser)
     stmt->condition = expression(parser);
     consume(parser, t_lbrace, "expected '{' after loop condition");
     stmt->body_block = (BlockStmt *)block(parser);
+    return (Stmt *)stmt;
+}
+
+static Stmt *assert_stmt(Parser *parser)
+{
+    /* came from 'assert' */
+    AssertStmt *stmt = (AssertStmt *)stmt_alloc(parser->ast_arena, STMT_ASSERT);
+    stmt->expr = expression(parser);
     return (Stmt *)stmt;
 }
 
@@ -374,39 +389,7 @@ static Expr *argument(Parser *parser)
 
 static Expr *expression(Parser *parser)
 {
-    // TODO: need to figure out if '(' should be parsed as a tuple, subshell or grouping (TODO)
-    Expr *left;
-    if (!match(parser, t_lparen))
-	left = equality(parser);
-    else if (match(parser, t_lparen))
-	left = list_or_tuple_or_map(parser, true);
-    else
-	left = subshell(parser);
-
-    if (match(parser, t_in)) {
-	BinaryExpr *expr = (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY);
-	expr->left = left;
-	expr->operator_ = t_in;
-	expr->right = expression(parser);
-	return (Expr *)expr;
-    }
-
-    if (match(parser, t_dot)) {
-	MethodExpr *expr = (MethodExpr *)expr_alloc(parser->ast_arena, EXPR_METHOD);
-	Token *method_name = consume(parser, t_identifier, "expected method name");
-	expr->obj = left;
-	expr->method_name = method_name->lexeme;
-	consume(parser, t_lparen, "expected left paren");
-	if (!match(parser, t_rparen)) {
-	    expr->arg_exprs = comma_sep_exprs(parser);
-	    consume(parser, t_rparen, "expected right paren");
-	} else {
-	    expr->arg_exprs = NULL;
-	}
-	return (Expr *)expr;
-    }
-
-    return left;
+    return equality(parser);
 }
 
 static Expr *subshell(Parser *parser)
@@ -479,7 +462,41 @@ static Expr *factor(Parser *parser)
 
 static Expr *unary(Parser *parser)
 {
-    return item_access(parser);
+    // TODO: need to figure out if '(' should be parsed as a tuple, subshell or grouping (TODO)
+    Expr *left;
+    if (!match(parser, t_lparen))
+	/* continue the "normal" recursive path */
+	left = item_access(parser);
+    else if (match(parser, t_lparen))
+	left = list_or_tuple_or_map(parser, true);
+    else
+	left = subshell(parser);
+
+    if (match(parser, t_in)) {
+	BinaryExpr *expr = (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY);
+	expr->left = left;
+	expr->operator_ = t_in;
+	expr->right = expression(parser);
+	return (Expr *)expr;
+    }
+
+    if (match(parser, t_dot)) {
+	MethodExpr *expr = (MethodExpr *)expr_alloc(parser->ast_arena, EXPR_METHOD);
+	Token *method_name = consume(parser, t_identifier, "expected method name");
+	expr->obj = left;
+	expr->method_name = method_name->lexeme;
+	consume(parser, t_lparen, "expected left paren");
+	if (!match(parser, t_rparen)) {
+	    expr->arg_exprs = comma_sep_exprs(parser);
+	    consume(parser, t_rparen, "expected right paren");
+	} else {
+	    expr->arg_exprs = NULL;
+	}
+	return (Expr *)expr;
+    }
+
+    /* no suitable match */
+    return left;
 }
 
 static Expr *item_access(Parser *parser)

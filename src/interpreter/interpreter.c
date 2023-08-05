@@ -72,13 +72,20 @@ static char **cmd_args_fmt(Interpreter *interpreter, CmdStmt *stmt)
     ARENA_LL_FOR_EACH(stmt->arg_exprs, item)
     {
 	SlashValue v = eval(interpreter, item->value);
-	if (!(v.type == SLASH_STR || v.type == SLASH_SHLIT))
-	    slash_exit_interpreter_err("only support evaluing str args");
 
-	char *str = scope_alloc(interpreter->scope, v.str.size + 1);
-	memcpy(str, v.str.view, v.str.size);
-	str[v.str.size] = 0;
-	argv[i] = str;
+	// TODO: better num to str
+	if (v.type == SLASH_NUM) {
+	    char *str = scope_alloc(interpreter->scope, 128);
+	    sprintf(str, "%f", v.num);
+	    argv[i] = str;
+	} else if (v.type == SLASH_STR || v.type == SLASH_SHLIT) {
+	    char *str = scope_alloc(interpreter->scope, v.str.size + 1);
+	    memcpy(str, v.str.view, v.str.size);
+	    str[v.str.size] = 0;
+	    argv[i] = str;
+	} else {
+	    slash_exit_interpreter_err("only support evaluing str args");
+	}
 	i++;
     }
 
@@ -230,7 +237,7 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
     close(fd[0]);
     close(fd[1]);
 
-    size_t size = strlen(buffer) - 1; // TODO: -1 because we always seem to have an unwanted '\n'?
+    size_t size = strlen(buffer);
     char *str_view = scope_alloc(interpreter->scope, size);
     strncpy(str_view, buffer, size);
     return (SlashValue){ .type = SLASH_STR, .str = { .view = str_view, .size = size } };
@@ -354,28 +361,8 @@ static void exec_var(Interpreter *interpreter, VarStmt *stmt)
     var_define(interpreter->scope, &stmt->name, &value);
 }
 
-static void exec_echo_temporary(Interpreter *interpreter, ArenaLL *args)
-{
-    // TODO: echo builtin, or something better than this at least
-    LLItem *item;
-    ARENA_LL_FOR_EACH(args, item)
-    {
-	SlashValue v = eval(interpreter, item->value);
-	SlashPrintFunc print_func = slash_print[v.type];
-	print_func(&v);
-	putchar(' ');
-    }
-
-    putchar('\n');
-}
-
 static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
 {
-    if (str_view_eq(stmt->cmd_name, (StrView){ .view = "echo", .size = 4 })) {
-	exec_echo_temporary(interpreter, stmt->arg_exprs);
-	return;
-    }
-
     exec_program_stub(interpreter, stmt);
 }
 
@@ -457,7 +444,13 @@ static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
     /* convert from += to + and -= to - */
     TokenType operator= stmt->assignment_op == t_plus_equal ? t_plus : t_minus;
     new_value = cmp_binary_values(*variable.value, new_value, operator);
-    var_assign(&var_name, variable.scope, interpreter->scope, &new_value);
+    /*
+     * 1. We know operator was either += or -=.
+     * 2. For dynamic types the binary compare will update the underlying object.
+     * Therefore we only assign if the variable type is not dynamic.
+     */
+    if (!SLASH_TYPE_DYNAMIC(variable.value->type))
+	var_assign(&var_name, variable.scope, interpreter->scope, &new_value);
 }
 
 static void exec_pipeline(Interpreter *interpreter, PipelineStmt *stmt)
@@ -486,6 +479,13 @@ static void exec_pipeline(Interpreter *interpreter, PipelineStmt *stmt)
     arraylist_rm(&stream_ctx->active_fds, stream_ctx->active_fds.size - 1);
 }
 
+static void exec_assert(Interpreter *interpreter, AssertStmt *stmt)
+{
+    SlashValue result = eval(interpreter, stmt->expr);
+    if (!is_truthy(&result))
+	slash_exit_interpreter_err("assertion failed");
+}
+
 static void exec_loop(Interpreter *interpreter, LoopStmt *stmt)
 {
     Scope loop_scope;
@@ -510,6 +510,19 @@ static void exec_iter_loop_list(Interpreter *interpreter, IterLoopStmt *stmt, Sl
     SlashValue *iterator_value;
     for (size_t i = 0; i < iterable.underlying->size; i++) {
 	iterator_value = slash_list_get(&iterable, i);
+	var_assign_simple(interpreter->scope, &stmt->var_name, iterator_value);
+	exec_block_body(interpreter, stmt->body_block);
+    }
+}
+
+static void exec_iter_loop_tuple(Interpreter *interpreter, IterLoopStmt *stmt, SlashTuple iterable)
+{
+    /* define the loop variable that holds the current iterator value */
+    var_define(interpreter->scope, &stmt->var_name, NULL);
+
+    SlashValue *iterator_value;
+    for (size_t i = 0; i < iterable.size; i++) {
+	iterator_value = &iterable.values[i];
 	var_assign_simple(interpreter->scope, &stmt->var_name, iterator_value);
 	exec_block_body(interpreter, stmt->body_block);
     }
@@ -591,6 +604,9 @@ static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
 	break;
     case SLASH_LIST:
 	exec_iter_loop_list(interpreter, stmt, underlying.list);
+	break;
+    case SLASH_TUPLE:
+	exec_iter_loop_tuple(interpreter, stmt, underlying.tuple);
 	break;
     case SLASH_MAP:
 	exec_iter_loop_map(interpreter, stmt, underlying.map);
@@ -681,6 +697,10 @@ static void exec(Interpreter *interpreter, Stmt *stmt)
 
     case STMT_PIPELINE:
 	exec_pipeline(interpreter, (PipelineStmt *)stmt);
+	break;
+
+    case STMT_ASSERT:
+	exec_assert(interpreter, (AssertStmt *)stmt);
 	break;
 
 

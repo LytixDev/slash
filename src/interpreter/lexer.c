@@ -58,6 +58,7 @@ char *token_type_str_map[t_enum_count] = {
     "t_num",
     "t_bool",
     "t_none",
+    "t_assert",
 
     /* single-character tokens */
     "t_lparen",
@@ -117,11 +118,13 @@ static TokenType *keyword_get_from_start(Lexer *lexer)
     return hashmap_get(lexer->keywords, lexer->input + lexer->start, lexer->pos - lexer->start);
 }
 
+
 static void keywords_init(struct hashmap_t *keywords)
 {
     /* init and populate hashmap with keyword strings */
     hashmap_init(keywords);
 
+    // TODO: can use a big brain macro here, altough this is okay despite inelegant I suppose
     /* hardcoding the sizes because strlen is demonic */
     StrView keys[keywords_len] = {
 	{ .view = "var", .size = sizeof("var") - 1 },
@@ -142,11 +145,12 @@ static void keywords_init(struct hashmap_t *keywords)
 	{ .view = "num", .size = sizeof("num") - 1 },
 	{ .view = "bool", .size = sizeof("bool") - 1 },
 	{ .view = "none", .size = sizeof("none") - 1 },
+	{ .view = "assert", .size = sizeof("assert") - 1 },
     };
 
     TokenType vals[keywords_len] = {
-	t_var,	 t_func, t_return, t_if, t_elif, t_else, t_loop, t_in,	 t_true,
-	t_false, t_as,	 t_and,	   t_or, t_not,	 t_str,	 t_num,	 t_bool, t_none,
+	t_var, t_func, t_return, t_if,	t_elif, t_else, t_loop, t_in,	t_true,	  t_false,
+	t_as,  t_and,  t_or,	 t_not, t_str,	t_num,	t_bool, t_none, t_assert,
     };
 
     for (int i = 0; i < keywords_len; i++)

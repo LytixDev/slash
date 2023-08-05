@@ -104,11 +104,6 @@ void slash_list_print(SlashValue *value)
     putchar(']');
 }
 
-size_t *slash_list_len(SlashValue *value)
-{
-    return &value->list.underlying->size;
-}
-
 SlashValue slash_list_item_get(Scope *scope, SlashValue *self, SlashValue *index)
 {
     assert(self->type == SLASH_LIST);
@@ -157,6 +152,7 @@ bool slash_list_item_in(SlashValue *self, SlashValue *item)
 /* methods */
 SlashMethod slash_list_methods[SLASH_LIST_METHODS_COUNT] = {
     (SlashMethod){ .name = "pop", .fp = slash_list_pop },
+    (SlashMethod){ .name = "len", .fp = slash_list_len },
 };
 
 SlashValue slash_list_pop(SlashValue *self, size_t argc, SlashValue *argv)
@@ -184,4 +180,19 @@ SlashValue slash_list_pop(SlashValue *self, size_t argc, SlashValue *argv)
     arraylist_get_copy(underlying, idx, &popped_item);
     arraylist_rm(underlying, idx);
     return popped_item;
+}
+
+SlashValue slash_list_len(SlashValue *self, size_t argc, SlashValue *argv)
+{
+    assert(self->type == SLASH_LIST);
+
+    ArrayList *underlying = self->list.underlying;
+
+    if (!match_signature("", argc, argv)) {
+	slash_exit_interpreter_err("bad method args");
+	ASSERT_NOT_REACHED;
+    }
+
+    SlashValue len = { .type = SLASH_NUM, .num = (double)underlying->size };
+    return len;
 }

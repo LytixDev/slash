@@ -1,0 +1,7 @@
+var count = (ls | grep runall | wc -l)
+
+if $count {
+    assert true
+} else {
+    assert false
+}

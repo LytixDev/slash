@@ -47,6 +47,7 @@ typedef enum {
     STMT_ASSIGN,
     STMT_BLOCK,
     STMT_PIPELINE,
+    STMT_ASSERT,
     STMT_ENUM_COUNT
 } StmtType;
 
@@ -180,6 +181,11 @@ typedef struct {
     CmdStmt *left;
     Stmt *right;
 } PipelineStmt;
+
+typedef struct {
+    StmtType type;
+    Expr *expr;
+} AssertStmt;
 
 
 /* functions */

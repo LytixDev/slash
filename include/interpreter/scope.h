@@ -29,7 +29,7 @@ struct scope_t {
     size_t depth; // the amount of enclosing scopes
     ArenaTmp arena_tmp; // arena to put any temporary data on
     HashMap values; // key: StrView, value: SlashValue (actual objects, not pointers)
-    LinkedList owning; // owning references to SlashValue's that must be freed on scope_destroy
+    ArrayList owning; // owning references to SlashValue's that must be freed on scope_destroy
 };
 
 typedef struct {

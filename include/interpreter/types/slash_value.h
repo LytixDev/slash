@@ -71,7 +71,6 @@ bool slash_value_eq(SlashValue *a, SlashValue *b);
 // SlashToStrFunc
 // SlashToReprFunc
 typedef void (*SlashPrintFunc)(SlashValue *self);
-typedef size_t (*SlashLenFunc)(SlashValue *self);
 typedef SlashValue (*SlashItemGetFunc)(Scope *scope, SlashValue *self, SlashValue *);
 typedef void (*SlashItemAssignFunc)(SlashValue *self, SlashValue *, SlashValue *);
 typedef bool (*SlashItemInFunc)(SlashValue *self, SlashValue *);
@@ -85,8 +84,6 @@ typedef bool (*SlashItemInFunc)(SlashValue *self, SlashValue *);
  * print_func(&value)
  */
 extern SlashPrintFunc slash_print[SLASH_TYPE_COUNT];
-
-extern SlashLenFunc slash_len[SLASH_TYPE_COUNT];
 
 extern SlashItemGetFunc slash_item_get[SLASH_TYPE_COUNT];
 
