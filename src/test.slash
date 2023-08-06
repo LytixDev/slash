@@ -1,6 +1,7 @@
-var t = ((1, 2, 3))
-var idx = 0
-loop value in $t {
-    assert $value == $t[$idx]
-    $idx += 1
-}
+assert 1 + 1 == 2
+assert 1 - 1 == 0
+assert 0 - -1 == 1
+assert 0xff + 1 == 256
+assert 0xff - 256 == -1
+assert 0b1000 == 8
+assert 1_000_000 == 1000000

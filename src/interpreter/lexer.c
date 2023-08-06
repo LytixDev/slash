@@ -462,6 +462,7 @@ StateFn lex_number(Lexer *lexer)
 	/* edge case: leading sign is not followed by a digit */
 	if (!match_any(lexer, (char *)(digits + 1)))
 	    lex_panic(lexer, "optional leading sign must be followed by a digit");
+	backup(lexer);
     }
     /* hex and binary */
     if (accept(lexer, "0")) {
