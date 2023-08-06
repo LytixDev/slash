@@ -25,7 +25,7 @@ char slash_type_to_char[SLASH_TYPE_COUNT] = {
     'b', // bool
     's', // str
     'n', // num
-    '-', // shlit
+    '-', // shident
     'r', // range
     'l', // list
     't', // tuple

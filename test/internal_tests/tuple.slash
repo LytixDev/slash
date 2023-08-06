@@ -1,7 +1,9 @@
-var t = ((1, 2, 3))
+var t = ' 1, 2, 3 '
+var idx = 0
 loop value in $t {
     # do something
-    assert $value
+    assert $value == $t[$idx]
+    $idx += 1
 }
 
 assert $t[0] == 1
@@ -11,5 +13,5 @@ assert $t[0] == 1
 
 
 {
-    var t = ((1, 2, ((3, 4))))
+    var t = ' 1, 2, '3, 4' '
 }

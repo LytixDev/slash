@@ -34,7 +34,7 @@ typedef enum {
     SLASH_BOOL = 0,
     SLASH_STR,
     SLASH_NUM,
-    SLASH_SHLIT,
+    SLASH_SHIDENT,
     SLASH_RANGE,
     SLASH_LIST,
     SLASH_TUPLE,

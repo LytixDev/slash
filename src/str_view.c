@@ -14,12 +14,129 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "str_view.h"
 
+
+#define HEX_UNDERSCORE_IGNORE 16
+
+static const int hex_lookup[256] = {
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    0,	1,  2,	3,  4,	5,  6,	7,  8,	9,  -1, -1, -1, -1, -1, -1, -1, 10, 11, 12, 13, 14, 15, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 16,
+    -1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+};
+
+static double strview_binary_to_double(StrView a)
+{
+    char *bin_str = a.view;
+    long result = 0;
+    char ch;
+
+    while ((size_t)(bin_str - a.view) < a.size) {
+	ch = *bin_str++;
+	if (ch == '_')
+	    continue;
+	if (!((ch == '0') | (ch == '1')))
+	    break;
+	result = (result << 1) | (ch - '0');
+    }
+
+    return (double)result;
+}
+
+static double strview_hex_to_double(StrView a)
+{
+    char *hex_str = a.view;
+    double result = 0.0;
+    int digit;
+
+    while ((size_t)(hex_str - a.view) < a.size) {
+	if ((digit = hex_lookup[*hex_str++]) >= 0) {
+	    if (digit == HEX_UNDERSCORE_IGNORE) {
+		continue;
+	    }
+	    result = result * 16.0 + (double)digit;
+	} else {
+	    break;
+	}
+    }
+
+    return result;
+}
+
+double str_view_to_double(StrView a)
+{
+    double result = 0.0;
+    char *str = a.view;
+    if (a.size == 0)
+	return NAN;
+
+    /* check sign */
+    double sign = 1.0;
+    if (*str == '-') {
+	sign = -1.0;
+	str++;
+    } else if (*str == '+') {
+	str++;
+    }
+
+    if ((size_t)(str - a.view) == a.size)
+	return NAN;
+
+    /* check optional base identifier */
+    if (*str == '0') {
+	if ((size_t)(str - a.view) + 2 > a.size)
+	    goto strtod_base10;
+	if (str[1] == 'X' || str[1] == 'x')
+	    return sign * strview_hex_to_double(
+			      (StrView){ .view = str + 2, .size = a.size - (str - a.view) - 2 });
+
+	if (str[1] == 'b' || str[1] == 'B')
+	    return sign * strview_binary_to_double(
+			      (StrView){ .view = str + 2, .size = a.size - (str - a.view) - 2 });
+    }
+
+strtod_base10:
+    while ((*str >= '0' && *str <= '9') || *str == '_') {
+	if ((size_t)(str - a.view) == a.size)
+	    goto strtod_done;
+	/* ignore '_' part */
+	if (*str == '_') {
+	    str++;
+	    continue;
+	}
+	result = result * 10.0 + (*str - '0');
+	str++;
+    }
+
+    /* fraction */
+    if (*str == '.') {
+	str++;
+	double fraction = 0.1;
+	while (*str >= '0' && *str <= '9') {
+	    if ((size_t)(str - a.view) == a.size)
+		break;
+	    result += (*str - '0') * fraction;
+	    fraction *= 0.1;
+	    str++;
+	}
+    }
+
+strtod_done:
+    return result * sign;
+}
 
 void str_view_print(StrView s)
 {
@@ -35,15 +152,6 @@ void str_view_println(StrView s)
     memcpy(str, s.view, s.size);
     str[s.size] = 0;
     printf("%s\n", str);
-}
-
-// TODO: add base2 support
-double str_view_to_double(StrView s)
-{
-    char str[s.size + 1];
-    memcpy(str, s.view, s.size);
-    str[s.size] = 0;
-    return strtod(str, NULL);
 }
 
 int32_t str_view_to_int(StrView s)

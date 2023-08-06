@@ -44,7 +44,7 @@ void slash_tuple_print(SlashValue *value)
 {
     SlashTuple tuple = value->tuple;
     SlashValue current;
-    printf("((");
+    printf("'");
     for (size_t i = 0; i < tuple.size; i++) {
 	current = tuple.values[i];
 	/* call the print function directly */
@@ -52,7 +52,7 @@ void slash_tuple_print(SlashValue *value)
 	if (i != tuple.size - 1)
 	    printf(", ");
     }
-    printf("))");
+    printf("'");
 }
 
 size_t *slash_tuple_len(SlashValue *value)

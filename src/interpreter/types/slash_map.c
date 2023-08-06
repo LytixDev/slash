@@ -52,7 +52,7 @@ SlashValue *slash_map_get(SlashMap *map, SlashValue *key)
 /* common slash value functions */
 void slash_map_print(SlashValue *value)
 {
-    printf("[[");
+    printf("@[");
     HashMap *m = value->map.underlying;
     SlashValue *k, *v;
     struct hm_bucket_t *bucket;
@@ -78,7 +78,7 @@ void slash_map_print(SlashValue *value)
 	    slash_print[v->type](v);
 	}
     }
-    printf("]]");
+    printf("]");
 }
 
 size_t *slash_map_len(SlashValue *value)

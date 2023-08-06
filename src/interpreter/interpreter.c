@@ -78,7 +78,7 @@ static char **cmd_args_fmt(Interpreter *interpreter, CmdStmt *stmt)
 	    char *str = scope_alloc(interpreter->scope, 128);
 	    sprintf(str, "%f", v.num);
 	    argv[i] = str;
-	} else if (v.type == SLASH_STR || v.type == SLASH_SHLIT) {
+	} else if (v.type == SLASH_STR || v.type == SLASH_SHIDENT) {
 	    char *str = scope_alloc(interpreter->scope, v.str.size + 1);
 	    memcpy(str, v.str.view, v.str.size);
 	    str[v.str.size] = 0;
@@ -210,6 +210,8 @@ static SlashValue eval_item_access(Interpreter *interpreter, ItemAccessExpr *exp
 
     ScopeAndValue value = var_get(interpreter->scope, &var_name);
     SlashValue *self = value.value;
+    if (self == NULL)
+	slash_exit_interpreter_err("Item access for variable that is not defined");
 
     SlashItemGetFunc func = slash_item_get[self->type];
     SlashValue item = func(interpreter->scope, self, &access_index);
@@ -246,14 +248,13 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
 static SlashValue eval_tuple(Interpreter *interpreter, ListExpr *expr)
 {
     SlashTuple tuple;
-    slash_tuple_init(interpreter->scope, &tuple, expr->exprs->size);
-
-    /* size is 0 */
+    /* empty initializer -> size is 0 */
     if (expr->exprs == NULL) {
-	assert(tuple.size == 0);
+	slash_tuple_init(interpreter->scope, &tuple, 0);
 	return (SlashValue){ .type = SLASH_TUPLE, .tuple = tuple };
     }
 
+    slash_tuple_init(interpreter->scope, &tuple, expr->exprs->size);
     size_t i = 0;
     LLItem *item;
     ARENA_LL_FOR_EACH(expr->exprs, item)

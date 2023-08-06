@@ -54,8 +54,9 @@ static Expr *primary(Parser *parser);
 static Expr *bool_lit(Parser *parser);
 static Expr *number(Parser *parser);
 static Expr *range(Parser *parser);
+static Expr *list(Parser *parser);
 static Expr *map(Parser *parser);
-static Expr *list_or_tuple_or_map(Parser *parser, bool is_list);
+static Expr *tuple(Parser *parser);
 
 
 /* util/helper functions */
@@ -217,7 +218,7 @@ static Stmt *statement(Parser *parser)
     if (match(parser, t_lbrace))
 	return block(parser);
 
-    if (match(parser, dt_shlit))
+    if (match(parser, t_dt_shident))
 	return pipeline_stmt(parser);
 
     /*
@@ -271,7 +272,7 @@ static Stmt *assignment_stmt(Parser *parser)
 
 static Stmt *var_decl(Parser *parser)
 {
-    Token *name = consume(parser, t_identifier, "Expected variable name");
+    Token *name = consume(parser, t_ident, "Expected variable name");
     consume(parser, t_equal, "Expected variable definition");
     Expr *initializer = expression(parser);
     consume(parser, t_newline, "Expected line ending after variable definition");
@@ -285,7 +286,7 @@ static Stmt *var_decl(Parser *parser)
 static Stmt *loop_stmt(Parser *parser)
 {
     /* came from 'loop */
-    if (match(parser, t_identifier)) {
+    if (match(parser, t_ident)) {
 	/* loop IDENTIFIER in iterable { ... } */
 	Token *var_name = previous(parser);
 	consume(parser, t_in, "Expected 'in' keyword in loop");
@@ -349,12 +350,12 @@ static Stmt *block(Parser *parser)
 
 static Stmt *pipeline_stmt(Parser *parser)
 {
-    /* came from dt_shlit */
+    /* came from t_dt_shident */
     Stmt *left = cmd_stmt(parser);
     if (!match(parser, t_pipe))
 	return left;
 
-    consume(parser, dt_shlit, "expected shell literal after pipe symbol");
+    consume(parser, t_dt_shident, "expected shell literal after pipe symbol");
     Stmt *right = pipeline_stmt(parser);
 
     PipelineStmt *stmt = (PipelineStmt *)stmt_alloc(parser->ast_arena, STMT_PIPELINE);
@@ -365,7 +366,7 @@ static Stmt *pipeline_stmt(Parser *parser)
 
 static Stmt *cmd_stmt(Parser *parser)
 {
-    /* came from dt_shlit */
+    /* came from t_dt_shident */
     Token *cmd_name = previous(parser);
 
     CmdStmt *stmt = (CmdStmt *)stmt_alloc(parser->ast_arena, STMT_CMD);
@@ -395,7 +396,7 @@ static Expr *expression(Parser *parser)
 static Expr *subshell(Parser *parser)
 {
     /* came from '(' */
-    consume(parser, dt_shlit, "Expected shell literal after '('");
+    consume(parser, t_dt_shident, "Expected shell literal after '('");
     SubshellExpr *expr = (SubshellExpr *)expr_alloc(parser->ast_arena, EXPR_SUBSHELL);
     expr->stmt = pipeline_stmt(parser);
     consume(parser, t_rparen, "Expected ')' after subshell");
@@ -467,8 +468,6 @@ static Expr *unary(Parser *parser)
     if (!match(parser, t_lparen))
 	/* continue the "normal" recursive path */
 	left = item_access(parser);
-    else if (match(parser, t_lparen))
-	left = list_or_tuple_or_map(parser, true);
     else
 	left = subshell(parser);
 
@@ -482,7 +481,7 @@ static Expr *unary(Parser *parser)
 
     if (match(parser, t_dot)) {
 	MethodExpr *expr = (MethodExpr *)expr_alloc(parser->ast_arena, EXPR_METHOD);
-	Token *method_name = consume(parser, t_identifier, "expected method name");
+	Token *method_name = consume(parser, t_ident, "expected method name");
 	expr->obj = left;
 	expr->method_name = method_name->lexeme;
 	consume(parser, t_lparen, "expected left paren");
@@ -533,22 +532,26 @@ static Expr *primary(Parser *parser)
     if (check(parser, t_dot_dot))
 	return range(parser);
 
-    if (match(parser, dt_num)) {
+    if (match(parser, t_dt_num)) {
 	if (check(parser, t_dot_dot))
 	    return range(parser);
 	return number(parser);
     }
 
     if (match(parser, t_lbracket))
-	return list_or_tuple_or_map(parser, false);
+	return list(parser);
+    if (match(parser, t_at_lbracket))
+	return map(parser);
+    if (match(parser, t_qoute))
+	return tuple(parser);
 
-    if (!match(parser, dt_str, dt_shlit))
+    if (!match(parser, t_dt_str, t_dt_shident))
 	slash_exit_parse_err("not a valid primary type");
 
-    /* str or shlit */
+    /* str or shident */
     Token *token = previous(parser);
     LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
-    expr->value = (SlashValue){ .type = token->type == dt_str ? SLASH_STR : SLASH_SHLIT,
+    expr->value = (SlashValue){ .type = token->type == t_dt_str ? SLASH_STR : SLASH_SHIDENT,
 				.str = token->lexeme };
     return (Expr *)expr;
 }
@@ -574,13 +577,13 @@ static Expr *range(Parser *parser)
 {
     SlashRange range;
     Token *start_num_or_any = previous(parser);
-    if (start_num_or_any->type != dt_num)
+    if (start_num_or_any->type != t_dt_num)
 	range.start = 0;
     else
 	range.start = str_view_to_int(start_num_or_any->lexeme);
 
     consume(parser, t_dot_dot, "unreachable");
-    consume(parser, dt_num, "Expected end number in range expression");
+    consume(parser, t_dt_num, "Expected end number in range expression");
     Token *end_num = previous(parser);
     range.end = str_view_to_int(end_num->lexeme);
 
@@ -589,9 +592,27 @@ static Expr *range(Parser *parser)
     return (Expr *)expr;
 }
 
+static Expr *list(Parser *parser)
+{
+    /* came from '[' */
+    ListExpr *expr = (ListExpr *)expr_alloc(parser->ast_arena, EXPR_LIST);
+    expr->list_type = SLASH_LIST;
+
+    /* if next is not ']', parse list initializer */
+    if (!match(parser, t_rbracket)) {
+	expr->exprs = comma_sep_exprs(parser);
+	consume(parser, t_rbracket, "Unterminated list initializer: expected ']'");
+    } else {
+	expr->exprs = NULL;
+    }
+
+    return (Expr *)expr;
+}
+
+
 static Expr *map(Parser *parser)
 {
-    /* came from '[[' */
+    /* came from '@[' */
     MapExpr *expr = (MapExpr *)expr_alloc(parser->ast_arena, EXPR_MAP);
     expr->key_value_pairs = arena_ll_alloc(parser->ast_arena);
 
@@ -605,39 +626,24 @@ static Expr *map(Parser *parser)
 	    break;
     } while (!check(parser, t_rbracket));
 
-    consume(parser, t_rbracket, "Expected ']]' to terminate map");
-    consume(parser, t_rbracket, "Expected ']]' to terminate map");
+    consume(parser, t_rbracket, "Expected ']' to terminate map");
     return (Expr *)expr;
 }
 
-static Expr *list_or_tuple_or_map(Parser *parser, bool is_tuple)
+static Expr *tuple(Parser *parser)
 {
-    /* came from '[' or '((' */
-    if (match(parser, t_lbracket))
-	return map(parser);
-
+    /* came from ''' */
     ListExpr *expr = (ListExpr *)expr_alloc(parser->ast_arena, EXPR_LIST);
-    expr->list_type = is_tuple ? SLASH_TUPLE : SLASH_LIST;
-    TokenType terminator = is_tuple ? t_rparen : t_rbracket;
+    expr->list_type = SLASH_TUPLE;
 
-    /* edge case: empty list */
-    if (match(parser, terminator)) {
-	if (is_tuple)
-	    consume(parser, t_rparen, "Expected '))' to terminate tuple");
-	expr->exprs = NULL;
-	return (Expr *)expr;
-    }
-
-    /* if next is not terminator, parse list initializer */
-    if (!match(parser, terminator)) {
+    /* if next is not ''', parse list initializer */
+    if (!match(parser, t_qoute)) {
 	expr->exprs = comma_sep_exprs(parser);
-	consume(parser, terminator, "Expected list terminator after arg list");
+	consume(parser, t_qoute, "Unterminated list initializer: expected ']'");
     } else {
 	expr->exprs = NULL;
     }
 
-    if (is_tuple)
-	consume(parser, t_rparen, "Expected '))' to terminate tuple");
     return (Expr *)expr;
 }
 

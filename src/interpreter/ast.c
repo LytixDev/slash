@@ -103,7 +103,7 @@ static void ast_print_literal(LiteralExpr *expr)
 {
     switch (expr->value.type) {
     case SLASH_STR:
-    case SLASH_SHLIT:
+    case SLASH_SHIDENT:
 	str_view_print(expr->value.str);
 	break;
 

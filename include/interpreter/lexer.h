@@ -28,85 +28,108 @@
 	.fn = ___state_fn     \
     }
 
+/*
+ * X macro for the token types.
+ * All thats needed to sucesfully add a new token type is to add it somewhere on this list.
+ * The identifiers for the TokenType enum will be t_`token` where `token` is the X macro param.
+ *
+ * hmm, is this too much voodoo?
+ */
+#define KEYWORD_TOKENS \
+    X(var)             \
+    X(func)            \
+    X(return)          \
+    X(if)              \
+    X(elif)            \
+    X(else)            \
+    X(loop)            \
+    X(in)              \
+    X(true)            \
+    X(false)           \
+    X(as)              \
+    X(and)             \
+    X(or)              \
+    X(not )            \
+    X(str)             \
+    X(num)             \
+    X(bool)            \
+    X(none)            \
+    X(assert)          \
+    X(break)           \
+    X(continue)
+#define SINGLE_CHAR_TOKENS \
+    X(lparen)              \
+    X(rparen)              \
+    X(lbrace)              \
+    X(rbrace)              \
+    X(lbracket)            \
+    X(rbracket)            \
+    X(star)                \
+    X(tilde)               \
+    X(backslash)           \
+    X(comma)               \
+    X(colon)               \
+    X(semicolon)           \
+    X(qoute)
+#define ONE_OR_TWO_CHAR_TOKENS \
+    X(anp)                     \
+    X(anp_anp)                 \
+    X(equal)                   \
+    X(equal_equal)             \
+    X(pipe)                    \
+    X(pipe_pipe)               \
+    X(bang)                    \
+    X(bang_equal)              \
+    X(greater)                 \
+    X(greater_equal)           \
+    X(less)                    \
+    X(less_equal)              \
+    X(dot)                     \
+    X(dot_dot)                 \
+    X(plus)                    \
+    X(plus_equal)              \
+    X(minus)                   \
+    X(minus_equal)             \
+    X(at)                      \
+    X(at_lbracket)
+#define DATA_TYPE_TOKENS \
+    X(dt_str)            \
+    X(dt_num)            \
+    X(dt_range)          \
+    X(dt_bool)           \
+    X(dt_shident)        \
+    X(dt_list)           \
+    X(dt_tuple)          \
+    X(dt_map)            \
+    X(dt_none)
+#define REST_TOKENS \
+    X(access)       \
+    X(ident)        \
+    X(newline)      \
+    X(eof)          \
+    X(error)
+
+#define SLASH_ALL_TOKENS   \
+    KEYWORD_TOKENS         \
+    SINGLE_CHAR_TOKENS     \
+    ONE_OR_TWO_CHAR_TOKENS \
+    DATA_TYPE_TOKENS       \
+    REST_TOKENS
+
+#define X(token) t_##token,
 typedef enum {
-    /* keywords */
-    t_var = 0,
-    t_func,
-    t_return,
-    t_if,
-    t_elif,
-    t_else,
-    t_loop,
-    t_in,
-    t_true,
-    t_false,
-    t_as,
-    t_and,
-    t_or,
-    t_not,
-    t_str,
-    t_num,
-    t_bool,
-    t_none,
-    t_assert,
-
-    /* single-character tokens */
-    t_lparen,
-    t_rparen,
-    t_lbrace,
-    t_rbrace,
-    t_lbracket,
-    t_rbracket,
-    t_star,
-    t_tilde,
-    t_backslash,
-    t_comma,
-    t_colon,
-
-    /* one or two character tokens */
-    t_anp,
-    t_anp_anp,
-    t_equal,
-    t_equal_equal,
-    t_pipe,
-    t_pipe_pipe,
-    t_bang,
-    t_bang_equal,
-    t_greater,
-    t_greater_equal,
-    t_less,
-    t_less_equal,
-    t_dot,
-    t_dot_dot,
-    t_plus,
-    t_plus_equal,
-    t_minus,
-    t_minus_equal,
-
-    /* data types */
-    dt_str,
-    dt_num,
-    dt_range,
-    dt_bool,
-    dt_shlit,
-    dt_none,
-
-    /* */
-    t_access,
-    t_identifier,
-    t_newline,
-    t_eof,
-    t_error,
-    t_enum_count,
+    SLASH_ALL_TOKENS t_enum_count,
 } TokenType;
-
-#define keywords_len (t_assert + 1)
+#undef X
 
 extern char *token_type_str_map[t_enum_count];
 
 typedef struct {
     TokenType type;
     StrView lexeme;
+    size_t line;
+    size_t start; // position in line of first char of lexeme
+    size_t end; // position in line of final char of lexeme
 } Token;
 
 typedef struct {
@@ -114,8 +137,12 @@ typedef struct {
     size_t input_size; // size of input in bytes.
     size_t start; // start position of this token.
     size_t pos; // current position in the input.
-    ArrayList *tokens;
-    struct hashmap_t *keywords;
+
+    size_t line_count; // what line in the input we are on.
+    size_t pos_in_line;
+
+    ArrayList tokens;
+    HashMap keywords;
 } Lexer;
 
 

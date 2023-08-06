@@ -22,163 +22,98 @@
 #include "nicc/nicc.h"
 #include "str_view.h"
 
+/* forward declarations */
 static void lex_panic(Lexer *lexer, char *err_msg);
 static void run_until(Lexer *lexer, StateFn start_state, StateFn end_state);
 static void emit(Lexer *lexer, TokenType type);
 StateFn lex_any(Lexer *lexer);
 StateFn lex_end(Lexer *lexer);
-StateFn lex_argument(Lexer *lexer);
+StateFn lex_shell_arg_list(Lexer *lexer);
 StateFn lex_number(Lexer *lexer);
 StateFn lex_string(Lexer *lexer);
 StateFn lex_identifier(Lexer *lexer);
-StateFn lex_access_indices(Lexer *lexer);
 StateFn lex_access(Lexer *lexer);
 StateFn lex_comment(Lexer *lexer);
-StateFn lex_subshell_start(Lexer *lexer);
-StateFn lex_subshell_end(Lexer *lexer);
+StateFn lex_lparen(Lexer *lexer);
+StateFn lex_rparen(Lexer *lexer);
 
+/*
+ * How the lexer works:
+ * The lexer is a finite state machine (FSM) where the `lex_` family of functions are the states and
+ * functions calls are transition between states. The `lex_` functions return the next state rather
+ * than calling the next state function directly. This keeps the code quite elegant and makes it
+ * easy to mentally track what is going.
+ * Inspired by 'Lexical Scanning in Go' by Rob Pike: https://www.youtube.com/watch?v=HxaD_trXwRE
+ */
 
-char *token_type_str_map[t_enum_count] = {
-    /* keywords */
-    "t_var",
-    "t_func",
-    "t_return",
-    "t_if",
-    "t_elif",
-    "t_else",
-    "t_loop",
-    "t_in",
-    "t_true",
-    "t_false",
-    "t_as",
-    "t_and",
-    "t_or",
-    "t_not",
-    "t_str",
-    "t_num",
-    "t_bool",
-    "t_none",
-    "t_assert",
+#define MACRO_TO_STR(a) #a
+#define X(token) MACRO_TO_STR(t_##token),
+char *token_type_str_map[t_enum_count] = { SLASH_ALL_TOKENS };
+#undef X
 
-    /* single-character tokens */
-    "t_lparen",
-    "t_rparen",
-    "t_lbrace",
-    "t_rbrace",
-    "t_lbracket",
-    "t_rbracket",
-    "t_star",
-    "t_tilde",
-    "t_backslash",
-    "t_comma",
-    "t_colon",
-
-    /* one or two character tokens */
-    "t_anp",
-    "t_anp_anp",
-    "t_equal",
-    "t_equal_equal",
-    "t_pipe",
-    "t_pipe_pipe",
-    "t_bang",
-    "t_bang_equal",
-    "t_greater",
-    "t_greater_equal",
-    "t_less",
-    "t_less_equal",
-    "t_dot",
-    "t_dot_dot",
-    "t_plus",
-    "t_plus_equal",
-    "t_minus",
-    "t_minus_equal",
-
-    /* data types */
-    "dt_str",
-    "dt_num",
-    "dt_range",
-    "dt_bool",
-    "dt_shlit",
-    "dt_none",
-
-    "t_access",
-    "t_identifier",
-    "t_newline",
-    "t_eof",
-    "t_error",
-};
-
-static void keyword_set(struct hashmap_t *keywords, StrView key, TokenType val)
-{
-    hashmap_put(keywords, key.view, key.size, &val, sizeof(TokenType), true);
-}
-
-static TokenType *keyword_get_from_start(Lexer *lexer)
-{
-    return hashmap_get(lexer->keywords, lexer->input + lexer->start, lexer->pos - lexer->start);
-}
-
-
-static void keywords_init(struct hashmap_t *keywords)
+static void keywords_init(HashMap *keywords)
 {
     /* init and populate hashmap with keyword strings */
     hashmap_init(keywords);
 
-    // TODO: can use a big brain macro here, altough this is okay despite inelegant I suppose
-    /* hardcoding the sizes because strlen is demonic */
-    StrView keys[keywords_len] = {
-	{ .view = "var", .size = sizeof("var") - 1 },
-	{ .view = "func", .size = sizeof("func") - 1 },
-	{ .view = "return", .size = sizeof("return") - 1 },
-	{ .view = "if", .size = sizeof("if") - 1 },
-	{ .view = "elif", .size = sizeof("elif") - 1 },
-	{ .view = "else", .size = sizeof("else") - 1 },
-	{ .view = "loop", .size = sizeof("loop") - 1 },
-	{ .view = "in", .size = sizeof("in") - 1 },
-	{ .view = "true", .size = sizeof("true") - 1 },
-	{ .view = "false", .size = sizeof("false") - 1 },
-	{ .view = "as", .size = sizeof("as") - 1 },
-	{ .view = "and", .size = sizeof("and") - 1 },
-	{ .view = "or", .size = sizeof("or") - 1 },
-	{ .view = "not", .size = sizeof("not") - 1 },
-	{ .view = "str", .size = sizeof("str") - 1 },
-	{ .view = "num", .size = sizeof("num") - 1 },
-	{ .view = "bool", .size = sizeof("bool") - 1 },
-	{ .view = "none", .size = sizeof("none") - 1 },
-	{ .view = "assert", .size = sizeof("assert") - 1 },
-    };
+#define X(token)                                                                   \
+    do {                                                                           \
+	StrView view = { .view = #token, .size = sizeof(#token) - 1 };             \
+	TokenType tt = t_##token;                                                  \
+	hashmap_put(keywords, view.view, view.size, &tt, sizeof(TokenType), true); \
+    } while (0);
 
-    TokenType vals[keywords_len] = {
-	t_var, t_func, t_return, t_if,	t_elif, t_else, t_loop, t_in,	t_true,	  t_false,
-	t_as,  t_and,  t_or,	 t_not, t_str,	t_num,	t_bool, t_none, t_assert,
-    };
-
-    for (int i = 0; i < keywords_len; i++)
-	keyword_set(keywords, keys[i], vals[i]);
+    /* populats the hashmap by 'calling' the X macro on all keywords */
+    KEYWORD_TOKENS
+#undef X
 }
-
 
 void tokens_print(ArrayList *tokens)
 {
+    printf("--------------\n");
+    printf("count\t| line, column\t| type\t\t| lexeme\n");
     printf("--- tokens ---\n");
 
     for (size_t i = 0; i < tokens->size; i++) {
 	Token *token = arraylist_get(tokens, i);
-	printf("[%zu] (%s) ", i, token_type_str_map[token->type]);
-	if (token->type != t_newline)
-	    str_view_print(token->lexeme);
+	if (token->type == t_newline)
+	    continue;
+	printf("[%zu]\t| [%zu, %zu-%zu]\t| %s\t| ", i, token->line, token->start, token->end,
+	       token_type_str_map[token->type]);
+	str_view_print(token->lexeme);
 	putchar('\n');
     }
 }
 
+
 /*
- * helper functions
+ * Lexer helper functions
  */
+static void emit(Lexer *lexer, TokenType type)
+{
+    size_t token_length = lexer->pos - lexer->start;
+    Token token = { .type = type,
+		    .lexeme =
+			(StrView){ .view = lexer->input + lexer->start, .size = token_length },
+		    .line = lexer->line_count,
+		    /* A single can not span across multiple lines, so this is fine . */
+		    .start = lexer->pos_in_line - token_length,
+		    .end = lexer->pos_in_line };
+    arraylist_append(&lexer->tokens, &token);
+    lexer->start = lexer->pos;
+}
+
+static TokenType *token_as_keyword(Lexer *lexer)
+{
+    return hashmap_get(&lexer->keywords, lexer->input + lexer->start, lexer->pos - lexer->start);
+}
+
 static char next(Lexer *lexer)
 {
     if (lexer->input[lexer->pos] == 0)
 	return EOF;
 
+    lexer->pos_in_line++;
     return lexer->input[lexer->pos++];
 }
 
@@ -196,13 +131,6 @@ static char peek_ahead(Lexer *lexer, int step)
     return lexer->input[idx];
 }
 
-// static char prev(Lexer *lexer)
-//{
-//     if (lexer->pos == 0)
-//	return -1;
-//     return lexer->input[lexer->pos - 1];
-// }
-
 static void ignore(Lexer *lexer)
 {
     lexer->start = lexer->pos;
@@ -213,6 +141,8 @@ static void backup(Lexer *lexer)
     if (lexer->pos == 0)
 	lex_panic(lexer, "tried to backup at input position zero");
 
+    /* This is fine because we never increment line_count and then backup() */
+    lexer->pos_in_line--;
     lexer->pos--;
 }
 
@@ -270,32 +200,34 @@ static void accept_run(Lexer *lexer, char *accept_list)
 
 static TokenType prev_token_type(Lexer *lexer)
 {
-    size_t size = lexer->tokens->size;
+    size_t size = lexer->tokens.size;
     if (size == 0)
 	return t_error;
-    Token *token = arraylist_get(lexer->tokens, size - 1);
+    Token *token = arraylist_get(&lexer->tokens, size - 1);
     return token->type;
 }
 
-static void shlit_seperate(Lexer *lexer)
+static void shell_arg_emit(Lexer *lexer)
 {
     backup(lexer);
     if (lexer->start != lexer->pos)
-	emit(lexer, dt_shlit);
+	emit(lexer, t_dt_shident);
+    next(lexer);
 }
 
 static void lex_panic(Lexer *lexer, char *err_msg)
 {
     fprintf(stderr, "LEX PANIC!\n");
-    printf("--- lexer internal state --\n");
-    printf("start: %zu. pos: %zu\ninput: %s", lexer->start, lexer->pos, lexer->input);
-    tokens_print(lexer->tokens);
+    fprintf(stderr, "--- lexer internal state --\n");
+    fprintf(stderr, "line: %zu. column: %zu\ninput: %s", lexer->line_count, lexer->pos_in_line,
+	    lexer->input);
+    tokens_print(&lexer->tokens);
     slash_exit_lex_err(err_msg);
 }
 
 
 /*
- * semantic
+ * Semantic utils
  */
 static bool is_numeric(char c)
 {
@@ -314,11 +246,11 @@ static bool is_valid_identifier(char c)
 
 
 /*
- * state functions
+ * State functions
  */
 StateFn lex_any(Lexer *lexer)
 {
-    while (1) {
+    while (true) {
 	char c = next(lexer);
 	switch (c) {
 	case ' ':
@@ -327,21 +259,20 @@ StateFn lex_any(Lexer *lexer)
 	    ignore(lexer);
 	    break;
 
+	case ';':
 	case '\n':
 	    emit(lexer, t_newline);
+	    lexer->line_count++;
+	    lexer->pos_in_line = 0;
 	    break;
 
 	/* one character tokens */
 	case '(':
-	    /* do not go into subshell parsing mode if tuple: came from '(' or next is '(' */
-	    if (!(prev_token_type(lexer) == t_identifier || prev_token_type(lexer) == t_lparen ||
-		  peek(lexer) == '('))
-		return STATE_FN(lex_subshell_start);
+	    /* returning lex_lparen would make no "practical" difference */
 	    emit(lexer, t_lparen);
 	    break;
 	case ')':
-	    return STATE_FN(lex_subshell_end);
-	// TODO: handling brackets should have its own state fns?
+	    return STATE_FN(lex_rparen);
 	case '[':
 	    emit(lexer, t_lbracket);
 	    break;
@@ -357,11 +288,9 @@ StateFn lex_any(Lexer *lexer)
 	case ',':
 	    emit(lexer, t_comma);
 	    break;
-	// TODO: should have its own state fn?
 	case ':':
 	    emit(lexer, t_colon);
 	    break;
-	// TODO: handle these better
 	case '*':
 	    emit(lexer, t_star);
 	    break;
@@ -370,6 +299,9 @@ StateFn lex_any(Lexer *lexer)
 	    break;
 	case '\\':
 	    emit(lexer, t_backslash);
+	    break;
+	case '\'':
+	    emit(lexer, t_qoute);
 	    break;
 
 	/* one or two character tokens */
@@ -393,6 +325,9 @@ StateFn lex_any(Lexer *lexer)
 	    break;
 	case '.':
 	    emit(lexer, match(lexer, '.') ? t_dot_dot : t_dot);
+	    break;
+	case '@':
+	    emit(lexer, match(lexer, '[') ? t_at_lbracket : t_at);
 	    break;
 
 	case '+':
@@ -445,7 +380,7 @@ StateFn lex_any(Lexer *lexer)
     }
 
 panic:
-    lex_panic(lexer, "lex_any unsuccesfull");
+    lex_panic(lexer, "does not match anything");
     return STATE_FN(NULL);
 }
 
@@ -455,77 +390,96 @@ StateFn lex_end(Lexer *lexer)
     return STATE_FN(NULL);
 }
 
-StateFn lex_argument(Lexer *lexer)
+StateFn lex_shell_arg_list(Lexer *lexer)
 {
-    /* previous token was a shell literal */
-
+    /*
+     * NOTE: Previous token was a shell identifier.
+     *       We are quite strict in that we require identifiers to be alphanumeric plus '-' and '_'.
+     *       The POSIX parsing rules will f.ex allow ']', 'abc]' and much more to to be a valid
+     *       token here. This may be a problem, alltough I have not found a single shell command
+     *       that would not match our 'stricter' identifer requirements. The arguments to a shell
+     *       command however need to be a lot more flexible.
+     *
+     * Shell command example: grep -rs --color=auto "some_string"
+     *  Here we don't want to parse '-' as t_minus etc.
+     *
+     * Lexing rules for shell arg list:
+     *  whitespace, tab         -> backup, emit, advance, ignore and continue
+     *  $                       -> backup, emit, advance and lex access
+     *  "                       -> backup, emit, advance and lex string
+     *  (                       -> backup, emit, advance, lex any until rparen and continue
+     *  )                       -> backup, emit, advance, stop and return lex rparen
+     *  \n, ;, |, &, EOF        -> backup, emit, and stop
+     *
+     *  shell_arg_emit() is a helper function that will backup, emit and advance
+     */
     while (1) {
 	char c = next(lexer);
 	switch (c) {
-	/* space and tab is treated as seperators when parsing arguments to a shell literal */
 	case ' ':
 	case '\t':
 	case '\v':
-	    shlit_seperate(lexer);
+	    shell_arg_emit(lexer);
 	    accept_run(lexer, " \t\v");
 	    ignore(lexer);
 	    break;
 
-	case '(':
-	    shlit_seperate(lexer);
-	    next(lexer);
-	    lex_subshell_start(lexer);
-	    break;
-
 	case '$':
-	    shlit_seperate(lexer);
-	    next(lexer);
+	    shell_arg_emit(lexer);
 	    lex_access(lexer);
 	    break;
-
 	case '"':
-	    shlit_seperate(lexer);
-	    next(lexer);
+	    shell_arg_emit(lexer);
 	    lex_string(lexer);
 	    break;
 
-	/* terminating characters */
+	case '(':
+	    shell_arg_emit(lexer);
+	    lex_lparen(lexer);
+	    break;
 	case ')':
-	    shlit_seperate(lexer);
-	    next(lexer);
-	    return STATE_FN(lex_subshell_end);
-	case EOF:
-	case '&':
-	case '|':
+	    shell_arg_emit(lexer);
+	    return STATE_FN(lex_rparen);
+
 	case '\n':
-	    shlit_seperate(lexer);
+	case ';':
+	case '|':
+	case '&':
+	case EOF:
+	    shell_arg_emit(lexer);
+	    backup(lexer);
 	    return STATE_FN(lex_any);
 	}
     }
 }
 
-// TODO: octal support?
 StateFn lex_number(Lexer *lexer)
 {
-    char *digits = "0123456789";
+    char *digits = "_0123456789";
 
     /* optional leading sign */
     if (accept(lexer, "+-")) {
-	/* edge case where leading sign is not followed by a digit */
-	if (!match_any(lexer, digits))
+	/* edge case: leading sign is not followed by a digit */
+	if (!match_any(lexer, (char *)(digits + 1)))
 	    lex_panic(lexer, "optional leading sign must be followed by a digit");
+	backup(lexer);
     }
-
     /* hex and binary */
     if (accept(lexer, "0")) {
-	if (accept(lexer, "xX"))
-	    digits = "0123456789abcdefABCDEF";
-	else if (accept(lexer, "bB"))
-	    digits = "01";
+	bool changed_base = false;
+	if (accept(lexer, "xX")) {
+	    digits = "_0123456789abcdefABCDEF";
+	    changed_base = true;
+	} else if (accept(lexer, "bB")) {
+	    digits = "_01";
+	    changed_base = true;
+	}
+	/* edge case: no valid digits */
+	if (changed_base && !match_any(lexer, (char *)(digits + 1)))
+	    lex_panic(lexer, "number must contain at least one valid digit");
     }
 
     accept_run(lexer, digits);
-
     /* treating two '.' as a seperate token */
     if (peek_ahead(lexer, 1) != '.') {
 	/*
@@ -536,7 +490,7 @@ StateFn lex_number(Lexer *lexer)
 	    accept_run(lexer, digits);
     }
 
-    emit(lexer, dt_num);
+    emit(lexer, t_dt_num);
     return STATE_FN(lex_any);
 }
 
@@ -546,63 +500,20 @@ StateFn lex_identifier(Lexer *lexer)
 	;
     backup(lexer);
 
-    TokenType *tt = keyword_get_from_start(lexer);
-    TokenType previous = prev_token_type(lexer);
+    TokenType *tt = token_as_keyword(lexer);
     if (tt != NULL) {
 	emit(lexer, *tt);
 	return STATE_FN(lex_any);
     }
 
-    if (previous == t_var || previous == t_loop || previous == t_func || previous == t_lparen ||
-	previous == t_comma || peek(lexer) == '(') {
-	emit(lexer, t_identifier);
+    TokenType previous = prev_token_type(lexer);
+    if (previous == t_var || previous == t_loop || previous == t_dot || previous == t_comma) {
+	emit(lexer, t_ident);
 	return STATE_FN(lex_any);
     }
 
-    emit(lexer, dt_shlit);
-    return STATE_FN(lex_argument);
-}
-
-StateFn lex_access_indices(Lexer *lexer)
-{
-    /* came from '[' */
-    emit(lexer, t_lbracket);
-
-    /* index as str */
-    if (match(lexer, '"')) {
-	lex_string(lexer);
-	if (!match(lexer, ']'))
-	    slash_exit_lex_err("expected ']' after variable access");
-	emit(lexer, t_rbracket);
-	return STATE_FN(lex_any);
-    }
-
-    /* index as num or range */
-    bool some_indicy = false;
-    if (is_numeric(peek(lexer))) {
-	lex_number(lexer);
-	some_indicy = true;
-    }
-
-    if (match(lexer, '.')) {
-	if (!match(lexer, '.'))
-	    slash_exit_lex_err("expected another '.' after ranged access");
-	emit(lexer, t_dot_dot);
-
-	if (!is_numeric(peek(lexer)))
-	    slash_exit_lex_err("expected base10 number");
-	lex_number(lexer);
-	some_indicy = true;
-    }
-
-    if (!some_indicy)
-	slash_exit_lex_err("expected a valid indicy after element access");
-
-    if (!match(lexer, ']'))
-	slash_exit_lex_err("expected ']' after variable access");
-    emit(lexer, t_rbracket);
-
-    return STATE_FN(lex_any);
+    emit(lexer, t_dt_shident);
+    return STATE_FN(lex_shell_arg_list);
 }
 
 StateFn lex_access(Lexer *lexer)
@@ -610,17 +521,13 @@ StateFn lex_access(Lexer *lexer)
     /* came from '$' which we want to ignore */
     ignore(lexer);
 
-    // TODO: make sure there is at least one char here?
+    if (!is_valid_identifier(next(lexer)))
+	lex_panic(lexer, "invalid identifier access");
+
     while (is_valid_identifier(next(lexer)))
 	;
     backup(lexer);
     emit(lexer, t_access);
-
-    /* optional element access */
-    if (!match(lexer, '['))
-	return STATE_FN(lex_any);
-
-    lex_access_indices(lexer);
 
     return STATE_FN(lex_any);
 }
@@ -633,12 +540,12 @@ StateFn lex_string(Lexer *lexer)
     char c;
     while ((c = next(lexer)) != '"') {
 	if (c == EOF)
-	    lex_panic(lexer, "String not terminated");
+	    lex_panic(lexer, "unterminated string");
     }
 
     /* backup final qoute */
     backup(lexer);
-    emit(lexer, dt_str);
+    emit(lexer, t_dt_str);
     /* advance past final qoute and ignore it */
     next(lexer);
     ignore(lexer);
@@ -659,15 +566,15 @@ StateFn lex_comment(Lexer *lexer)
     return STATE_FN(lex_any);
 }
 
-StateFn lex_subshell_start(Lexer *lexer)
+StateFn lex_lparen(Lexer *lexer)
 {
     emit(lexer, t_lparen);
-    run_until(lexer, STATE_FN(lex_argument), STATE_FN(lex_subshell_end));
-    StateFn next = lex_subshell_end(lexer);
+    run_until(lexer, STATE_FN(lex_any), STATE_FN(lex_rparen));
+    StateFn next = lex_rparen(lexer);
     return next;
 }
 
-StateFn lex_subshell_end(Lexer *lexer)
+StateFn lex_rparen(Lexer *lexer)
 {
     emit(lexer, t_rparen);
     return STATE_FN(lex_any);
@@ -675,17 +582,8 @@ StateFn lex_subshell_end(Lexer *lexer)
 
 
 /*
- * fsm
+ * FSM run functions
  */
-static void emit(Lexer *lexer, TokenType type)
-{
-    Token token = { .type = type,
-		    .lexeme = (StrView){ .view = lexer->input + lexer->start,
-					 .size = lexer->pos - lexer->start } };
-    arraylist_append(lexer->tokens, &token);
-    lexer->start = lexer->pos;
-}
-
 static void run_until(Lexer *lexer, StateFn start_state, StateFn end_state)
 {
     for (StateFn state = start_state; state.fn != end_state.fn;) {
@@ -704,20 +602,17 @@ static void run(Lexer *lexer)
 
 ArrayList lex(char *input, size_t input_size)
 {
-    struct hashmap_t keywords;
-    keywords_init(&keywords);
-    ArrayList tokens;
-    arraylist_init(&tokens, sizeof(Token));
-
-
     Lexer lexer = { .input = input,
 		    .input_size = input_size,
 		    .pos = 0,
 		    .start = 0,
-		    .tokens = &tokens,
-		    .keywords = &keywords };
+		    .line_count = 0,
+		    .pos_in_line = 0 };
+    keywords_init(&lexer.keywords);
+    arraylist_init(&lexer.tokens, sizeof(Token));
+
     run(&lexer);
 
-    hashmap_free(&keywords);
-    return tokens;
+    hashmap_free(&lexer.keywords);
+    return lexer.tokens;
 }
