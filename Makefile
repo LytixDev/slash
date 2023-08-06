@@ -28,7 +28,7 @@ $(TARGET-FUZZ): $(OBJS)
 	@echo [LD] $@
 	@$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
-debug: CFLAGS = -Iinclude -Wall -Wpedantic -Wextra -Wshadow -std=c11 -g -DDEBUG
+debug: CFLAGS = -Iinclude -Wall -Wpedantic -Wextra -Wshadow -std=c11 -g -DDEBUG -DDEBUG_PERF
 debug: $(TARGET)
 
 fuzz: CFLAGS += -fsanitize=address -fsanitize=undefined

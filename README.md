@@ -80,14 +80,14 @@ loop name in $names {
 }
 ```
 
-### First class Lists, Maps and Tuples
+### First class lists, maps and tuples
 ```
 # list
 var primes = [2, 3, 5, 7, 11, 13]
 # list from slice: [3, 5, 7]
 var some_primes = $primes[1..4]
 # map
-var social_credit_score = $[ "brage": 10, "eilor": 300 ]
+var social_credit_score = @[ "brage": 10, "eilor": 300 ]
 # tuple: ' "brage", "eilor" '
 var people = $social_credit_score.keys()
 ```
