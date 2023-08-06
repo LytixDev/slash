@@ -31,10 +31,10 @@ var popped = l.pop()  # every type also has builtin methods
 $popped = l.pop(0)  # method overloading
 
 # tuples
-var t  = ((1, 2, 3))
+var t  = '1, 2, 3'
 
 # map
-var m = [["key": "value"]]
+var m = @["key": "value"]
 ```
 
 

@@ -54,8 +54,9 @@ static Expr *primary(Parser *parser);
 static Expr *bool_lit(Parser *parser);
 static Expr *number(Parser *parser);
 static Expr *range(Parser *parser);
+static Expr *list(Parser *parser);
 static Expr *map(Parser *parser);
-static Expr *list_or_tuple_or_map(Parser *parser, bool is_list);
+static Expr *tuple(Parser *parser);
 
 
 /* util/helper functions */
@@ -467,8 +468,6 @@ static Expr *unary(Parser *parser)
     if (!match(parser, t_lparen))
 	/* continue the "normal" recursive path */
 	left = item_access(parser);
-    else if (match(parser, t_lparen))
-	left = list_or_tuple_or_map(parser, true);
     else
 	left = subshell(parser);
 
@@ -540,7 +539,11 @@ static Expr *primary(Parser *parser)
     }
 
     if (match(parser, t_lbracket))
-	return list_or_tuple_or_map(parser, false);
+	return list(parser);
+    if (match(parser, t_at_lbracket))
+	return map(parser);
+    if (match(parser, t_qoute))
+	return tuple(parser);
 
     if (!match(parser, t_dt_str, t_dt_shident))
 	slash_exit_parse_err("not a valid primary type");
@@ -589,9 +592,27 @@ static Expr *range(Parser *parser)
     return (Expr *)expr;
 }
 
+static Expr *list(Parser *parser)
+{
+    /* came from '[' */
+    ListExpr *expr = (ListExpr *)expr_alloc(parser->ast_arena, EXPR_LIST);
+    expr->list_type = SLASH_LIST;
+
+    /* if next is not ']', parse list initializer */
+    if (!match(parser, t_rbracket)) {
+	expr->exprs = comma_sep_exprs(parser);
+	consume(parser, t_rbracket, "Unterminated list initializer: expected ']'");
+    } else {
+	expr->exprs = NULL;
+    }
+
+    return (Expr *)expr;
+}
+
+
 static Expr *map(Parser *parser)
 {
-    /* came from '[[' */
+    /* came from '@[' */
     MapExpr *expr = (MapExpr *)expr_alloc(parser->ast_arena, EXPR_MAP);
     expr->key_value_pairs = arena_ll_alloc(parser->ast_arena);
 
@@ -605,39 +626,24 @@ static Expr *map(Parser *parser)
 	    break;
     } while (!check(parser, t_rbracket));
 
-    consume(parser, t_rbracket, "Expected ']]' to terminate map");
-    consume(parser, t_rbracket, "Expected ']]' to terminate map");
+    consume(parser, t_rbracket, "Expected ']' to terminate map");
     return (Expr *)expr;
 }
 
-static Expr *list_or_tuple_or_map(Parser *parser, bool is_tuple)
+static Expr *tuple(Parser *parser)
 {
-    /* came from '[' or '((' */
-    if (match(parser, t_lbracket))
-	return map(parser);
-
+    /* came from ''' */
     ListExpr *expr = (ListExpr *)expr_alloc(parser->ast_arena, EXPR_LIST);
-    expr->list_type = is_tuple ? SLASH_TUPLE : SLASH_LIST;
-    TokenType terminator = is_tuple ? t_rparen : t_rbracket;
+    expr->list_type = SLASH_TUPLE;
 
-    /* edge case: empty list */
-    if (match(parser, terminator)) {
-	if (is_tuple)
-	    consume(parser, t_rparen, "Expected '))' to terminate tuple");
-	expr->exprs = NULL;
-	return (Expr *)expr;
-    }
-
-    /* if next is not terminator, parse list initializer */
-    if (!match(parser, terminator)) {
+    /* if next is not ''', parse list initializer */
+    if (!match(parser, t_qoute)) {
 	expr->exprs = comma_sep_exprs(parser);
-	consume(parser, terminator, "Expected list terminator after arg list");
+	consume(parser, t_qoute, "Unterminated list initializer: expected ']'");
     } else {
 	expr->exprs = NULL;
     }
 
-    if (is_tuple)
-	consume(parser, t_rparen, "Expected '))' to terminate tuple");
     return (Expr *)expr;
 }
 

@@ -1,6 +1,6 @@
 /* context-free expression grammar */
 
-program         -> (declaration "\n"*? )* EOF ;
+program         -> (declaration NEWLINE*? )* EOF ;
 
 declaration     -> var_declaration
                 |  statement ;
@@ -13,7 +13,7 @@ statement       -> expr_stmt
                 |  assignment_stmt
                 |  block ;
 
-var_declaration -> "var" IDENTIFIER "=" expression "\n" ;
+var_declaration -> "var" IDENTIFIER "=" expression NEWLINE ;
 
 
 /* statements */
@@ -34,7 +34,7 @@ pipeline_stmt   -> cmd_stmt "|" pipeline_stmt ;
 
 assignment_stmt -> access ("=" | "+=" | "-=") expression ;
 
-expr_stmt       -> expressions "\n" ;
+expr_stmt       -> expressions NEWLINE ;
 
 block           -> "{" statement* "}" ;
 
@@ -76,7 +76,8 @@ primary         -> STRING
                 |  number
                 |  range 
                 |  list
-                |  map ;
+                |  map
+                |  tuple ;
 
 bool_lit        -> "true" | "false ";
 
@@ -88,4 +89,4 @@ list            -> "[" comma_sep_exprs "]" ;
 
 map             -> "@[" ( expression ":" expression "," )*? "]"
 
-tuple           -> "((" comma_sep_exprs "))" ;
+tuple           -> "'" comma_sep_exprs "'" ;
