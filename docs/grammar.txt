@@ -1,6 +1,20 @@
 /* context-free expression grammar */
 
-program         -> (declaration NEWLINE*? )* EOF ;
+Each rule is a name followed by an arrow, followed by a sequence of of symbols ending with a semicolon.
+Terminals are qouted strings or uppercase words.
+Non-terminals are lowercase words.
+'|' symbol seperates series of productions for a given rule.
+() grouping
+* repeat zero or more times
++ repeat one or more times
+? optional
+
+
+
+
+program         -> ( declaration newline )* EOF ;
+
+newline         -> ( "\n" | ";" )+ ;
 
 declaration     -> var_declaration
                 |  statement ;
@@ -9,60 +23,63 @@ statement       -> expr_stmt
                 |  loop_stmt
                 |  assert_stmt
                 |  if_stmt
-                |  cmd_stmt
                 |  assignment_stmt
+                |  pipeline_stmt
                 |  block ;
 
-var_declaration -> "var" IDENTIFIER "=" expression NEWLINE ;
+var_declaration -> "var" IDENTIFIER "=" expression newline ;
 
 
 /* statements */
 
-/* 
- * if optional ( IDENTIFIER "in" ) is present then the following expression must be iterable.
- * if not, then a runtime error will raise
- */
 loop_stmt       -> "loop" ( IDENTIFIER "in" )? expression block ;
 
 assert_stmt     -> "assert" expression ;
 
-if_stmt         -> "if" expression block (( "elif" expression block ) | ( "else" block ))? ;
+if_stmt         -> "if" expression block ( ( "elif" expression block ) | ( "else" block ) )? ;
 
-cmd_stmt        -> SHIDENT ( argument* )? ;
+assignment_stmt -> access ( "=" | "+=" | "-=" ) expression ;
 
-pipeline_stmt   -> cmd_stmt "|" pipeline_stmt ;
+expr_stmt       -> expression newline ;
 
-assignment_stmt -> access ("=" | "+=" | "-=") expression ;
+pipeline_stmt   -> cmd_stmt ( "|" pipeline_stmt )* ;
 
-expr_stmt       -> expressions NEWLINE ;
+cmd_stmt        -> SHIDENT argument* ;
 
-block           -> "{" statement* "}" ;
+block           -> "{" declaration* "}" ;
+
 
 
 /* expressions */
 
 //TODO: currently just a linked list, should be its own expr?
-comma_sep_exprs -> (argument ",")*? ;
+sequence_expr   -> ( argument "," )* ;
 
 argument        -> expression ;
 
-expression      -> equality ;
+expression      -> logic_or ;
 
-equality        -> comparison (( "!=" | "==" ) comparison )* ;
-comparison      -> term (( ">" | ">=" | "<" | "<=" ) term )* ;
-term            -> factor (( "-" | "+" ) factor )* ;
+logic_or        -> logic_and ( "or" logic_and )* ;
+logic_and       -> equality ( "and" equality )* ;
+
+equality        -> comparison ( ( "!=" | "==" ) comparison )* ;
+
+comparison      -> term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
+
+term            -> factor ( ( "-" | "+" ) factor )* ;
+
 factor          -> unary ;
+
 unary           -> method_call
                 |  contains
                 |  subshell
                 |  item_access ;
 
-method_call     -> expression "." IDENTIFIER "(" comma_sep_exprs ")" ;
+method_call     -> expression "." IDENTIFIER "(" sequence_expr ")" ;
 
 contains        -> expression "in" expression ;
 
-subshell        -> "(" cmd_stmt ")" ;
-                |  "(" pipeline_stmt ")" ;
+subshell        -> "(" declaration+ ")" ;
 
 item_access     -> ACCESS "[" expression "]"
                 |  access ;
@@ -71,22 +88,22 @@ access          -> ACCESS
                 |  primary ;
 
 primary         -> STRING 
-                |  SHIDENT
                 |  bool_lit
                 |  number
                 |  range 
                 |  list
                 |  map
-                |  tuple ;
+                |  tuple 
+                | "(" expression ")" ;
 
 bool_lit        -> "true" | "false ";
 
 number          -> NUMBER ;
 
-range           -> NUMBER? ".." NUMBER ;
+range           -> expression? ".." expression ;
 
-list            -> "[" comma_sep_exprs "]" ;
+list            -> "[" sequence_expr "]" ;
 
-map             -> "@[" ( expression ":" expression "," )*? "]"
+map             -> "@[" ( expression ":" expression "," )* "]"
 
-tuple           -> "'" comma_sep_exprs "'" ;
+tuple           -> "'" sequence_expr "'" ;

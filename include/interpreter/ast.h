@@ -31,7 +31,7 @@ typedef enum {
     EXPR_ACCESS,
     EXPR_ITEM_ACCESS,
     EXPR_SUBSHELL,
-    EXPR_LIST,
+    EXPR_LIST, // list or tuple
     EXPR_MAP,
     EXPR_METHOD,
     EXPR_ENUM_COUNT

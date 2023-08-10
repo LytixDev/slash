@@ -27,8 +27,9 @@
 #include "str_view.h"
 
 
-/* grammar functions */
+/* non-terminal grammar rule functions */
 static Stmt *declaration(Parser *parser);
+/* stmts */
 static Stmt *statement(Parser *parser);
 static Stmt *var_decl(Parser *parser);
 static Stmt *loop_stmt(Parser *parser);
@@ -39,7 +40,7 @@ static Stmt *cmd_stmt(Parser *parser);
 static Stmt *assignment_stmt(Parser *parser);
 static Stmt *expr_stmt(Parser *parser);
 static Stmt *block(Parser *parser);
-
+/* exprs */
 static Expr *argument(Parser *parser);
 static Expr *expression(Parser *parser);
 static Expr *subshell(Parser *parser);
@@ -130,7 +131,6 @@ static Token *consume(Parser *parser, TokenType expected, char *err_msg)
     return advance(parser);
 }
 
-// TODO: match multiple?
 static void ignore(Parser *parser, TokenType type)
 {
     while (check(parser, type))
@@ -164,6 +164,7 @@ static bool match_either(Parser *parser, unsigned int n, ...)
 }
 
 #define match(parser, ...) match_either(parser, VA_NUMBER_OF_ARGS(__VA_ARGS__), __VA_ARGS__)
+
 
 ArenaLL *comma_sep_exprs(Parser *parser)
 {
@@ -463,7 +464,6 @@ static Expr *factor(Parser *parser)
 
 static Expr *unary(Parser *parser)
 {
-    // TODO: need to figure out if '(' should be parsed as a tuple, subshell or grouping (TODO)
     Expr *left;
     if (!match(parser, t_lparen))
 	/* continue the "normal" recursive path */
