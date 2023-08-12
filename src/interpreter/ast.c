@@ -25,9 +25,9 @@
 
 
 const size_t expr_size_table[] = {
-    sizeof(UnaryExpr),	    sizeof(BinaryExpr),	  sizeof(LiteralExpr),	sizeof(AccessExpr),
-    sizeof(ItemAccessExpr), sizeof(SubshellExpr), sizeof(ListExpr),	sizeof(MapExpr),
-    sizeof(MethodExpr),	    sizeof(SequenceExpr), sizeof(GroupingExpr),
+    sizeof(UnaryExpr),	   sizeof(BinaryExpr),	 sizeof(LiteralExpr),  sizeof(AccessExpr),
+    sizeof(SubscriptExpr), sizeof(SubshellExpr), sizeof(ListExpr),     sizeof(MapExpr),
+    sizeof(MethodExpr),	   sizeof(SequenceExpr), sizeof(GroupingExpr),
 };
 
 const size_t stmt_size_table[] = {
@@ -138,9 +138,9 @@ static void ast_print_access(AccessExpr *expr)
     str_view_print(expr->var_name);
 }
 
-static void ast_print_item_access(ItemAccessExpr *expr)
+static void ast_print_item_access(SubscriptExpr *expr)
 {
-    str_view_print(expr->var_name);
+    ast_print_expr(expr->expr);
     putchar('[');
     ast_print_expr(expr->access_value);
     putchar(']');
@@ -303,8 +303,8 @@ static void ast_print_expr(Expr *expr)
 	ast_print_access((AccessExpr *)expr);
 	break;
 
-    case EXPR_ITEM_ACCESS:
-	ast_print_item_access((ItemAccessExpr *)expr);
+    case EXPR_SUBSCRIPT:
+	ast_print_item_access((SubscriptExpr *)expr);
 	break;
 
     case EXPR_SUBSHELL:

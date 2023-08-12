@@ -46,7 +46,7 @@ cmd_stmt        -> SHIDENT argument* ;
 
 block           -> "{" declaration* "}" ;
 
-assignment_stmt -> item_access ( "=" | "+=" | "-=" ) expression newline_or_block_end ;
+assignment_stmt -> subscript ( "=" | "+=" | "-=" ) expression newline_or_block_end ;
 
 expr_stmt       -> expression newline_or_block_end ;
 
@@ -75,7 +75,7 @@ factor          -> unary ;
 unary           -> subshell
                 |  contains
                 |  method_call
-                |  item_access ;
+                |  subscript ;
 
 subshell        -> "(" declaration+ ")" ;
 
@@ -83,7 +83,7 @@ method_call     -> expression "." IDENTIFIER "(" sequence_expr ")" ;
 
 contains        -> expression "in" expression ;
 
-item_access     -> access ( "[" expression "]" )? ;
+subscript       -> access ( "[" expression "]" )? ;
 
 access          -> ACCESS | primary ;
 

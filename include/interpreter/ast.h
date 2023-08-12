@@ -29,7 +29,7 @@ typedef enum {
     EXPR_BINARY,
     EXPR_LITERAL,
     EXPR_ACCESS,
-    EXPR_ITEM_ACCESS,
+    EXPR_SUBSCRIPT,
     EXPR_SUBSHELL,
     EXPR_LIST, // list or tuple
     EXPR_MAP,
@@ -99,9 +99,9 @@ typedef struct {
 
 typedef struct {
     ExprType type;
-    StrView var_name;
+    Expr *expr; // the underlying expr we are subscripting
     Expr *access_value; // a[x], where x in this case is the 'access_value'
-} ItemAccessExpr;
+} SubscriptExpr;
 
 typedef struct {
     ExprType type;

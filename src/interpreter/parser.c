@@ -57,7 +57,7 @@ static Expr *term(Parser *parser);
 static Expr *factor(Parser *parser);
 static Expr *unary(Parser *parser);
 static Expr *subshell(Parser *parser);
-static Expr *item_access(Parser *parser);
+static Expr *subscript(Parser *parser);
 static Expr *access(Parser *parser);
 static Expr *primary(Parser *parser);
 static Expr *bool_lit(Parser *parser);
@@ -382,7 +382,7 @@ static Stmt *assignment_stmt(Parser *parser)
     size_t pos = parser->token_pos;
 
     // TODO: throw parse error if not AccessExpr or ItemAccessExpr ?
-    Expr *var = item_access(parser);
+    Expr *var = subscript(parser);
     if (!match(parser, t_equal, t_plus_equal, t_minus_equal)) {
 	/* if next token after access is not an assignment op, then ignore everything we just did */
 	// TODO: can we just return the `var` as an ExpressionStmt ?
@@ -431,11 +431,10 @@ static Expr *logical_or(Parser *parser)
     Expr *expr = logical_and(parser);
 
     while (match(parser, t_or)) {
-	Token *operator= previous(parser);
 	Expr *right = logical_and(parser);
 	BinaryExpr *expr_bin = (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY);
 	expr_bin->left = expr;
-	expr_bin->operator_ = operator->type;
+	expr_bin->operator_ = t_or;
 	expr_bin->right = right;
 	expr = (Expr *)expr_bin;
     }
@@ -448,11 +447,10 @@ static Expr *logical_and(Parser *parser)
     Expr *expr = equality(parser);
 
     while (match(parser, t_and)) {
-	Token *operator= previous(parser);
 	Expr *right = equality(parser);
 	BinaryExpr *expr_bin = (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY);
 	expr_bin->left = expr;
-	expr_bin->operator_ = operator->type;
+	expr_bin->operator_ = t_and;
 	expr_bin->right = right;
 	expr = (Expr *)expr_bin;
     }
@@ -529,7 +527,7 @@ static Expr *unary(Parser *parser)
     }
 
     /* continue the "normal" recursive path */
-    Expr *left = item_access(parser);
+    Expr *left = subscript(parser);
 
     /* contains */
     if (match(parser, t_in)) {
@@ -570,26 +568,24 @@ static Expr *subshell(Parser *parser)
     return (Expr *)expr;
 }
 
-static Expr *item_access(Parser *parser)
+static Expr *subscript(Parser *parser)
 {
-    if (!match(parser, t_access))
-	return primary(parser);
-
+    Expr *expr = access(parser);
     if (!match(parser, t_lbracket))
-	return access(parser);
+	return expr;
 
-    Token *variable_name = previous_previous(parser);
-    Expr *access_value = expression(parser);
+    SubscriptExpr *subscript_expr = (SubscriptExpr *)expr_alloc(parser->ast_arena, EXPR_SUBSCRIPT);
+    subscript_expr->expr = expr;
+    subscript_expr->access_value = expression(parser);
     consume(parser, t_rbracket, "expected ']' after variable subscript");
-    ItemAccessExpr *expr = (ItemAccessExpr *)expr_alloc(parser->ast_arena, EXPR_ITEM_ACCESS);
-    expr->var_name = variable_name->lexeme;
-    expr->access_value = access_value;
-    return (Expr *)expr;
+    return (Expr *)subscript_expr;
 }
 
 static Expr *access(Parser *parser)
 {
-    /* came from t_access */
+    if (!match(parser, t_access))
+	return primary(parser);
+
     Token *variable_name = previous(parser);
     AccessExpr *expr = (AccessExpr *)expr_alloc(parser->ast_arena, EXPR_ACCESS);
     expr->var_name = variable_name->lexeme;
