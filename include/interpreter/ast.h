@@ -35,6 +35,7 @@ typedef enum {
     EXPR_MAP,
     EXPR_METHOD,
     EXPR_SEQUENCE,
+    EXPR_GROUPING,
     EXPR_ENUM_COUNT
 } ExprType;
 
@@ -130,6 +131,11 @@ typedef struct {
     ExprType type;
     ArenaLL seq;
 } SequenceExpr;
+
+typedef struct {
+    ExprType type;
+    Expr *expr;
+} GroupingExpr;
 
 
 /* statements */

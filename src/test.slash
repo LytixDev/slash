@@ -1,2 +1,0 @@
-var count = (ls | wc -l)
-echo $count

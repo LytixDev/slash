@@ -179,6 +179,14 @@ static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
 {
     SlashValue left = eval(interpreter, expr->left);
     SlashValue right = eval(interpreter, expr->right);
+    // FIXME: Does not short circuit. May need a 'logical' ast node
+    if (expr->operator_ == t_and) {
+	return (SlashValue){ .type = SLASH_BOOL, .boolean = is_truthy(&left) && is_truthy(&right) };
+    }
+    if (expr->operator_ == t_or) {
+	return (SlashValue){ .type = SLASH_BOOL, .boolean = is_truthy(&left) || is_truthy(&right) };
+    }
+
     if (expr->operator_ != t_in)
 	return cmp_binary_values(left, right, expr->operator_);
 
@@ -342,6 +350,11 @@ static SlashValue eval_method(Interpreter *interpreter, MethodExpr *expr)
     assert(i == expr->arg_exprs->size);
 
     return method(&self, i, argv);
+}
+
+static SlashValue eval_grouping(Interpreter *interpreter, GroupingExpr *expr)
+{
+    return eval(interpreter, expr->expr);
 }
 
 
@@ -653,6 +666,9 @@ static SlashValue eval(Interpreter *interpreter, Expr *expr)
 
     case EXPR_METHOD:
 	return eval_method(interpreter, (MethodExpr *)expr);
+
+    case EXPR_GROUPING:
+	return eval_grouping(interpreter, (GroupingExpr *)expr);
 
     default:
 	slash_exit_internal_err("interpreter: expr type not handled");

@@ -85,8 +85,7 @@ contains        -> expression "in" expression ;
 
 item_access     -> access ( "[" expression "]" )? ;
 
-access          -> ACCESS
-                |  primary ;
+access          -> ACCESS | primary ;
 
 primary         -> STRING 
                 |  bool_lit

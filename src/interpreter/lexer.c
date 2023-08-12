@@ -268,7 +268,7 @@ StateFn lex_any(Lexer *lexer)
 
 	/* one character tokens */
 	case '(':
-	    /* returning lex_lparen would make no "practical" difference */
+	    /* returning lex_lparen would make no "practical" difference ... I think? */
 	    emit(lexer, t_lparen);
 	    break;
 	case ')':

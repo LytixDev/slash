@@ -423,7 +423,7 @@ static Expr *argument(Parser *parser)
 
 static Expr *expression(Parser *parser)
 {
-    return equality(parser);
+    return logical_or(parser);
 }
 
 static Expr *logical_or(Parser *parser)
@@ -520,8 +520,13 @@ static Expr *factor(Parser *parser)
 
 static Expr *unary(Parser *parser)
 {
-    if (match(parser, t_lparen))
-	return subshell(parser);
+    if (match(parser, t_lparen)) {
+	if (check(parser, t_dt_shident)) {
+	    return subshell(parser);
+	} else {
+	    parser->token_pos--;
+	}
+    }
 
     /* continue the "normal" recursive path */
     Expr *left = item_access(parser);
@@ -595,22 +600,21 @@ static Expr *primary(Parser *parser)
 {
     if (match(parser, t_true, t_false))
 	return bool_lit(parser);
-
     if (check(parser, t_dot_dot))
 	return range(parser);
-
     if (match(parser, t_dt_num)) {
 	if (check(parser, t_dot_dot))
 	    return range(parser);
 	return number(parser);
     }
-
     if (match(parser, t_lbracket))
 	return list(parser);
     if (match(parser, t_at_lbracket))
 	return map(parser);
     if (match(parser, t_qoute))
 	return tuple(parser);
+    if (match(parser, t_lparen))
+	return grouping(parser);
 
     if (!match(parser, t_dt_str, t_dt_shident))
 	slash_exit_parse_err(parser, "not a valid primary type");
@@ -649,8 +653,8 @@ static Expr *range(Parser *parser)
     else
 	range.start = str_view_to_int(start_num_or_any->lexeme);
 
-    consume(parser, t_dot_dot, "unreachable");
-    consume(parser, t_dt_num, "Expected end number in range expression");
+    consume(parser, t_dot_dot, "This error should be unreachable");
+    consume(parser, t_dt_num, "Expected second number after '..' in range expression");
     Token *end_num = previous(parser);
     range.end = str_view_to_int(end_num->lexeme);
 
@@ -675,7 +679,6 @@ static Expr *list(Parser *parser)
 
     return (Expr *)expr;
 }
-
 
 static Expr *map(Parser *parser)
 {
@@ -711,6 +714,15 @@ static Expr *tuple(Parser *parser)
 	expr->exprs = NULL;
     }
 
+    return (Expr *)expr;
+}
+
+static Expr *grouping(Parser *parser)
+{
+    /* came from '(' */
+    GroupingExpr *expr = (GroupingExpr *)expr_alloc(parser->ast_arena, EXPR_GROUPING);
+    expr->expr = expression(parser);
+    consume(parser, t_rparen, "Expected ')' after expression");
     return (Expr *)expr;
 }
 
