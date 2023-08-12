@@ -63,7 +63,7 @@ void slash_list_from_ranged_copy(Scope *scope, SlashList *ret_ptr, SlashList *to
 				 SlashRange range)
 {
     slash_list_init(scope, ret_ptr);
-    assert(range.end <= to_copy->underlying->size);
+    assert((size_t)range.end <= to_copy->underlying->size);
     for (int i = range.start; i < range.end; i++)
 	arraylist_append(ret_ptr->underlying, arraylist_get(to_copy->underlying, i));
 }
@@ -174,7 +174,7 @@ SlashValue slash_list_pop(SlashValue *self, size_t argc, SlashValue *argv)
     /* argc must be 1 and type of argv must be num */
     SlashValue key = argv[0];
     size_t idx = (size_t)key.num;
-    if (idx < 0 || idx > underlying->size - 1) {
+    if (key.num < 0 || idx > underlying->size - 1) {
 	slash_exit_interpreter_err("index out of range");
     }
     arraylist_get_copy(underlying, idx, &popped_item);

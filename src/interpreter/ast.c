@@ -177,9 +177,9 @@ static void ast_print_method(MethodExpr *expr)
     str_view_print(expr->method_name);
     putchar('(');
 
-    if (expr->arg_exprs != NULL) {
+    if (expr->args != NULL) {
 	LLItem *item;
-	ARENA_LL_FOR_EACH(expr->arg_exprs, item)
+	ARENA_LL_FOR_EACH(&expr->args->seq, item)
 	{
 	    ast_print_expr(item->value);
 	}

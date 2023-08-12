@@ -341,20 +341,19 @@ static SlashValue eval_method(Interpreter *interpreter, MethodExpr *expr)
      * first argument will always be the object that the method is called "on"
      * second argument will always be the number of following arguments (argc)
      */
-    if (expr->arg_exprs == NULL)
+    if (expr->args == NULL)
 	return method(&self, 0, NULL);
 
-    SlashValue argv[expr->arg_exprs->size];
+    SlashValue argv[expr->args->seq.size];
     size_t i = 0;
     LLItem *item;
-    ARENA_LL_FOR_EACH(expr->arg_exprs, item)
+    ARENA_LL_FOR_EACH(&expr->args->seq, item)
     {
 	SlashValue sv = eval(interpreter, item->value);
 	argv[i++] = sv;
     }
 
-    assert(i == expr->arg_exprs->size);
-
+    assert(i == expr->args->seq.size);
     return method(&self, i, argv);
 }
 

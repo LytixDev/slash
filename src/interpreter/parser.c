@@ -80,12 +80,6 @@ static Token *previous(Parser *parser)
     return arraylist_get(parser->tokens, parser->token_pos - 1);
 }
 
-/* lol */
-static Token *previous_previous(Parser *parser)
-{
-    return arraylist_get(parser->tokens, parser->token_pos - 2);
-}
-
 static bool is_at_end(Parser *parser)
 {
     return peek(parser)->type == t_eof;
@@ -173,26 +167,6 @@ static bool match_either(Parser *parser, unsigned int n, ...)
 }
 
 #define match(parser, ...) match_either(parser, VA_NUMBER_OF_ARGS(__VA_ARGS__), __VA_ARGS__)
-
-
-ArenaLL *comma_sep_exprs(Parser *parser)
-{
-    /*
-     * this function is only called when we expect comma seperated expression
-     */
-
-    ArenaLL *args = arena_ll_alloc(parser->ast_arena);
-    do {
-	ignore(parser, t_newline);
-	arena_ll_append(args, expression(parser));
-	/* if no comma then we exit */
-	if (!match(parser, t_comma))
-	    break;
-    } while (!check(parser, t_eof));
-
-    ignore(parser, t_newline);
-    return args;
-}
 
 
 /* grammar functions */
@@ -546,10 +520,10 @@ static Expr *unary(Parser *parser)
 	expr->method_name = method_name->lexeme;
 	consume(parser, t_lparen, "expected left paren");
 	if (!match(parser, t_rparen)) {
-	    expr->arg_exprs = comma_sep_exprs(parser);
+	    expr->args = sequence(parser);
 	    consume(parser, t_rparen, "expected right paren");
 	} else {
-	    expr->arg_exprs = NULL;
+	    expr->args = NULL;
 	}
 	return (Expr *)expr;
     }

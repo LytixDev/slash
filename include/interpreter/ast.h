@@ -129,7 +129,7 @@ typedef struct {
     ExprType type;
     Expr *obj;
     StrView method_name;
-    ArenaLL *arg_exprs;
+    SequenceExpr *args;
 } MethodExpr;
 
 typedef struct {
