@@ -1,92 +1,111 @@
 /* context-free expression grammar */
 
-program         -> (declaration NEWLINE*? )* EOF ;
+Each rule is a name followed by an arrow, followed by a sequence of of symbols ending with a semicolon.
+Terminals are qouted strings or uppercase words.
+Non-terminals are lowercase words.
+'|' symbol seperates series of productions for a given rule.
+() grouping
+* repeat zero or more times
++ repeat one or more times
+? optional
+
+
+
+program         -> declaration* EOF ;
+
+newline         -> ( "\n" | ";" )+ ;
+
+newline_or_block_end -> newline | '}' ;
 
 declaration     -> var_declaration
                 |  statement ;
 
-statement       -> expr_stmt
-                |  loop_stmt
-                |  assert_stmt
-                |  if_stmt
-                |  cmd_stmt
-                |  assignment_stmt
-                |  block ;
+var_declaration -> "var" IDENTIFIER "=" expression newline ;
 
-var_declaration -> "var" IDENTIFIER "=" expression NEWLINE ;
 
 
 /* statements */
 
-/* 
- * if optional ( IDENTIFIER "in" ) is present then the following expression must be iterable.
- * if not, then a runtime error will raise
- */
+statement       -> loop_stmt
+                |  assert_stmt
+                |  if_stmt
+                |  pipeline_stmt
+                |  block
+                |  assignment_stmt
+                |  expr_stmt ;
+
 loop_stmt       -> "loop" ( IDENTIFIER "in" )? expression block ;
 
-assert_stmt     -> "assert" expression ;
+assert_stmt     -> "assert" expression newline_or_block_end ;
 
-if_stmt         -> "if" expression block (( "elif" expression block ) | ( "else" block ))? ;
+if_stmt         -> "if" expression block ( ( "elif" expression block ) | ( "else" block ) )? ;
 
-cmd_stmt        -> SHIDENT ( argument* )? ;
+pipeline_stmt   -> cmd_stmt ( "|" pipeline_stmt )* ;
 
-pipeline_stmt   -> cmd_stmt "|" pipeline_stmt ;
+cmd_stmt        -> SHIDENT argument* ;
 
-assignment_stmt -> access ("=" | "+=" | "-=") expression ;
+block           -> "{" declaration* "}" ;
 
-expr_stmt       -> expressions NEWLINE ;
+assignment_stmt -> subscript ( "=" | "+=" | "-=" ) expression newline_or_block_end ;
 
-block           -> "{" statement* "}" ;
+expr_stmt       -> expression newline_or_block_end ;
+
 
 
 /* expressions */
 
-//TODO: currently just a linked list, should be its own expr?
-comma_sep_exprs -> (argument ",")*? ;
+sequence_expr   -> ( argument ( "," argument )* )? ;
 
 argument        -> expression ;
 
-expression      -> equality ;
+expression      -> logic_or ;
 
-equality        -> comparison (( "!=" | "==" ) comparison )* ;
-comparison      -> term (( ">" | ">=" | "<" | "<=" ) term )* ;
-term            -> factor (( "-" | "+" ) factor )* ;
+logical_or      -> logical_and ( "or" logical_and )* ;
+
+logical_and     -> equality ( "and" equality )* ;
+
+equality        -> comparison ( ( "!=" | "==" ) comparison )* ;
+
+comparison      -> term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
+
+term            -> factor ( ( "-" | "+" ) factor )* ;
+
 factor          -> unary ;
-unary           -> method_call
-                |  contains
-                |  subshell
-                |  item_access ;
 
-method_call     -> expression "." IDENTIFIER "(" comma_sep_exprs ")" ;
+unary           -> subshell
+                |  contains
+                |  method_call
+                |  subscript ;
+
+subshell        -> "(" declaration+ ")" ;
+
+method_call     -> expression "." IDENTIFIER "(" sequence_expr ")" ;
 
 contains        -> expression "in" expression ;
 
-subshell        -> "(" cmd_stmt ")" ;
-                |  "(" pipeline_stmt ")" ;
+subscript       -> access ( "[" expression "]" )? ;
 
-item_access     -> ACCESS "[" expression "]"
-                |  access ;
-
-access          -> ACCESS
-                |  primary ;
+access          -> ACCESS | primary ;
 
 primary         -> STRING 
-                |  SHIDENT
                 |  bool_lit
                 |  number
                 |  range 
                 |  list
                 |  map
-                |  tuple ;
+                |  tuple 
+                |  grouping ;
 
 bool_lit        -> "true" | "false ";
 
 number          -> NUMBER ;
 
-range           -> NUMBER? ".." NUMBER ;
+range           -> expression? ".." expression ;
 
-list            -> "[" comma_sep_exprs "]" ;
+list            -> "[" sequence_expr "]" ;
 
-map             -> "@[" ( expression ":" expression "," )*? "]"
+map             -> "@[" ( expression ":" expression "," )* "]"
 
-tuple           -> "'" comma_sep_exprs "'" ;
+tuple           -> "'" sequence_expr "'" ;
+
+grouping        -> "(" expression ")" ;

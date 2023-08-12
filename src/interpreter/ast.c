@@ -25,9 +25,9 @@
 
 
 const size_t expr_size_table[] = {
-    sizeof(UnaryExpr),	sizeof(BinaryExpr),	sizeof(LiteralExpr),
-    sizeof(AccessExpr), sizeof(ItemAccessExpr), sizeof(SubshellExpr),
-    sizeof(ListExpr),	sizeof(MapExpr),	sizeof(MethodExpr),
+    sizeof(UnaryExpr),	   sizeof(BinaryExpr),	 sizeof(LiteralExpr),  sizeof(AccessExpr),
+    sizeof(SubscriptExpr), sizeof(SubshellExpr), sizeof(ListExpr),     sizeof(MapExpr),
+    sizeof(MethodExpr),	   sizeof(SequenceExpr), sizeof(GroupingExpr),
 };
 
 const size_t stmt_size_table[] = {
@@ -37,8 +37,9 @@ const size_t stmt_size_table[] = {
 };
 
 char *expr_type_str_map[EXPR_ENUM_COUNT] = {
-    "EXPR_UNARY",    "EXPR_BINARY", "EXPR_LITERAL", "EXPR_ACCESS", "EXPR_ITEM_ACCESS",
-    "EXPR_SUBSHELL", "EXPR_LIST",   "EXPR_MAP",	    "EXPR_METHOD",
+    "EXPR_UNARY",	"EXPR_BINARY",	 "EXPR_LITERAL",  "EXPR_ACCESS",
+    "EXPR_ITEM_ACCESS", "EXPR_SUBSHELL", "EXPR_LIST",	  "EXPR_MAP",
+    "EXPR_METHOD",	"EXPR_SEQUENCE", "EXPR_GROUPING",
 };
 
 char *stmt_type_str_map[STMT_ENUM_COUNT] = {
@@ -80,6 +81,14 @@ void ast_arena_release(Arena *ast_arena)
 static void ast_print_expr(Expr *expr);
 static void ast_print_stmt(Stmt *stmt);
 
+static void ast_print_sequence(SequenceExpr *expr)
+{
+    LLItem *item;
+    ARENA_LL_FOR_EACH(&expr->seq, item)
+    {
+	ast_print_expr(item->value);
+    }
+}
 
 static void ast_print_unary(UnaryExpr *expr)
 {
@@ -129,9 +138,9 @@ static void ast_print_access(AccessExpr *expr)
     str_view_print(expr->var_name);
 }
 
-static void ast_print_item_access(ItemAccessExpr *expr)
+static void ast_print_item_access(SubscriptExpr *expr)
 {
-    str_view_print(expr->var_name);
+    ast_print_expr(expr->expr);
     putchar('[');
     ast_print_expr(expr->access_value);
     putchar(']');
@@ -142,12 +151,7 @@ static void ast_print_list(ListExpr *expr)
     if (expr->exprs == NULL)
 	return;
 
-    LLItem *item;
-    ARENA_LL_FOR_EACH(expr->exprs, item)
-    {
-	ast_print_expr(item->value);
-	printf(", ");
-    }
+    ast_print_sequence(expr->exprs);
 }
 
 static void ast_print_map(MapExpr *expr)
@@ -180,6 +184,13 @@ static void ast_print_method(MethodExpr *expr)
 	    ast_print_expr(item->value);
 	}
     }
+    putchar(')');
+}
+
+static void ast_print_grouping(GroupingExpr *expr)
+{
+    putchar('(');
+    ast_print_expr(expr->expr);
     putchar(')');
 }
 
@@ -292,8 +303,8 @@ static void ast_print_expr(Expr *expr)
 	ast_print_access((AccessExpr *)expr);
 	break;
 
-    case EXPR_ITEM_ACCESS:
-	ast_print_item_access((ItemAccessExpr *)expr);
+    case EXPR_SUBSCRIPT:
+	ast_print_item_access((SubscriptExpr *)expr);
 	break;
 
     case EXPR_SUBSHELL:
@@ -310,6 +321,14 @@ static void ast_print_expr(Expr *expr)
 
     case EXPR_METHOD:
 	ast_print_method((MethodExpr *)expr);
+	break;
+
+    case EXPR_SEQUENCE:
+	ast_print_sequence((SequenceExpr *)expr);
+	break;
+
+    case EXPR_GROUPING:
+	ast_print_grouping((GroupingExpr *)expr);
 	break;
 
     default:

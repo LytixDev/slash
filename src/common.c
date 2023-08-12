@@ -17,6 +17,25 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "interpreter/lexer.h"
+#include "interpreter/parser.h"
+#include "nicc/nicc.h"
+
+
+char *get_offending_line(char *src, size_t line)
+{
+    size_t count = 0;
+    while (*src != 0) {
+	if (*src == '\n')
+	    count++;
+	if (count == line)
+	    return src + 1;
+
+	src++;
+    }
+    return NULL;
+}
+
 
 void slash_exit_lex_err(char *err_msg)
 {
@@ -24,9 +43,19 @@ void slash_exit_lex_err(char *err_msg)
     exit(1);
 }
 
-void slash_exit_parse_err(char *err_msg)
+void slash_exit_parse_err(Parser *parser, char *err_msg)
 {
-    fprintf(stderr, "Error during parsing: %s\n", err_msg);
+    fprintf(stderr, "Error during parsing: %s.\n", err_msg);
+    Token *failed = arraylist_get(parser->tokens, parser->token_pos);
+    fprintf(stderr, "Occured in line %zu at %zu.\n", failed->line, failed->start);
+
+    char *p = get_offending_line(parser->input, failed->line);
+    fprintf(stderr, "%s\n", p);
+    for (size_t i = 0; i < failed->start; i++)
+	putchar(' ');
+    for (size_t i = 0; i < failed->end - failed->start; i++)
+	putchar('^');
+    putchar('\n');
     exit(1);
 }
 

@@ -268,7 +268,7 @@ StateFn lex_any(Lexer *lexer)
 
 	/* one character tokens */
 	case '(':
-	    /* returning lex_lparen would make no "practical" difference */
+	    /* returning lex_lparen would make no "practical" difference ... I think? */
 	    emit(lexer, t_lparen);
 	    break;
 	case ')':
@@ -409,7 +409,7 @@ StateFn lex_shell_arg_list(Lexer *lexer)
      *  "                       -> backup, emit, advance and lex string
      *  (                       -> backup, emit, advance, lex any until rparen and continue
      *  )                       -> backup, emit, advance, stop and return lex rparen
-     *  \n, ;, |, &, EOF        -> backup, emit, and stop
+     *  \n, }, ;, |, &, EOF     -> backup, emit, and stop
      *
      *  shell_arg_emit() is a helper function that will backup, emit and advance
      */
@@ -442,6 +442,7 @@ StateFn lex_shell_arg_list(Lexer *lexer)
 	    return STATE_FN(lex_rparen);
 
 	case '\n':
+	case '}':
 	case ';':
 	case '|':
 	case '&':

@@ -15,6 +15,9 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <stdio.h>
+#ifdef DEBUG_PERF
+#include <time.h>
+#endif /* DEBUG_PERF */
 
 #include "interpreter/ast.h"
 #include "interpreter/interpreter.h"
@@ -53,25 +56,58 @@ int main(int argc, char **argv)
     input[--counter] = 0;
     fclose(fp);
 
+#ifdef DEBUG_PERF
+    double lex_elapsed, parse_elapsed, interpret_elapsed;
+    clock_t start_time, end_time;
+    start_time = clock();
+#endif /* DEBUG_PERF */
+
     /* lex */
     ArrayList tokens = lex(input, counter + 1);
+
+#ifdef DEBUG_PERF
+    end_time = clock();
+    lex_elapsed = (double)(end_time - start_time) / CLOCKS_PER_SEC;
+#endif /* DEBUG_PERF */
 #ifdef DEBUG
     tokens_print(&tokens);
-#endif
+#endif /* DEBUG */
+
+#ifdef DEBUG_PERF
+    start_time = clock();
+#endif /* DEBUG_PERF */
 
     /* parse */
     Arena ast_arena;
     ast_arena_init(&ast_arena);
-    ArrayList stmts = parse(&ast_arena, &tokens);
+    ArrayList stmts = parse(&ast_arena, &tokens, input);
+
+#ifdef DEBUG_PERF
+    end_time = clock();
+    parse_elapsed = (double)(end_time - start_time) / CLOCKS_PER_SEC;
+#endif /* DEBUG_PERF */
 #ifdef DEBUG
     ast_print(&stmts);
-#endif
+#endif /* DEBUG */
 
-    /* interpret */
 #ifdef DEBUG
     printf("--- interpreter ---\n");
-#endif
+#endif /* DEBUG */
+#ifdef DEBUG_PERF
+    start_time = clock();
+#endif /* DEBUG_PERF */
+
+    /* interpret */
     interpret(&stmts);
+
+#ifdef DEBUG_PERF
+    end_time = clock();
+    interpret_elapsed = (double)(end_time - start_time) / CLOCKS_PER_SEC;
+    printf("--- perf ---\n");
+    printf("lex time:\t%f seconds.\n", lex_elapsed);
+    printf("parse time:\t%f seconds.\n", parse_elapsed);
+    printf("interpret time:\t%f seconds.\n", interpret_elapsed);
+#endif /* DEBUG_PERF */
 
     /* clean up */
     ast_arena_release(&ast_arena);

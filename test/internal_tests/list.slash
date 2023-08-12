@@ -57,3 +57,6 @@ var underlying = [1, 2, 3, 4, 5]
     assert 1 in $list1
     assert $two in $list1
 }
+
+# inline subscript 
+assert [1, 2, 3][0] == 1

@@ -29,11 +29,13 @@ typedef enum {
     EXPR_BINARY,
     EXPR_LITERAL,
     EXPR_ACCESS,
-    EXPR_ITEM_ACCESS,
+    EXPR_SUBSCRIPT,
     EXPR_SUBSHELL,
-    EXPR_LIST,
+    EXPR_LIST, // list or tuple
     EXPR_MAP,
     EXPR_METHOD,
+    EXPR_SEQUENCE,
+    EXPR_GROUPING,
     EXPR_ENUM_COUNT
 } ExprType;
 
@@ -66,6 +68,11 @@ typedef struct {
     StmtType type;
 } Stmt;
 
+typedef struct {
+    ExprType type;
+    ArenaLL seq;
+} SequenceExpr;
+
 /* expressions */
 typedef struct {
     ExprType type;
@@ -92,9 +99,9 @@ typedef struct {
 
 typedef struct {
     ExprType type;
-    StrView var_name;
+    Expr *expr; // the underlying expr we are subscripting
     Expr *access_value; // a[x], where x in this case is the 'access_value'
-} ItemAccessExpr;
+} SubscriptExpr;
 
 typedef struct {
     ExprType type;
@@ -104,7 +111,7 @@ typedef struct {
 typedef struct {
     ExprType type;
     SlashType list_type; // tuple or list
-    ArenaLL *exprs; // will be NULL for the empty list
+    SequenceExpr *exprs; // will be NULL for the empty list
 } ListExpr;
 
 // NOTE: not an expression
@@ -124,6 +131,11 @@ typedef struct {
     StrView method_name;
     ArenaLL *arg_exprs;
 } MethodExpr;
+
+typedef struct {
+    ExprType type;
+    Expr *expr;
+} GroupingExpr;
 
 
 /* statements */

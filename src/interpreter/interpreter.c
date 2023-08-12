@@ -179,6 +179,14 @@ static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
 {
     SlashValue left = eval(interpreter, expr->left);
     SlashValue right = eval(interpreter, expr->right);
+    if (expr->operator_ == t_and) {
+	return (SlashValue){ .type = SLASH_BOOL, .boolean = is_truthy(&left) && is_truthy(&right) };
+    }
+    // FIXME: Does not short circuit. May need a 'logical' ast node
+    if (expr->operator_ == t_or) {
+	return (SlashValue){ .type = SLASH_BOOL, .boolean = is_truthy(&left) || is_truthy(&right) };
+    }
+
     if (expr->operator_ != t_in)
 	return cmp_binary_values(left, right, expr->operator_);
 
@@ -203,10 +211,15 @@ static SlashValue eval_access(Interpreter *interpreter, AccessExpr *expr)
     return *sv.value;
 }
 
-static SlashValue eval_item_access(Interpreter *interpreter, ItemAccessExpr *expr)
+static SlashValue eval_subscript(Interpreter *interpreter, SubscriptExpr *expr)
 {
-    StrView var_name = expr->var_name;
+    SlashValue value = eval(interpreter, expr->expr);
     SlashValue access_index = eval(interpreter, expr->access_value);
+    SlashItemGetFunc func = slash_item_get[value.type];
+    SlashValue item = func(interpreter->scope, &value, &access_index);
+    return item;
+    /*
+    StrView var_name = expr->var_name;
 
     ScopeAndValue value = var_get(interpreter->scope, &var_name);
     SlashValue *self = value.value;
@@ -216,6 +229,7 @@ static SlashValue eval_item_access(Interpreter *interpreter, ItemAccessExpr *exp
     SlashItemGetFunc func = slash_item_get[self->type];
     SlashValue item = func(interpreter->scope, self, &access_index);
     return item;
+    */
 }
 
 static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
@@ -254,10 +268,10 @@ static SlashValue eval_tuple(Interpreter *interpreter, ListExpr *expr)
 	return (SlashValue){ .type = SLASH_TUPLE, .tuple = tuple };
     }
 
-    slash_tuple_init(interpreter->scope, &tuple, expr->exprs->size);
+    slash_tuple_init(interpreter->scope, &tuple, expr->exprs->seq.size);
     size_t i = 0;
     LLItem *item;
-    ARENA_LL_FOR_EACH(expr->exprs, item)
+    ARENA_LL_FOR_EACH(&expr->exprs->seq, item)
     {
 	SlashValue element_value = eval(interpreter, item->value);
 	tuple.values[i++] = element_value;
@@ -278,7 +292,7 @@ static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
 	return value;
 
     LLItem *item;
-    ARENA_LL_FOR_EACH(expr->exprs, item)
+    ARENA_LL_FOR_EACH(&expr->exprs->seq, item)
     {
 	SlashValue element_value = eval(interpreter, item->value);
 	slash_list_append(&value.list, element_value);
@@ -344,6 +358,11 @@ static SlashValue eval_method(Interpreter *interpreter, MethodExpr *expr)
     return method(&self, i, argv);
 }
 
+static SlashValue eval_grouping(Interpreter *interpreter, GroupingExpr *expr)
+{
+    return eval(interpreter, expr->expr);
+}
+
 
 /*
  * statment execution functions
@@ -388,13 +407,16 @@ static void exec_block(Interpreter *interpreter, BlockStmt *stmt)
     scope_destroy(&block_scope);
 }
 
-static void exec_item_assign(Interpreter *interpreter, AssignStmt *stmt)
+static void exec_subscript_assign(Interpreter *interpreter, AssignStmt *stmt)
 {
-    assert(stmt->var->type == EXPR_ITEM_ACCESS);
+    SubscriptExpr *subscript = (SubscriptExpr *)stmt->var;
+    /* this would mean assigning to an inline variable which would do nothing */
+    if (subscript->expr->type != EXPR_ACCESS)
+	return;
 
-    ItemAccessExpr *access = (ItemAccessExpr *)stmt->var;
+    AccessExpr *access = (AccessExpr *)subscript->expr;
     StrView var_name = access->var_name;
-    SlashValue access_index = eval(interpreter, access->access_value);
+    SlashValue access_index = eval(interpreter, subscript->access_value);
     SlashValue new_value = eval(interpreter, stmt->value);
 
     ScopeAndValue current = var_get(interpreter->scope, &var_name);
@@ -408,7 +430,7 @@ static void exec_item_assign(Interpreter *interpreter, AssignStmt *stmt)
     }
 
     // TODO: this is inefficient as we have to re-eval the access_index
-    SlashValue current_item_value = eval_item_access(interpreter, access);
+    SlashValue current_item_value = eval_subscript(interpreter, subscript);
     /* convert from += to + and -= to - */
     TokenType operator= stmt->assignment_op == t_plus_equal ? t_plus : t_minus;
     new_value = cmp_binary_values(current_item_value, new_value, operator);
@@ -419,8 +441,8 @@ static void exec_item_assign(Interpreter *interpreter, AssignStmt *stmt)
 
 static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
 {
-    if (stmt->var->type == EXPR_ITEM_ACCESS) {
-	exec_item_assign(interpreter, stmt);
+    if (stmt->var->type == EXPR_SUBSCRIPT) {
+	exec_subscript_assign(interpreter, stmt);
 	return;
     }
 
@@ -639,8 +661,8 @@ static SlashValue eval(Interpreter *interpreter, Expr *expr)
     case EXPR_ACCESS:
 	return eval_access(interpreter, (AccessExpr *)expr);
 
-    case EXPR_ITEM_ACCESS:
-	return eval_item_access(interpreter, (ItemAccessExpr *)expr);
+    case EXPR_SUBSCRIPT:
+	return eval_subscript(interpreter, (SubscriptExpr *)expr);
 
     case EXPR_SUBSHELL:
 	return eval_subshell(interpreter, (SubshellExpr *)expr);
@@ -653,6 +675,9 @@ static SlashValue eval(Interpreter *interpreter, Expr *expr)
 
     case EXPR_METHOD:
 	return eval_method(interpreter, (MethodExpr *)expr);
+
+    case EXPR_GROUPING:
+	return eval_grouping(interpreter, (GroupingExpr *)expr);
 
     default:
 	slash_exit_internal_err("interpreter: expr type not handled");

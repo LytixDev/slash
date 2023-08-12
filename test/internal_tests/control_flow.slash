@@ -6,6 +6,9 @@ if $t {
     assert false
 }
 
+# also valid syntax
+if true { assert true } else { assert false }
+
 # if, elif, else
 {
     var n = 5
