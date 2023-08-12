@@ -25,9 +25,9 @@
 
 
 const size_t expr_size_table[] = {
-    sizeof(UnaryExpr),	sizeof(BinaryExpr),	sizeof(LiteralExpr),
-    sizeof(AccessExpr), sizeof(ItemAccessExpr), sizeof(SubshellExpr),
-    sizeof(ListExpr),	sizeof(MapExpr),	sizeof(MethodExpr),
+    sizeof(UnaryExpr),	    sizeof(BinaryExpr),	  sizeof(LiteralExpr), sizeof(AccessExpr),
+    sizeof(ItemAccessExpr), sizeof(SubshellExpr), sizeof(ListExpr),    sizeof(MapExpr),
+    sizeof(MethodExpr),	    sizeof(SequenceExpr),
 };
 
 const size_t stmt_size_table[] = {
@@ -38,7 +38,7 @@ const size_t stmt_size_table[] = {
 
 char *expr_type_str_map[EXPR_ENUM_COUNT] = {
     "EXPR_UNARY",    "EXPR_BINARY", "EXPR_LITERAL", "EXPR_ACCESS", "EXPR_ITEM_ACCESS",
-    "EXPR_SUBSHELL", "EXPR_LIST",   "EXPR_MAP",	    "EXPR_METHOD",
+    "EXPR_SUBSHELL", "EXPR_LIST",   "EXPR_MAP",	    "EXPR_METHOD", "EXPR_SEQUENCE",
 };
 
 char *stmt_type_str_map[STMT_ENUM_COUNT] = {
@@ -183,6 +183,15 @@ static void ast_print_method(MethodExpr *expr)
     putchar(')');
 }
 
+static void ast_print_sequence(SequenceExpr *expr)
+{
+    LLItem *item;
+    ARENA_LL_FOR_EACH(&expr->seq, item)
+    {
+	ast_print_expr(item->value);
+    }
+}
+
 static void ast_print_expression(ExpressionStmt *stmt)
 {
     ast_print_expr(stmt->expression);
@@ -310,6 +319,10 @@ static void ast_print_expr(Expr *expr)
 
     case EXPR_METHOD:
 	ast_print_method((MethodExpr *)expr);
+	break;
+
+    case EXPR_SEQUENCE:
+	ast_print_sequence((SequenceExpr *)expr);
 	break;
 
     default:

@@ -80,7 +80,7 @@ int main(int argc, char **argv)
     /* parse */
     Arena ast_arena;
     ast_arena_init(&ast_arena);
-    ArrayList stmts = parse(&ast_arena, &tokens);
+    ArrayList stmts = parse(&ast_arena, &tokens, input);
 
 #ifdef DEBUG_PERF
     end_time = clock();

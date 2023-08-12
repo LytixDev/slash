@@ -25,13 +25,14 @@ typedef struct {
     Arena *ast_arena; // memory arena to put where all AST nodes live on
     ArrayList *tokens; // stream of tokens from the lexer
     size_t token_pos; // index of current token being processed
+    char *input; // handle to the source code
 } Parser;
 
 /*
  * Parses a list of tokens into a list of statements: Arraylist<Stmt>
  * The Stmt objects in the list are the first nodes in an AST.
  */
-ArrayList parse(Arena *ast_arena, ArrayList *tokens);
+ArrayList parse(Arena *ast_arena, ArrayList *tokens, char *input);
 
 
 #endif /* PARSER_H */

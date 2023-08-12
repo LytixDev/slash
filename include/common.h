@@ -17,6 +17,7 @@
 #ifndef COMMON_H
 #define COMMON_H
 
+#include "interpreter/parser.h"
 #include <assert.h>
 
 
@@ -24,7 +25,7 @@
 
 
 void slash_exit_lex_err(char *err_msg);
-void slash_exit_parse_err(char *err_msg);
+void slash_exit_parse_err(Parser *parser, char *err_msg);
 void slash_exit_interpreter_err(char *err_msg);
 void slash_exit_internal_err(char *err_msg);
 

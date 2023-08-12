@@ -34,6 +34,7 @@ typedef enum {
     EXPR_LIST, // list or tuple
     EXPR_MAP,
     EXPR_METHOD,
+    EXPR_SEQUENCE,
     EXPR_ENUM_COUNT
 } ExprType;
 
@@ -124,6 +125,11 @@ typedef struct {
     StrView method_name;
     ArenaLL *arg_exprs;
 } MethodExpr;
+
+typedef struct {
+    ExprType type;
+    ArenaLL seq;
+} SequenceExpr;
 
 
 /* statements */
