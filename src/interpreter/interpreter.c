@@ -262,10 +262,10 @@ static SlashValue eval_tuple(Interpreter *interpreter, ListExpr *expr)
 	return (SlashValue){ .type = SLASH_TUPLE, .tuple = tuple };
     }
 
-    slash_tuple_init(interpreter->scope, &tuple, expr->exprs->size);
+    slash_tuple_init(interpreter->scope, &tuple, expr->exprs->seq.size);
     size_t i = 0;
     LLItem *item;
-    ARENA_LL_FOR_EACH(expr->exprs, item)
+    ARENA_LL_FOR_EACH(&expr->exprs->seq, item)
     {
 	SlashValue element_value = eval(interpreter, item->value);
 	tuple.values[i++] = element_value;
@@ -286,7 +286,7 @@ static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
 	return value;
 
     LLItem *item;
-    ARENA_LL_FOR_EACH(expr->exprs, item)
+    ARENA_LL_FOR_EACH(&expr->exprs->seq, item)
     {
 	SlashValue element_value = eval(interpreter, item->value);
 	slash_list_append(&value.list, element_value);

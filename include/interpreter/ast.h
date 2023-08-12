@@ -68,6 +68,11 @@ typedef struct {
     StmtType type;
 } Stmt;
 
+typedef struct {
+    ExprType type;
+    ArenaLL seq;
+} SequenceExpr;
+
 /* expressions */
 typedef struct {
     ExprType type;
@@ -106,7 +111,7 @@ typedef struct {
 typedef struct {
     ExprType type;
     SlashType list_type; // tuple or list
-    ArenaLL *exprs; // will be NULL for the empty list
+    SequenceExpr *exprs; // will be NULL for the empty list
 } ListExpr;
 
 // NOTE: not an expression
@@ -126,11 +131,6 @@ typedef struct {
     StrView method_name;
     ArenaLL *arg_exprs;
 } MethodExpr;
-
-typedef struct {
-    ExprType type;
-    ArenaLL seq;
-} SequenceExpr;
 
 typedef struct {
     ExprType type;

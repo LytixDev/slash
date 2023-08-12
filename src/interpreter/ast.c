@@ -81,6 +81,14 @@ void ast_arena_release(Arena *ast_arena)
 static void ast_print_expr(Expr *expr);
 static void ast_print_stmt(Stmt *stmt);
 
+static void ast_print_sequence(SequenceExpr *expr)
+{
+    LLItem *item;
+    ARENA_LL_FOR_EACH(&expr->seq, item)
+    {
+	ast_print_expr(item->value);
+    }
+}
 
 static void ast_print_unary(UnaryExpr *expr)
 {
@@ -143,12 +151,7 @@ static void ast_print_list(ListExpr *expr)
     if (expr->exprs == NULL)
 	return;
 
-    LLItem *item;
-    ARENA_LL_FOR_EACH(expr->exprs, item)
-    {
-	ast_print_expr(item->value);
-	printf(", ");
-    }
+    ast_print_sequence(expr->exprs);
 }
 
 static void ast_print_map(MapExpr *expr)
@@ -182,15 +185,6 @@ static void ast_print_method(MethodExpr *expr)
 	}
     }
     putchar(')');
-}
-
-static void ast_print_sequence(SequenceExpr *expr)
-{
-    LLItem *item;
-    ARENA_LL_FOR_EACH(&expr->seq, item)
-    {
-	ast_print_expr(item->value);
-    }
 }
 
 static void ast_print_grouping(GroupingExpr *expr)

@@ -46,7 +46,7 @@ static Stmt *assignment_stmt(Parser *parser);
 static Stmt *cmd_stmt(Parser *parser);
 static Stmt *expr_stmt(Parser *parser);
 /* exprs */
-static Expr *sequence(Parser *parser);
+static SequenceExpr *sequence(Parser *parser);
 static Expr *argument(Parser *parser);
 static Expr *expression(Parser *parser);
 static Expr *logical_or(Parser *parser);
@@ -402,7 +402,7 @@ static Stmt *assignment_stmt(Parser *parser)
     return (Stmt *)stmt;
 }
 
-static Expr *sequence(Parser *parser)
+static SequenceExpr *sequence(Parser *parser)
 {
     SequenceExpr *expr = (SequenceExpr *)expr_alloc(parser->ast_arena, EXPR_SEQUENCE);
     arena_ll_init(parser->ast_arena, &expr->seq);
@@ -413,7 +413,7 @@ static Expr *sequence(Parser *parser)
 	    break;
     } while (!check(parser, t_eof));
 
-    return (Expr *)expr;
+    return expr;
 }
 
 static Expr *argument(Parser *parser)
@@ -671,7 +671,7 @@ static Expr *list(Parser *parser)
 
     /* if next is not ']', parse list initializer */
     if (!match(parser, t_rbracket)) {
-	expr->exprs = comma_sep_exprs(parser);
+	expr->exprs = sequence(parser);
 	consume(parser, t_rbracket, "Unterminated list initializer: expected ']'");
     } else {
 	expr->exprs = NULL;
@@ -708,7 +708,7 @@ static Expr *tuple(Parser *parser)
 
     /* if next is not ''', parse list initializer */
     if (!match(parser, t_qoute)) {
-	expr->exprs = comma_sep_exprs(parser);
+	expr->exprs = sequence(parser);
 	consume(parser, t_qoute, "Unterminated list initializer: expected ']'");
     } else {
 	expr->exprs = NULL;
