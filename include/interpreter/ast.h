@@ -141,7 +141,7 @@ typedef struct {
 typedef struct {
     ExprType type;
     Expr *expr;
-    TokenType as;
+    SlashType as;
 } CastExpr;
 
 

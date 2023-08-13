@@ -14,32 +14,12 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef INTERPRETER_H
-#define INTERPRETER_H
+#ifndef SLASH_CAST_H
+#define SLASH_CAST_H
 
-#include "interpreter/scope.h"
-#include "nicc/nicc.h"
-#include "sac/sac.h"
+#include "interpreter/interpreter.h"
+#include "interpreter/types/slash_value.h"
 
-#define STREAM_WRITE_END 1
-#define STRAM_READ_END 0
+SlashValue dynamic_cast(Interpreter *interpreter, SlashValue old, SlashType new_type);
 
-typedef struct {
-    int read_fd; // the file descriptor we are reading from, defaulted to STDIN
-    int write_fd; // the file descriptor we are writing to, defaulted to STDOUT
-    ArrayList active_fds; // list/stack of open file descriptors that need to be closed on fork()
-} StreamCtx;
-
-typedef struct {
-    Arena arena;
-    Scope globals;
-    Scope *scope;
-    int prev_exit_code;
-    StreamCtx *stream_ctx;
-} Interpreter;
-
-
-int interpret(ArrayList *statements);
-
-
-#endif /* INTERPRETER_H */
+#endif /* SLASH_CAST_H */

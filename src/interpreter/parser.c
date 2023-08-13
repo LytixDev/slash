@@ -168,6 +168,20 @@ static bool match_either(Parser *parser, unsigned int n, ...)
 
 #define match(parser, ...) match_either(parser, VA_NUMBER_OF_ARGS(__VA_ARGS__), __VA_ARGS__)
 
+static SlashType token_type_to_slash_type(TokenType type)
+{
+    switch (type) {
+    case t_num:
+	return SLASH_NUM;
+    case t_str:
+	return SLASH_STR;
+    case t_bool:
+	return SLASH_BOOL;
+    default:
+	slash_exit_interpreter_err("cast not supported...");
+    };
+}
+
 
 /* grammar functions */
 static void newline(Parser *parser)
@@ -498,6 +512,8 @@ static Expr *unary(Parser *parser)
 	    left = subshell(parser);
 	} else {
 	    parser->token_pos--;
+	    /* continue the "normal" recursive path */
+	    left = subscript(parser);
 	}
     } else {
 	/* continue the "normal" recursive path */
@@ -519,7 +535,7 @@ static Expr *unary(Parser *parser)
 	// TODO: support more casts later
 	if (!match(parser, t_num, t_str, t_bool))
 	    slash_exit_parse_err(parser, "Expected type after 'as' cast");
-	expr->as = previous(parser)->type;
+	expr->as = token_type_to_slash_type(previous(parser)->type);
 	return (Expr *)expr;
     }
 

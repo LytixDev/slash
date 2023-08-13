@@ -25,6 +25,7 @@
 #include "interpreter/interpreter.h"
 #include "interpreter/lexer.h"
 #include "interpreter/scope.h"
+#include "interpreter/types/cast.h"
 #include "interpreter/types/method.h"
 #include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
@@ -219,18 +220,6 @@ static SlashValue eval_subscript(Interpreter *interpreter, SubscriptExpr *expr)
     SlashItemGetFunc func = slash_item_get[value.type];
     SlashValue item = func(interpreter->scope, &value, &access_index);
     return item;
-    /*
-    StrView var_name = expr->var_name;
-
-    ScopeAndValue value = var_get(interpreter->scope, &var_name);
-    SlashValue *self = value.value;
-    if (self == NULL)
-	slash_exit_interpreter_err("Item access for variable that is not defined");
-
-    SlashItemGetFunc func = slash_item_get[self->type];
-    SlashValue item = func(interpreter->scope, self, &access_index);
-    return item;
-    */
 }
 
 static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
@@ -365,18 +354,15 @@ static SlashValue eval_grouping(Interpreter *interpreter, GroupingExpr *expr)
 
 static SlashValue eval_cast(Interpreter *interpreter, CastExpr *expr)
 {
-    // TODO: more fancy cast logic
-    // if (!(expr->expr->type == EXPR_SUBSHELL && expr->as == t_bool))
-    //     slash_exit_interpreter_err("only support casting subshells to bools");
-
     SlashValue value = eval(interpreter, expr->expr);
-    if (!(value.type == SLASH_STR && expr->as == t_num))
-	slash_exit_interpreter_err("noooo!");
-
-    return (SlashValue){ .type = SLASH_NUM, .num = str_view_to_double(value.str) };
-
-    // return (SlashValue){ .type = SLASH_BOOL, .boolean = interpreter->prev_exit_code == 0 ? true :
-    // false };
+    /*
+     * When LHS is a subshell and RHS is boolean then the final exit code of the subshell
+     * expression determines the boolean value.
+     */
+    if (expr->as == SLASH_BOOL && expr->expr->type == EXPR_SUBSHELL)
+	return (SlashValue){ .type = SLASH_BOOL,
+			     .boolean = interpreter->prev_exit_code == 0 ? true : false };
+    return dynamic_cast(interpreter, value, expr->as);
 }
 
 
