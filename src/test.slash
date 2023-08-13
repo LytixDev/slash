@@ -1,1 +1,8 @@
-assert (true and true) == true
+var count = (ls | grep runall | wc -l)
+$count
+
+if $count {
+    assert true
+} else {
+    assert false
+}

@@ -234,6 +234,7 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
     stream_ctx->write_fd = fd[STREAM_WRITE_END];
 
     exec(interpreter, expr->stmt);
+    close(fd[1]);
     /* restore original write fd */
     stream_ctx->write_fd = original_write_fd;
 
@@ -241,7 +242,6 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
     char buffer[4096] = { 0 };
     read(fd[0], buffer, 4096);
     close(fd[0]);
-    close(fd[1]);
 
     size_t size = strlen(buffer);
     char *str_view = scope_alloc(interpreter->scope, size);
