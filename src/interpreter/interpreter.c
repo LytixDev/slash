@@ -96,7 +96,8 @@ static char **cmd_args_fmt(Interpreter *interpreter, CmdStmt *stmt)
 static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt)
 {
     char **argv_owning = cmd_args_fmt(interpreter, stmt);
-    exec_program(interpreter->stream_ctx, argv_owning);
+    int exit_code = exec_program(interpreter->stream_ctx, argv_owning);
+    interpreter->prev_exit_code = exit_code;
     free(argv_owning);
 }
 
@@ -360,6 +361,22 @@ static SlashValue eval_method(Interpreter *interpreter, MethodExpr *expr)
 static SlashValue eval_grouping(Interpreter *interpreter, GroupingExpr *expr)
 {
     return eval(interpreter, expr->expr);
+}
+
+static SlashValue eval_cast(Interpreter *interpreter, CastExpr *expr)
+{
+    // TODO: more fancy cast logic
+    // if (!(expr->expr->type == EXPR_SUBSHELL && expr->as == t_bool))
+    //     slash_exit_interpreter_err("only support casting subshells to bools");
+
+    SlashValue value = eval(interpreter, expr->expr);
+    if (!(value.type == SLASH_STR && expr->as == t_num))
+	slash_exit_interpreter_err("noooo!");
+
+    return (SlashValue){ .type = SLASH_NUM, .num = str_view_to_double(value.str) };
+
+    // return (SlashValue){ .type = SLASH_BOOL, .boolean = interpreter->prev_exit_code == 0 ? true :
+    // false };
 }
 
 
@@ -678,6 +695,9 @@ static SlashValue eval(Interpreter *interpreter, Expr *expr)
     case EXPR_GROUPING:
 	return eval_grouping(interpreter, (GroupingExpr *)expr);
 
+    case EXPR_CAST:
+	return eval_cast(interpreter, (CastExpr *)expr);
+
     default:
 	slash_exit_internal_err("interpreter: expr type not handled");
 	/* will never happen, but lets make the compiler happy */
@@ -754,5 +774,5 @@ int interpret(ArrayList *statements)
     scope_destroy(&interpreter.globals);
     arraylist_free(&stream_ctx.active_fds);
 
-    return interpreter.exit_code;
+    return interpreter.prev_exit_code;
 }

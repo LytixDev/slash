@@ -73,8 +73,9 @@ term            -> factor ( ( "-" | "+" ) factor )* ;
 factor          -> unary ;
 
 unary           -> subshell
-                |  contains
                 |  method_call
+                |  contains
+                |  cast
                 |  subscript ;
 
 subshell        -> "(" declaration+ ")" ;
@@ -82,6 +83,8 @@ subshell        -> "(" declaration+ ")" ;
 method_call     -> expression "." IDENTIFIER "(" sequence_expr ")" ;
 
 contains        -> expression "in" expression ;
+
+cast            -> expression "as" TYPE ;
 
 subscript       -> access ( "[" expression "]" )? ;
 

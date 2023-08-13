@@ -35,7 +35,7 @@ typedef struct {
     Arena arena;
     Scope globals;
     Scope *scope;
-    int exit_code;
+    int prev_exit_code;
     StreamCtx *stream_ctx;
 } Interpreter;
 

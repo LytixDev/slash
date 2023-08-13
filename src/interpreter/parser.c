@@ -492,16 +492,17 @@ static Expr *factor(Parser *parser)
 
 static Expr *unary(Parser *parser)
 {
+    Expr *left;
     if (match(parser, t_lparen)) {
 	if (check(parser, t_dt_shident)) {
-	    return subshell(parser);
+	    left = subshell(parser);
 	} else {
 	    parser->token_pos--;
 	}
+    } else {
+	/* continue the "normal" recursive path */
+	left = subscript(parser);
     }
-
-    /* continue the "normal" recursive path */
-    Expr *left = subscript(parser);
 
     /* contains */
     if (match(parser, t_in)) {
@@ -509,6 +510,16 @@ static Expr *unary(Parser *parser)
 	expr->left = left;
 	expr->operator_ = t_in;
 	expr->right = expression(parser);
+	return (Expr *)expr;
+    }
+
+    if (match(parser, t_as)) {
+	CastExpr *expr = (CastExpr *)expr_alloc(parser->ast_arena, EXPR_CAST);
+	expr->expr = left;
+	// TODO: support more casts later
+	if (!match(parser, t_num, t_str, t_bool))
+	    slash_exit_parse_err(parser, "Expected type after 'as' cast");
+	expr->as = previous(parser)->type;
 	return (Expr *)expr;
     }
 

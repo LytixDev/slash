@@ -3,7 +3,7 @@
 *Slash* breaks free from the 30-year-old POSIX standard embracing a more intuitive and familiar language design while retaining goodies that makes the shell one of most valuable tools.
 
 Although still in its infancy, *Slash* is already "somewhat" useful! The script used to format the source code for this project is this simple *Slash* script:
-```
+```sh
 #!/bin/slash
 loop file in (find -name "*.c" -o -name "*.h") {
     clang-format -i -style=file $file
@@ -23,6 +23,7 @@ make
 ### Where the POSIX shell fail:
 1. Syntax oddities =>hard to pick up.
 2. Outdated spec => simple scripting idioms become unnecessarily complicated.
+3. Can't be used for simple math. It shouldn't be necessary to invoke `bc`, `awk` or `python` for very basic arithmetic.
 
 As a consequence of `1` and `2`, POSIX shell scripts tend to become complicated, error prone and hard to maintain.
 
@@ -34,7 +35,7 @@ In short; too clunky to communicate with the OS. Invoking and combining programs
 
 ## A Brief Tour of *Slash*
 Raw expressions are evaluated and printed out to the terminal.
-```
+```sh
 0xff + 1    # prints 256
 0xff == 255 # prints 'true'
 ```
@@ -45,7 +46,7 @@ echo $((0xff + 1))
 ```
 
 ### C-style, but no parentheses or semicolons
-``` 
+``` sh
 var system = (uname)  # '(...)' is similar to the POSIX '$(...)' 
 if $system == "Linux" {
     echo "well akthually youre using GNU/Linux"
@@ -54,22 +55,22 @@ if $system == "Linux" {
 
 ### "Keeping the good stuff from POSIX sh while improving on the crap parts"
 Unlike the POSIX shell, *Slash* makes interpreting text as other data types trivial:
-```
+```sh
 (ls | grep "*.png" | wc -l) as num >= 50 && echo "Many images!"
 ```
 
 ### Modern Looping
-```
+```sh
 loop file in (ls) {
     echo $file
 }
 ```
-```
+```sh
 loop i in 3..5 {
     echo $i
 }
 ```
-```
+```sh
 var names = ["Alice", "Bob", "Callum"]
 loop name in $names {
     if $name == "Callum" {
@@ -81,7 +82,7 @@ loop name in $names {
 ```
 
 ### First class lists, maps and tuples
-```
+```sh
 # list
 var primes = [2, 3, 5, 7, 11, 13]
 # list from slice: [3, 5, 7]
