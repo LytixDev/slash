@@ -84,7 +84,6 @@ void scope_init(Scope *scope, Scope *enclosing)
 void scope_destroy(Scope *scope)
 {
     /* free all owning references */
-    struct linkedlist_item_t *item;
     for (size_t i = 0; i < scope->owning.size; i++) {
 	SlashValue *sv = arraylist_get(&scope->owning, i);
 	assert(SLASH_TYPE_DYNAMIC(sv->type));

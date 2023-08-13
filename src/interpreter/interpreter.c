@@ -25,6 +25,7 @@
 #include "interpreter/interpreter.h"
 #include "interpreter/lexer.h"
 #include "interpreter/scope.h"
+#include "interpreter/types/cast.h"
 #include "interpreter/types/method.h"
 #include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
@@ -96,7 +97,8 @@ static char **cmd_args_fmt(Interpreter *interpreter, CmdStmt *stmt)
 static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt)
 {
     char **argv_owning = cmd_args_fmt(interpreter, stmt);
-    exec_program(interpreter->stream_ctx, argv_owning);
+    int exit_code = exec_program(interpreter->stream_ctx, argv_owning);
+    interpreter->prev_exit_code = exit_code;
     free(argv_owning);
 }
 
@@ -218,18 +220,6 @@ static SlashValue eval_subscript(Interpreter *interpreter, SubscriptExpr *expr)
     SlashItemGetFunc func = slash_item_get[value.type];
     SlashValue item = func(interpreter->scope, &value, &access_index);
     return item;
-    /*
-    StrView var_name = expr->var_name;
-
-    ScopeAndValue value = var_get(interpreter->scope, &var_name);
-    SlashValue *self = value.value;
-    if (self == NULL)
-	slash_exit_interpreter_err("Item access for variable that is not defined");
-
-    SlashItemGetFunc func = slash_item_get[self->type];
-    SlashValue item = func(interpreter->scope, self, &access_index);
-    return item;
-    */
 }
 
 static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
@@ -341,26 +331,38 @@ static SlashValue eval_method(Interpreter *interpreter, MethodExpr *expr)
      * first argument will always be the object that the method is called "on"
      * second argument will always be the number of following arguments (argc)
      */
-    if (expr->arg_exprs == NULL)
+    if (expr->args == NULL)
 	return method(&self, 0, NULL);
 
-    SlashValue argv[expr->arg_exprs->size];
+    SlashValue argv[expr->args->seq.size];
     size_t i = 0;
     LLItem *item;
-    ARENA_LL_FOR_EACH(expr->arg_exprs, item)
+    ARENA_LL_FOR_EACH(&expr->args->seq, item)
     {
 	SlashValue sv = eval(interpreter, item->value);
 	argv[i++] = sv;
     }
 
-    assert(i == expr->arg_exprs->size);
-
+    assert(i == expr->args->seq.size);
     return method(&self, i, argv);
 }
 
 static SlashValue eval_grouping(Interpreter *interpreter, GroupingExpr *expr)
 {
     return eval(interpreter, expr->expr);
+}
+
+static SlashValue eval_cast(Interpreter *interpreter, CastExpr *expr)
+{
+    SlashValue value = eval(interpreter, expr->expr);
+    /*
+     * When LHS is a subshell and RHS is boolean then the final exit code of the subshell
+     * expression determines the boolean value.
+     */
+    if (expr->as == SLASH_BOOL && expr->expr->type == EXPR_SUBSHELL)
+	return (SlashValue){ .type = SLASH_BOOL,
+			     .boolean = interpreter->prev_exit_code == 0 ? true : false };
+    return dynamic_cast(interpreter, value, expr->as);
 }
 
 
@@ -679,6 +681,9 @@ static SlashValue eval(Interpreter *interpreter, Expr *expr)
     case EXPR_GROUPING:
 	return eval_grouping(interpreter, (GroupingExpr *)expr);
 
+    case EXPR_CAST:
+	return eval_cast(interpreter, (CastExpr *)expr);
+
     default:
 	slash_exit_internal_err("interpreter: expr type not handled");
 	/* will never happen, but lets make the compiler happy */
@@ -755,5 +760,5 @@ int interpret(ArrayList *statements)
     scope_destroy(&interpreter.globals);
     arraylist_free(&stream_ctx.active_fds);
 
-    return interpreter.exit_code;
+    return interpreter.prev_exit_code;
 }

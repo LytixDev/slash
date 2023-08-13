@@ -80,12 +80,6 @@ static Token *previous(Parser *parser)
     return arraylist_get(parser->tokens, parser->token_pos - 1);
 }
 
-/* lol */
-static Token *previous_previous(Parser *parser)
-{
-    return arraylist_get(parser->tokens, parser->token_pos - 2);
-}
-
 static bool is_at_end(Parser *parser)
 {
     return peek(parser)->type == t_eof;
@@ -174,24 +168,18 @@ static bool match_either(Parser *parser, unsigned int n, ...)
 
 #define match(parser, ...) match_either(parser, VA_NUMBER_OF_ARGS(__VA_ARGS__), __VA_ARGS__)
 
-
-ArenaLL *comma_sep_exprs(Parser *parser)
+static SlashType token_type_to_slash_type(TokenType type)
 {
-    /*
-     * this function is only called when we expect comma seperated expression
-     */
-
-    ArenaLL *args = arena_ll_alloc(parser->ast_arena);
-    do {
-	ignore(parser, t_newline);
-	arena_ll_append(args, expression(parser));
-	/* if no comma then we exit */
-	if (!match(parser, t_comma))
-	    break;
-    } while (!check(parser, t_eof));
-
-    ignore(parser, t_newline);
-    return args;
+    switch (type) {
+    case t_num:
+	return SLASH_NUM;
+    case t_str:
+	return SLASH_STR;
+    case t_bool:
+	return SLASH_BOOL;
+    default:
+	slash_exit_interpreter_err("cast not supported...");
+    };
 }
 
 
@@ -518,16 +506,19 @@ static Expr *factor(Parser *parser)
 
 static Expr *unary(Parser *parser)
 {
+    Expr *left;
     if (match(parser, t_lparen)) {
 	if (check(parser, t_dt_shident)) {
-	    return subshell(parser);
+	    left = subshell(parser);
 	} else {
 	    parser->token_pos--;
+	    /* continue the "normal" recursive path */
+	    left = subscript(parser);
 	}
+    } else {
+	/* continue the "normal" recursive path */
+	left = subscript(parser);
     }
-
-    /* continue the "normal" recursive path */
-    Expr *left = subscript(parser);
 
     /* contains */
     if (match(parser, t_in)) {
@@ -535,6 +526,16 @@ static Expr *unary(Parser *parser)
 	expr->left = left;
 	expr->operator_ = t_in;
 	expr->right = expression(parser);
+	return (Expr *)expr;
+    }
+
+    if (match(parser, t_as)) {
+	CastExpr *expr = (CastExpr *)expr_alloc(parser->ast_arena, EXPR_CAST);
+	expr->expr = left;
+	// TODO: support more casts later
+	if (!match(parser, t_num, t_str, t_bool))
+	    slash_exit_parse_err(parser, "Expected type after 'as' cast");
+	expr->as = token_type_to_slash_type(previous(parser)->type);
 	return (Expr *)expr;
     }
 
@@ -546,10 +547,10 @@ static Expr *unary(Parser *parser)
 	expr->method_name = method_name->lexeme;
 	consume(parser, t_lparen, "expected left paren");
 	if (!match(parser, t_rparen)) {
-	    expr->arg_exprs = comma_sep_exprs(parser);
+	    expr->args = sequence(parser);
 	    consume(parser, t_rparen, "expected right paren");
 	} else {
-	    expr->arg_exprs = NULL;
+	    expr->args = NULL;
 	}
 	return (Expr *)expr;
     }

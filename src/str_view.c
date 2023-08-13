@@ -63,7 +63,7 @@ static double strview_hex_to_double(StrView a)
     int digit;
 
     while ((size_t)(hex_str - a.view) < a.size) {
-	if ((digit = hex_lookup[*hex_str++]) >= 0) {
+	if ((digit = hex_lookup[(int)*hex_str++]) >= 0) {
 	    if (digit == HEX_UNDERSCORE_IGNORE) {
 		continue;
 	    }

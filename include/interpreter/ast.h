@@ -36,6 +36,7 @@ typedef enum {
     EXPR_METHOD,
     EXPR_SEQUENCE,
     EXPR_GROUPING,
+    EXPR_CAST,
     EXPR_ENUM_COUNT
 } ExprType;
 
@@ -129,13 +130,19 @@ typedef struct {
     ExprType type;
     Expr *obj;
     StrView method_name;
-    ArenaLL *arg_exprs;
+    SequenceExpr *args;
 } MethodExpr;
 
 typedef struct {
     ExprType type;
     Expr *expr;
 } GroupingExpr;
+
+typedef struct {
+    ExprType type;
+    Expr *expr;
+    SlashType as;
+} CastExpr;
 
 
 /* statements */
