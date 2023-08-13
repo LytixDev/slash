@@ -648,6 +648,14 @@ static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
     scope_destroy(&loop_scope);
 }
 
+static void exec_andor(Interpreter *interpreter, AndOrStmt *stmt)
+{
+    exec(interpreter, stmt->left);
+    if ((stmt->operator_ == t_anp_anp && interpreter->prev_exit_code == 0) ||
+	(stmt->operator_ == t_pipe_pipe && interpreter->prev_exit_code != 0))
+	exec(interpreter, stmt->right);
+}
+
 static SlashValue eval(Interpreter *interpreter, Expr *expr)
 {
     switch (expr->type) {
@@ -732,6 +740,10 @@ static void exec(Interpreter *interpreter, Stmt *stmt)
 
     case STMT_ASSERT:
 	exec_assert(interpreter, (AssertStmt *)stmt);
+	break;
+
+    case STMT_ANDOR:
+	exec_andor(interpreter, (AndOrStmt *)stmt);
 	break;
 
 

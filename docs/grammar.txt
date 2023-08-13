@@ -15,13 +15,14 @@ program         -> declaration* EOF ;
 
 newline         -> ( "\n" | ";" )+ ;
 
-newline_or_block_end -> newline | '}' ;
+libary_newline  -> newline | "}" | "&&" | "||" ;
 
 declaration     -> var_declaration
-                |  statement ;
+                |  and_or ;
 
 var_declaration -> "var" IDENTIFIER "=" expression newline ;
 
+and_or          -> statement ( ( "&&" | "||" ) statement )* ;
 
 
 /* statements */
@@ -58,7 +59,7 @@ sequence_expr   -> ( argument ( "," argument )* )? ;
 
 argument        -> expression ;
 
-expression      -> logic_or ;
+expression      -> logical_or ;
 
 logical_or      -> logical_and ( "or" logical_and )* ;
 

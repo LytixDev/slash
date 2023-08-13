@@ -1,8 +1,1 @@
-var count = (ls | grep runall | wc -l)
-$count
-
-if $count {
-    assert true
-} else {
-    assert false
-}
+(ls | grep "*.png" | wc -l) as num >= 50 && echo "Many images!"
