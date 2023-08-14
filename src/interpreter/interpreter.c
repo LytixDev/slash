@@ -234,6 +234,7 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
     stream_ctx->write_fd = fd[STREAM_WRITE_END];
 
     exec(interpreter, expr->stmt);
+    close(fd[1]);
     /* restore original write fd */
     stream_ctx->write_fd = original_write_fd;
 
@@ -241,7 +242,6 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
     char buffer[4096] = { 0 };
     read(fd[0], buffer, 4096);
     close(fd[0]);
-    close(fd[1]);
 
     size_t size = strlen(buffer);
     char *str_view = scope_alloc(interpreter->scope, size);
@@ -648,6 +648,29 @@ static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
     scope_destroy(&loop_scope);
 }
 
+static void exec_andor(Interpreter *interpreter, AndOrStmt *stmt)
+{
+    /*
+     * L ( "&&" | "||" ) R.
+     * If L is an expression statement then we use the result of expression statement
+     * instead of the previous exit code.
+     */
+
+    bool predicate;
+    if (stmt->left->type == STMT_EXPRESSION) {
+	ExpressionStmt *left = (ExpressionStmt *)stmt->left;
+	SlashValue value = eval(interpreter, left->expression);
+	predicate = is_truthy(&value);
+    } else {
+	exec(interpreter, stmt->left);
+	predicate = interpreter->prev_exit_code == 0 ? true : false;
+    }
+
+    if ((stmt->operator_ == t_anp_anp && predicate) ||
+	(stmt->operator_ == t_pipe_pipe && !predicate))
+	exec(interpreter, stmt->right);
+}
+
 static SlashValue eval(Interpreter *interpreter, Expr *expr)
 {
     switch (expr->type) {
@@ -732,6 +755,10 @@ static void exec(Interpreter *interpreter, Stmt *stmt)
 
     case STMT_ASSERT:
 	exec_assert(interpreter, (AssertStmt *)stmt);
+	break;
+
+    case STMT_ANDOR:
+	exec_andor(interpreter, (AndOrStmt *)stmt);
 	break;
 
 

@@ -4,15 +4,18 @@ make fuzz
 # hack because './slash-fuzz' doesnt work yet
 sudo cp slash-fuzz /bin/slash-fuzz
 
-# var successes = 0
-# var tests = 0
+var successes = 0
+var tests = 0
 
 loop file in (find "test/internal_tests" -name "*.slash") {
-    echo $file
-    slash-fuzz $file
-    # $tests += 1
-    # $successes += 1
+    $tests += 1
+    if (slash-fuzz $file) as bool {
+        $successes += 1
+        echo $file "passed"
+    } else {
+        echo $file "FAILED!"
+    }
 }
 
-# echo $successes "out of" $tests "passed"
 echo "finished fuzz"
+echo $successes "out of" $tests "passed"

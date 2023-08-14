@@ -98,7 +98,7 @@ int main(int argc, char **argv)
 #endif /* DEBUG_PERF */
 
     /* interpret */
-    interpret(&stmts);
+    int exit_code = interpret(&stmts);
 
 #ifdef DEBUG_PERF
     end_time = clock();
@@ -113,4 +113,6 @@ int main(int argc, char **argv)
     ast_arena_release(&ast_arena);
     arraylist_free(&tokens);
     arraylist_free(&stmts);
+
+    return exit_code;
 }

@@ -43,10 +43,9 @@ int exec_program(StreamCtx *stream_ctx, char **argv)
 	argv_cur = *argv_cpy;
     }
 #endif /* EXEC_DEBUG */
+#include <stdio.h>
 
     int status;
-    int return_code = 0;
-
     pid_t new_pid = fork();
     if (new_pid == 0) {
 	if (stream_ctx->read_fd != STDIN_FILENO) {
@@ -57,10 +56,10 @@ int exec_program(StreamCtx *stream_ctx, char **argv)
 	}
 
 	close_active_fds(&stream_ctx->active_fds);
-	return_code = execve(argv[0], argv, environ);
+	execve(argv[0], argv, environ);
     }
 
     close_active_fds(&stream_ctx->active_fds);
     waitpid(new_pid, &status, 0);
-    return return_code;
+    return WEXITSTATUS(status);
 }
