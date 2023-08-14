@@ -650,9 +650,24 @@ static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
 
 static void exec_andor(Interpreter *interpreter, AndOrStmt *stmt)
 {
-    exec(interpreter, stmt->left);
-    if ((stmt->operator_ == t_anp_anp && interpreter->prev_exit_code == 0) ||
-	(stmt->operator_ == t_pipe_pipe && interpreter->prev_exit_code != 0))
+    /*
+     * L ( "&&" | "||" ) R.
+     * If L is an expression statement then we use the result of expression statement
+     * instead of the previous exit code.
+     */
+
+    bool predicate;
+    if (stmt->left->type == STMT_EXPRESSION) {
+	ExpressionStmt *left = (ExpressionStmt *)stmt->left;
+	SlashValue value = eval(interpreter, left->expression);
+	predicate = is_truthy(&value);
+    } else {
+	exec(interpreter, stmt->left);
+	predicate = interpreter->prev_exit_code == 0 ? true : false;
+    }
+
+    if ((stmt->operator_ == t_anp_anp && predicate) ||
+	(stmt->operator_ == t_pipe_pipe && !predicate))
 	exec(interpreter, stmt->right);
 }
 

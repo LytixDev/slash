@@ -15,7 +15,7 @@ program         -> declaration* EOF ;
 
 newline         -> ( "\n" | ";" )+ ;
 
-libary_newline  -> newline | "}" | "&&" | "||" ;
+expr_promotion  -> newline | "}" | "&&" | "||" ;
 
 declaration     -> var_declaration
                 |  and_or ;

@@ -32,7 +32,7 @@
  */
 
 static void newline(Parser *parser);
-static void liberal_newline(Parser *parser);
+static void expr_promotion(Parser *parser);
 static Stmt *declaration(Parser *parser);
 static Stmt *var_decl(Parser *parser);
 static Stmt *and_or(Parser *parser);
@@ -191,7 +191,7 @@ static void newline(Parser *parser)
     ignore(parser, t_newline);
 }
 
-static void liberal_newline(Parser *parser)
+static void expr_promotion(Parser *parser)
 {
     if (check(parser, t_rbrace, t_anp_anp, t_pipe_pipe))
 	return;
@@ -220,7 +220,7 @@ static Stmt *var_decl(Parser *parser)
     Token *name = consume(parser, t_ident, "Expected variable name");
     consume(parser, t_equal, "Expected variable definition");
     Expr *initializer = expression(parser);
-    liberal_newline(parser);
+    expr_promotion(parser);
 
     VarStmt *stmt = (VarStmt *)stmt_alloc(parser->ast_arena, STMT_VAR);
     stmt->name = name->lexeme;
@@ -298,7 +298,7 @@ static Stmt *assert_stmt(Parser *parser)
     /* came from 'assert' */
     AssertStmt *stmt = (AssertStmt *)stmt_alloc(parser->ast_arena, STMT_ASSERT);
     stmt->expr = expression(parser);
-    liberal_newline(parser);
+    expr_promotion(parser);
     return (Stmt *)stmt;
 }
 
@@ -376,7 +376,7 @@ static Stmt *expr_stmt(Parser *parser)
 {
     ExpressionStmt *stmt = (ExpressionStmt *)stmt_alloc(parser->ast_arena, STMT_EXPRESSION);
     stmt->expression = expression(parser);
-    liberal_newline(parser);
+    expr_promotion(parser);
     return (Stmt *)stmt;
 }
 
@@ -398,7 +398,7 @@ static Stmt *assignment_stmt(Parser *parser)
     /* access part of assignment */
     Token *assignment_op = previous(parser);
     Expr *value = expression(parser);
-    liberal_newline(parser);
+    expr_promotion(parser);
 
     AssignStmt *stmt = (AssignStmt *)stmt_alloc(parser->ast_arena, STMT_ASSIGN);
     stmt->var = var;
