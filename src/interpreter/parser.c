@@ -416,6 +416,7 @@ static SequenceExpr *sequence(Parser *parser)
 	/* if no comma then we exit */
 	if (!match(parser, t_comma))
 	    break;
+	ignore(parser, t_newline);
     } while (!check(parser, t_eof));
 
     return expr;
