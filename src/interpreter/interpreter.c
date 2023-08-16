@@ -180,14 +180,18 @@ static SlashValue cmp_binary_values(SlashValue left, SlashValue right, TokenType
 static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
 {
     SlashValue left = eval(interpreter, expr->left);
-    SlashValue right = eval(interpreter, expr->right);
     if (expr->operator_ == t_and) {
-	return (SlashValue){ .type = SLASH_BOOL, .boolean = is_truthy(&left) && is_truthy(&right) };
+        /* short circuit */
+        if (!is_truthy(&left))
+            return (SlashValue){ .type = SLASH_BOOL, .boolean = false };
+        SlashValue right = eval(interpreter, expr->right);
+	return (SlashValue){ .type = SLASH_BOOL, .boolean = is_truthy(&right) };
     }
-    // FIXME: Does not short circuit. May need a 'logical' ast node
-    if (expr->operator_ == t_or) {
+
+    SlashValue right = eval(interpreter, expr->right);
+
+    if (expr->operator_ == t_or)
 	return (SlashValue){ .type = SLASH_BOOL, .boolean = is_truthy(&left) || is_truthy(&right) };
-    }
 
     if (expr->operator_ != t_in)
 	return cmp_binary_values(left, right, expr->operator_);

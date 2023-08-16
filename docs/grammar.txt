@@ -87,7 +87,7 @@ contains        -> expression "in" expression ;
 
 cast            -> expression "as" TYPE ;
 
-subscript       -> access ( "[" expression "]" )? ;
+subscript       -> access ( "[" expression "]" access? )* ;
 
 access          -> ACCESS | primary ;
 
