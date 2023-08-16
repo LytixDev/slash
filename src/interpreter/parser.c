@@ -589,14 +589,16 @@ static Expr *subshell(Parser *parser)
 static Expr *subscript(Parser *parser)
 {
     Expr *expr = access(parser);
-    if (!match(parser, t_lbracket))
-	return expr;
+    while (match(parser, t_lbracket)) {
+	SubscriptExpr *subscript_expr =
+	    (SubscriptExpr *)expr_alloc(parser->ast_arena, EXPR_SUBSCRIPT);
+	subscript_expr->expr = expr;
+	subscript_expr->access_value = expression(parser);
+	consume(parser, t_rbracket, "expected ']' after variable subscript");
+	expr = (Expr *)subscript_expr;
+    }
 
-    SubscriptExpr *subscript_expr = (SubscriptExpr *)expr_alloc(parser->ast_arena, EXPR_SUBSCRIPT);
-    subscript_expr->expr = expr;
-    subscript_expr->access_value = expression(parser);
-    consume(parser, t_rbracket, "expected ']' after variable subscript");
-    return (Expr *)subscript_expr;
+    return expr;
 }
 
 static Expr *access(Parser *parser)
