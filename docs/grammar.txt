@@ -89,6 +89,8 @@ cast            -> expression "as" TYPE ;
 
 subscript       -> access ( "[" expression "]" )? ;
 
+subscript       -> access ( "[" expression "]" )? ;
+
 access          -> ACCESS | primary ;
 
 primary         -> STRING 
