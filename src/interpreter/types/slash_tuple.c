@@ -17,7 +17,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "common.h"
+#include "interpreter/error.h"
 #include "interpreter/scope.h"
 #include "interpreter/types/slash_tuple.h"
 #include "interpreter/types/slash_value.h"

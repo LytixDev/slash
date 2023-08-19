@@ -14,9 +14,10 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef COMMON_H
-#define COMMON_H
+#ifndef ERROR_H
+#define ERROR_H
 
+#include "interpreter/lexer.h"
 #include "interpreter/parser.h"
 #include <assert.h>
 
@@ -29,4 +30,19 @@ void slash_exit_parse_err(Parser *parser, char *err_msg);
 void slash_exit_interpreter_err(char *err_msg);
 void slash_exit_internal_err(char *err_msg);
 
-#endif /* COMMON_H */
+/*
+ * Here the idea is that maybe we would at some point in the future like to report
+ * errors somewhere else than straight to stderr.
+ */
+#ifndef REPORT_PRINT_IMPL
+#define REPORT_PRINT_IMPL(format, ...) fprintf(stderr, (format), __VA_ARGS__)
+#endif
+
+#define REPORT_LEX_ERR(lexer, fmt, ...)                         \
+    do {                                                        \
+	REPORT_PRINT_IMPL("[line %zu]: ", (lexer)->line_count); \
+	REPORT_PRINT_IMPL(fmt, __VA_ARGS__);                    \
+	(lexer)->had_error = true;                              \
+    } while (0)
+
+#endif /* ERROR_H */

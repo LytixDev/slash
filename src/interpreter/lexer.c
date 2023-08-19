@@ -17,7 +17,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "common.h"
+#include "interpreter/error.h"
 #include "interpreter/lexer.h"
 #include "nicc/nicc.h"
 #include "str_view.h"
@@ -375,13 +375,9 @@ StateFn lex_any(Lexer *lexer)
 		return STATE_FN(lex_identifier);
 	    }
 
-	    goto panic;
+	    REPORT_LEX_ERR(lexer, "Unrecognized character '%c'\n", c);
 	}
     }
-
-panic:
-    lex_panic(lexer, "does not match anything");
-    return STATE_FN(NULL);
 }
 
 StateFn lex_end(Lexer *lexer)
@@ -601,9 +597,10 @@ static void run(Lexer *lexer)
 	state = state.fn(lexer);
 }
 
-ArrayList lex(char *input, size_t input_size)
+Lexer lex(char *input, size_t input_size)
 {
-    Lexer lexer = { .input = input,
+    Lexer lexer = { .had_error = false,
+		    .input = input,
 		    .input_size = input_size,
 		    .pos = 0,
 		    .start = 0,
@@ -615,5 +612,5 @@ ArrayList lex(char *input, size_t input_size)
     run(&lexer);
 
     hashmap_free(&lexer.keywords);
-    return lexer.tokens;
+    return lexer;
 }

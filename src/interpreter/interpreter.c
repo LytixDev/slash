@@ -19,9 +19,9 @@
 #include <unistd.h>
 
 #include "arena_ll.h"
-#include "common.h"
 #include "interpreter/ast.h"
 #include "interpreter/core/exec.h"
+#include "interpreter/error.h"
 #include "interpreter/interpreter.h"
 #include "interpreter/lexer.h"
 #include "interpreter/scope.h"
@@ -181,10 +181,10 @@ static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
 {
     SlashValue left = eval(interpreter, expr->left);
     if (expr->operator_ == t_and) {
-        /* short circuit */
-        if (!is_truthy(&left))
-            return (SlashValue){ .type = SLASH_BOOL, .boolean = false };
-        SlashValue right = eval(interpreter, expr->right);
+	/* short circuit */
+	if (!is_truthy(&left))
+	    return (SlashValue){ .type = SLASH_BOOL, .boolean = false };
+	SlashValue right = eval(interpreter, expr->right);
 	return (SlashValue){ .type = SLASH_BOOL, .boolean = is_truthy(&right) };
     }
 

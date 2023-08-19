@@ -17,8 +17,8 @@
 #include <stdarg.h>
 
 #include "arena_ll.h"
-#include "common.h"
 #include "interpreter/ast.h"
+#include "interpreter/error.h"
 #include "interpreter/lexer.h"
 #include "interpreter/parser.h"
 #include "interpreter/types/slash_value.h"

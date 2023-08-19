@@ -14,6 +14,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -22,7 +23,7 @@
 #include "nicc/nicc.h"
 
 
-char *get_offending_line(char *src, size_t line)
+static char *get_offending_line(char *src, size_t line)
 {
     size_t count = 0;
     while (*src != 0) {

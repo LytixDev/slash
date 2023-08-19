@@ -63,14 +63,18 @@ int main(int argc, char **argv)
 #endif /* DEBUG_PERF */
 
     /* lex */
-    ArrayList tokens = lex(input, counter + 1);
+    Lexer lex_result = lex(input, counter + 1);
+    if (lex_result.had_error) {
+	arraylist_free(&lex_result.tokens);
+	return 1;
+    }
 
 #ifdef DEBUG_PERF
     end_time = clock();
     lex_elapsed = (double)(end_time - start_time) / CLOCKS_PER_SEC;
 #endif /* DEBUG_PERF */
 #ifdef DEBUG
-    tokens_print(&tokens);
+    tokens_print(&lex_result.tokens);
 #endif /* DEBUG */
 
 #ifdef DEBUG_PERF
@@ -80,7 +84,7 @@ int main(int argc, char **argv)
     /* parse */
     Arena ast_arena;
     ast_arena_init(&ast_arena);
-    ArrayList stmts = parse(&ast_arena, &tokens, input);
+    ArrayList stmts = parse(&ast_arena, &lex_result.tokens, input);
 
 #ifdef DEBUG_PERF
     end_time = clock();
@@ -111,7 +115,7 @@ int main(int argc, char **argv)
 
     /* clean up */
     ast_arena_release(&ast_arena);
-    arraylist_free(&tokens);
+    arraylist_free(&lex_result.tokens);
     arraylist_free(&stmts);
 
     return exit_code;

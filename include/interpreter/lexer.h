@@ -133,6 +133,7 @@ typedef struct {
 } Token;
 
 typedef struct {
+    bool had_error;
     char *input; // the input string being scanned.
     size_t input_size; // size of input in bytes.
     size_t start; // start position of this token.
@@ -152,7 +153,7 @@ typedef struct func_wrap {
 
 
 /* functions */
-ArrayList lex(char *input, size_t input_size);
+Lexer lex(char *input, size_t input_size);
 
 void tokens_print(ArrayList *tokens);
 
