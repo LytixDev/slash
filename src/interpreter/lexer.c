@@ -23,7 +23,6 @@
 #include "str_view.h"
 
 /* forward declarations */
-static void lex_panic(Lexer *lexer, char *err_msg);
 static void run_until(Lexer *lexer, StateFn start_state, StateFn end_state);
 static void emit(Lexer *lexer, TokenType type);
 StateFn lex_any(Lexer *lexer);
@@ -139,7 +138,7 @@ static void ignore(Lexer *lexer)
 static void backup(Lexer *lexer)
 {
     if (lexer->pos == 0)
-	lex_panic(lexer, "tried to backup at input position zero");
+	ASSERT_NOT_REACHED;
 
     /* This is fine because we never increment line_count and then backup() */
     lexer->pos_in_line--;
@@ -213,16 +212,6 @@ static void shell_arg_emit(Lexer *lexer)
     if (lexer->start != lexer->pos)
 	emit(lexer, t_dt_shident);
     next(lexer);
-}
-
-static void lex_panic(Lexer *lexer, char *err_msg)
-{
-    fprintf(stderr, "LEX PANIC!\n");
-    fprintf(stderr, "--- lexer internal state --\n");
-    fprintf(stderr, "line: %zu. column: %zu\ninput: %s", lexer->line_count, lexer->pos_in_line,
-	    lexer->input);
-    tokens_print(&lexer->tokens);
-    slash_exit_lex_err(err_msg);
 }
 
 
@@ -329,28 +318,12 @@ StateFn lex_any(Lexer *lexer)
 	case '@':
 	    emit(lexer, match(lexer, '[') ? t_at_lbracket : t_at);
 	    break;
-
 	case '+':
-	    if (match(lexer, '=')) {
-		emit(lexer, t_plus_equal);
-		break;
-	    } else if (!check_any(lexer, "0123456789")) {
-		emit(lexer, t_plus);
-		break;
-	    }
-	    backup(lexer);
-	    return STATE_FN(lex_number);
-
+	    emit(lexer, match(lexer, '=') ? t_plus_equal : t_plus);
+	    break;
 	case '-':
-	    if (match(lexer, '=')) {
-		emit(lexer, t_minus_equal);
-		break;
-	    } else if (!check_any(lexer, "0123456789")) {
-		emit(lexer, t_minus);
-		break;
-	    }
-	    backup(lexer);
-	    return STATE_FN(lex_number);
+	    emit(lexer, match(lexer, '=') ? t_minus_equal : t_minus);
+	    break;
 
 	case '$':
 	    return STATE_FN(lex_access);
@@ -375,7 +348,7 @@ StateFn lex_any(Lexer *lexer)
 		return STATE_FN(lex_identifier);
 	    }
 
-	    REPORT_LEX_ERR(lexer, "Unrecognized character '%c'\n", c);
+	    report_lex_err(lexer, true, "Unrecognized character");
 	}
     }
 }
@@ -454,13 +427,6 @@ StateFn lex_number(Lexer *lexer)
 {
     char *digits = "_0123456789";
 
-    /* optional leading sign */
-    if (accept(lexer, "+-")) {
-	/* edge case: leading sign is not followed by a digit */
-	if (!match_any(lexer, (char *)(digits + 1)))
-	    lex_panic(lexer, "optional leading sign must be followed by a digit");
-	backup(lexer);
-    }
     /* hex and binary */
     if (accept(lexer, "0")) {
 	bool changed_base = false;
@@ -472,8 +438,10 @@ StateFn lex_number(Lexer *lexer)
 	    changed_base = true;
 	}
 	/* edge case: no valid digits */
-	if (changed_base && !match_any(lexer, (char *)(digits + 1)))
-	    lex_panic(lexer, "number must contain at least one valid digit");
+	if (changed_base && !match_any(lexer, (char *)(digits + 1))) {
+	    report_lex_err(lexer, true, "Number must contain at least one valid digit");
+	    return STATE_FN(lex_any);
+	}
     }
 
     accept_run(lexer, digits);
@@ -518,8 +486,10 @@ StateFn lex_access(Lexer *lexer)
     /* came from '$' which we want to ignore */
     ignore(lexer);
 
-    if (!is_valid_identifier(next(lexer)))
-	lex_panic(lexer, "invalid identifier access");
+    if (!is_valid_identifier(next(lexer))) {
+	report_lex_err(lexer, true, "Illegal identifier name");
+	return STATE_FN(lex_any);
+    }
 
     while (is_valid_identifier(next(lexer)))
 	;
@@ -536,8 +506,11 @@ StateFn lex_string(Lexer *lexer)
 
     char c;
     while ((c = next(lexer)) != '"') {
-	if (c == EOF)
-	    lex_panic(lexer, "unterminated string");
+	if (c == EOF || c == '\n') {
+	    backup(lexer);
+	    report_lex_err(lexer, true, "Unterminated string literal");
+	    return STATE_FN(lex_any);
+	}
     }
 
     /* backup final qoute */
@@ -584,8 +557,10 @@ StateFn lex_rparen(Lexer *lexer)
 static void run_until(Lexer *lexer, StateFn start_state, StateFn end_state)
 {
     for (StateFn state = start_state; state.fn != end_state.fn;) {
-	if (state.fn == NULL)
-	    lex_panic(lexer, "expected end_state not reached");
+	if (state.fn == NULL) {
+	    report_lex_err(lexer, false, "Expected end_state not reached");
+	    break;
+	}
 	state = state.fn(lexer);
     }
 }

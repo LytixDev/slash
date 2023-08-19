@@ -15,15 +15,22 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "interpreter/error.h"
 #include "interpreter/lexer.h"
 #include "interpreter/parser.h"
 #include "nicc/nicc.h"
 
+typedef struct {
+    char *alloced_buffer;
+    size_t left_offset;
+} ErrBuf;
 
-static char *get_offending_line(char *src, size_t line)
+
+static char *offending_line(char *src, size_t line)
 {
     size_t count = 0;
     while (*src != 0) {
@@ -37,11 +44,53 @@ static char *get_offending_line(char *src, size_t line)
     return NULL;
 }
 
-
-void slash_exit_lex_err(char *err_msg)
+static ErrBuf offending_line_from_offset(char *input, size_t offset)
 {
-    fprintf(stderr, "Error during lexing: %s\n", err_msg);
-    exit(1);
+    /* first char after previous newline */
+    char *start;
+    for (start = input + offset; start - input >= 0; start--) {
+	if (*start == '\n') {
+	    start++;
+	    break;
+	}
+    }
+    if (start == input - 1)
+	start++;
+
+    /* first char before previous newline */
+    char *end;
+    for (end = input + offset; *end != EOF; end++) {
+	if (*end == '\n') {
+	    break;
+	}
+    }
+
+    // TODO: we can define a max len just for safety
+    assert(end > start);
+    size_t len = end - start;
+    char *buffer = malloc(sizeof(char) * (len + 1));
+    memcpy(buffer, start, len);
+    buffer[len] = 0;
+    return (ErrBuf){ .alloced_buffer = buffer, .left_offset = (input + offset) - start };
+}
+
+void report_lex_err(Lexer *lexer, bool print_offending, char *msg)
+{
+    REPORT_IMPL("[line %zu]: %s\n", lexer->line_count + 1, msg);
+    if (print_offending) {
+	ErrBuf bf = offending_line_from_offset(lexer->input, lexer->start);
+	REPORT_IMPL(">%s\n ", bf.alloced_buffer);
+	free(bf.alloced_buffer);
+
+	// TODO: a lot of wasted calls to REPORT_IMPL
+	for (size_t i = 0; i < bf.left_offset; i++)
+	    REPORT_IMPL(" ");
+	for (size_t i = 0; i < lexer->pos - lexer->start; i++)
+	    REPORT_IMPL("^");
+	REPORT_IMPL("\n");
+    }
+
+    lexer->had_error = true;
 }
 
 void slash_exit_parse_err(Parser *parser, char *err_msg)
@@ -50,7 +99,7 @@ void slash_exit_parse_err(Parser *parser, char *err_msg)
     Token *failed = arraylist_get(parser->tokens, parser->token_pos);
     fprintf(stderr, "Occured in line %zu at %zu.\n", failed->line, failed->start);
 
-    char *p = get_offending_line(parser->input, failed->line);
+    char *p = offending_line(parser->input, failed->line);
     fprintf(stderr, "%s\n", p);
     for (size_t i = 0; i < failed->start; i++)
 	putchar(' ');

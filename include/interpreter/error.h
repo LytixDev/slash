@@ -22,27 +22,20 @@
 #include <assert.h>
 
 
-#define ASSERT_NOT_REACHED assert(false && "panic: unreachable code reached")
-
-
-void slash_exit_lex_err(char *err_msg);
-void slash_exit_parse_err(Parser *parser, char *err_msg);
-void slash_exit_interpreter_err(char *err_msg);
-void slash_exit_internal_err(char *err_msg);
+#define ASSERT_NOT_REACHED assert(0 && "panic: unreachable code reached")
 
 /*
  * Here the idea is that maybe we would at some point in the future like to report
  * errors somewhere else than straight to stderr.
  */
-#ifndef REPORT_PRINT_IMPL
-#define REPORT_PRINT_IMPL(format, ...) fprintf(stderr, (format), __VA_ARGS__)
+#ifndef REPORT_IMPL
+#define REPORT_IMPL(...) fprintf(stderr, __VA_ARGS__)
 #endif
 
-#define REPORT_LEX_ERR(lexer, fmt, ...)                         \
-    do {                                                        \
-	REPORT_PRINT_IMPL("[line %zu]: ", (lexer)->line_count); \
-	REPORT_PRINT_IMPL(fmt, __VA_ARGS__);                    \
-	(lexer)->had_error = true;                              \
-    } while (0)
+void slash_exit_parse_err(Parser *parser, char *err_msg);
+void slash_exit_interpreter_err(char *err_msg);
+void slash_exit_internal_err(char *err_msg);
+
+void report_lex_err(Lexer *lexer, bool print_offending, char *msg);
 
 #endif /* ERROR_H */
