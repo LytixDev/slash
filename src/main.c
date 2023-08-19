@@ -15,11 +15,13 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <stdio.h>
+#include <sys/stat.h>
 #ifdef DEBUG_PERF
 #include <time.h>
 #endif /* DEBUG_PERF */
 
 #include "interpreter/ast.h"
+#include "interpreter/error.h"
 #include "interpreter/interpreter.h"
 #include "interpreter/lexer.h"
 #include "interpreter/parser.h"
@@ -37,24 +39,24 @@ int main(int argc, char **argv)
     if (argc > 1)
 	file_path = argv[1];
 
-    char input[MAX_INPUT_SIZE];
+    struct stat st;
+    if (stat(file_path, &st) != 0) {
+	REPORT_IMPL("Could not stat file '%s'\n", file_path);
+	return 1;
+    }
+    size_t file_size = st.st_size;
+
+    char *input = malloc(sizeof(char) * (file_size + 1));
     FILE *fp = fopen(file_path, "r");
     if (fp == NULL) {
-	fprintf(stderr, "error opening file %s\n", file_path);
-	return -1;
+	REPORT_IMPL("Could not open file '%s'\n", file_path);
+	return 1;
     }
-
-    int c;
-    size_t counter = 0;
-    do {
-	c = fgetc(fp);
-	input[counter++] = c;
-	if (counter == MAX_INPUT_SIZE)
-	    break;
-    } while (c != EOF);
-
-    input[--counter] = 0;
-    fclose(fp);
+    if (fread(input, sizeof(char), st.st_size, fp) != file_size) {
+	REPORT_IMPL("Could not read file '%s'\n", file_path);
+	return 1;
+    }
+    input[file_size] = 0;
 
 #ifdef DEBUG_PERF
     double lex_elapsed, parse_elapsed, interpret_elapsed;
@@ -63,9 +65,11 @@ int main(int argc, char **argv)
 #endif /* DEBUG_PERF */
 
     /* lex */
-    Lexer lex_result = lex(input, counter + 1);
+    Lexer lex_result = lex(input, file_size);
     if (lex_result.had_error) {
+	REPORT_IMPL("Lexer had error, exiting ...\n");
 	arraylist_free(&lex_result.tokens);
+	free(input);
 	return 1;
     }
 
@@ -117,6 +121,7 @@ int main(int argc, char **argv)
     ast_arena_release(&ast_arena);
     arraylist_free(&lex_result.tokens);
     arraylist_free(&stmts);
+    free(input);
 
     return exit_code;
 }
