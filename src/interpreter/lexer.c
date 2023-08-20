@@ -69,15 +69,14 @@ static void keywords_init(HashMap *keywords)
 
 void tokens_print(ArrayList *tokens)
 {
-    printf("--------------\n");
+    printf("Tokens:\n");
     printf("count\t| line, column\t| type\t\t| lexeme\n");
-    printf("--- tokens ---\n");
 
     for (size_t i = 0; i < tokens->size; i++) {
 	Token *token = arraylist_get(tokens, i);
 	if (token->type == t_newline)
 	    continue;
-	printf("[%zu]\t| [%zu, %zu-%zu]\t| %s\t| ", i, token->line, token->start, token->end,
+	printf("[%zu]\t| [%zu, %zu-%zu]\t| %-10s\t| ", i, token->line, token->start, token->end,
 	       token_type_str_map[token->type]);
 	str_view_print(token->lexeme);
 	putchar('\n');

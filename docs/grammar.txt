@@ -73,7 +73,10 @@ term            -> factor ( ( "-" | "+" ) factor )* ;
 
 factor          -> unary ;
 
-unary           -> subshell
+unary           -> ("not" | "-") unary
+                |  single ;
+
+single          -> subshell
                 |  method_call
                 |  contains
                 |  cast
