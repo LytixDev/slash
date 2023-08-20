@@ -37,7 +37,7 @@ static char *offending_line(char *src, size_t line)
 	if (*src == '\n')
 	    count++;
 	if (count == line)
-	    return src + 1;
+	    return src;
 
 	src++;
     }
@@ -93,20 +93,23 @@ void report_lex_err(Lexer *lexer, bool print_offending, char *msg)
     lexer->had_error = true;
 }
 
-void slash_exit_parse_err(Parser *parser, char *err_msg)
+void report_parse_err(Parser *parser, char *msg)
 {
-    fprintf(stderr, "Error during parsing: %s.\n", err_msg);
     Token *failed = arraylist_get(parser->tokens, parser->token_pos);
-    fprintf(stderr, "Occured in line %zu at %zu.\n", failed->line, failed->start);
+    REPORT_IMPL("[line %zu]: Error during parsing: %s\n", failed->line + 1, msg);
 
-    char *p = offending_line(parser->input, failed->line);
-    fprintf(stderr, "%s\n", p);
+    char *line = offending_line(parser->input, failed->line);
+    ErrBuf bf = offending_line_from_offset(line, failed->start);
+    REPORT_IMPL(">%s\n ", bf.alloced_buffer);
+    free(bf.alloced_buffer);
+
     for (size_t i = 0; i < failed->start; i++)
-	putchar(' ');
+	REPORT_IMPL(" ");
     for (size_t i = 0; i < failed->end - failed->start; i++)
-	putchar('^');
-    putchar('\n');
-    exit(1);
+	REPORT_IMPL("^");
+    REPORT_IMPL("\n");
+
+    parser->had_error = true;
 }
 
 void slash_exit_interpreter_err(char *err_msg)

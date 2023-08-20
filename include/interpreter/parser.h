@@ -17,6 +17,8 @@
 #ifndef PARSER_H
 #define PARSER_H
 
+#include <stdbool.h>
+
 #include "nicc/nicc.h"
 #include "sac/sac.h"
 
@@ -26,13 +28,19 @@ typedef struct {
     ArrayList *tokens; // stream of tokens from the lexer
     size_t token_pos; // index of current token being processed
     char *input; // handle to the source code
+    bool had_error;
 } Parser;
+
+typedef struct {
+    bool had_error;
+    ArrayList stmts;
+} StmtsOrErr;
 
 /*
  * Parses a list of tokens into a list of statements: Arraylist<Stmt>
  * The Stmt objects in the list are the first nodes in an AST.
  */
-ArrayList parse(Arena *ast_arena, ArrayList *tokens, char *input);
+StmtsOrErr parse(Arena *ast_arena, ArrayList *tokens, char *input);
 
 
 #endif /* PARSER_H */

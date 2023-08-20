@@ -27,6 +27,8 @@
 #include "str_view.h"
 
 
+static void report_err_and_sync(Parser *parser, char *err_msg);
+
 /*
  * non-terminal grammar rule functions
  */
@@ -130,7 +132,7 @@ static bool check_either(Parser *parser, int step, unsigned int n, ...)
 static Token *consume(Parser *parser, TokenType expected, char *err_msg)
 {
     if (!check_single(parser, expected, 0))
-	slash_exit_parse_err(parser, err_msg);
+	report_err_and_sync(parser, err_msg);
 
     return advance(parser);
 }
@@ -179,8 +181,35 @@ static SlashType token_type_to_slash_type(TokenType type)
     case t_bool:
 	return SLASH_BOOL;
     default:
-	slash_exit_interpreter_err("cast not supported...");
+	ASSERT_NOT_REACHED;
     };
+
+    ASSERT_NOT_REACHED;
+    return 0;
+}
+
+static void synchronize(Parser *parser)
+{
+    do {
+	advance(parser);
+	switch (peek(parser)->type) {
+	case t_var:
+	case t_loop:
+	case t_if:
+	case t_assert:
+	case t_newline:
+	    return;
+	default:
+	    (void)0;
+	}
+
+    } while (!is_at_end(parser));
+}
+
+static void report_err_and_sync(Parser *parser, char *err_msg)
+{
+    report_parse_err(parser, err_msg);
+    synchronize(parser);
 }
 
 
@@ -551,8 +580,10 @@ static Expr *unary(Parser *parser)
 	CastExpr *expr = (CastExpr *)expr_alloc(parser->ast_arena, EXPR_CAST);
 	expr->expr = left;
 	// TODO: support more casts later
-	if (!match(parser, t_num, t_str, t_bool))
-	    slash_exit_parse_err(parser, "Expected type after 'as' cast");
+	if (!match(parser, t_num, t_str, t_bool)) {
+	    report_err_and_sync(parser, "Expected 'num', 'str' or 'bool' keyword after cast");
+	    return NULL;
+	}
 	expr->as = token_type_to_slash_type(previous(parser)->type);
 	return (Expr *)expr;
     }
@@ -633,8 +664,10 @@ static Expr *primary(Parser *parser)
     if (match(parser, t_lparen))
 	return grouping(parser);
 
-    if (!match(parser, t_dt_str, t_dt_shident))
-	slash_exit_parse_err(parser, "not a valid primary type");
+    if (!match(parser, t_dt_str, t_dt_shident)) {
+	report_err_and_sync(parser, "not a valid primary type");
+	return NULL;
+    }
 
     /* str or shident */
     Token *token = previous(parser);
@@ -743,9 +776,11 @@ static Expr *grouping(Parser *parser)
     return (Expr *)expr;
 }
 
-ArrayList parse(Arena *ast_arena, ArrayList *tokens, char *input)
+StmtsOrErr parse(Arena *ast_arena, ArrayList *tokens, char *input)
 {
-    Parser parser = { .ast_arena = ast_arena, .tokens = tokens, .token_pos = 0, .input = input };
+    Parser parser = {
+	.ast_arena = ast_arena, .tokens = tokens, .token_pos = 0, .input = input, .had_error = false
+    };
     ArrayList statements;
     arraylist_init(&statements, sizeof(Stmt *));
 
@@ -754,5 +789,5 @@ ArrayList parse(Arena *ast_arena, ArrayList *tokens, char *input)
 	arraylist_append(&statements, &stmt);
     }
 
-    return statements;
+    return (StmtsOrErr){ .had_error = parser.had_error, .stmts = statements };
 }

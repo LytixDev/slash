@@ -1,1 +1,3 @@
-var s = "Alic
+var name = "Alice"
+
+$name as list

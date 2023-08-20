@@ -35,6 +35,7 @@
 
 int main(int argc, char **argv)
 {
+    int exit_code;
     char *file_path = "src/test.slash";
     if (argc > 1)
 	file_path = argv[1];
@@ -50,11 +51,13 @@ int main(int argc, char **argv)
     FILE *fp = fopen(file_path, "r");
     if (fp == NULL) {
 	REPORT_IMPL("Could not open file '%s'\n", file_path);
-	return 1;
+	exit_code = 1;
+	goto defer_input;
     }
     if (fread(input, sizeof(char), st.st_size, fp) != file_size) {
 	REPORT_IMPL("Could not read file '%s'\n", file_path);
-	return 1;
+	exit_code = 1;
+	goto defer_input;
     }
     input[file_size] = 0;
 
@@ -67,10 +70,8 @@ int main(int argc, char **argv)
     /* lex */
     Lexer lex_result = lex(input, file_size);
     if (lex_result.had_error) {
-	REPORT_IMPL("Lexer had error, exiting ...\n");
-	arraylist_free(&lex_result.tokens);
-	free(input);
-	return 1;
+	exit_code = 1;
+	goto defer_tokens;
     }
 
 #ifdef DEBUG_PERF
@@ -88,14 +89,18 @@ int main(int argc, char **argv)
     /* parse */
     Arena ast_arena;
     ast_arena_init(&ast_arena);
-    ArrayList stmts = parse(&ast_arena, &lex_result.tokens, input);
+    StmtsOrErr stmts = parse(&ast_arena, &lex_result.tokens, input);
+    if (stmts.had_error) {
+	exit_code = 1;
+	goto defer_stms;
+    }
 
 #ifdef DEBUG_PERF
     end_time = clock();
     parse_elapsed = (double)(end_time - start_time) / CLOCKS_PER_SEC;
 #endif /* DEBUG_PERF */
 #ifdef DEBUG
-    ast_print(&stmts);
+    ast_print(&stmts.stmts);
 #endif /* DEBUG */
 
 #ifdef DEBUG
@@ -106,7 +111,7 @@ int main(int argc, char **argv)
 #endif /* DEBUG_PERF */
 
     /* interpret */
-    int exit_code = interpret(&stmts);
+    exit_code = interpret(&stmts.stmts);
 
 #ifdef DEBUG_PERF
     end_time = clock();
@@ -118,9 +123,12 @@ int main(int argc, char **argv)
 #endif /* DEBUG_PERF */
 
     /* clean up */
+defer_stms:
     ast_arena_release(&ast_arena);
+    arraylist_free(&stmts.stmts);
+defer_tokens:
     arraylist_free(&lex_result.tokens);
-    arraylist_free(&stmts);
+defer_input:
     free(input);
 
     return exit_code;
