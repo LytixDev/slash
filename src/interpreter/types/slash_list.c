@@ -18,7 +18,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-#include "common.h"
+#include "interpreter/error.h"
 #include "interpreter/scope.h"
 #include "interpreter/types/slash_list.h"
 #include "interpreter/types/slash_value.h"
@@ -108,7 +108,7 @@ SlashValue slash_list_item_get(Scope *scope, SlashValue *self, SlashValue *index
 {
     assert(self->type == SLASH_LIST);
     if (!(index->type == SLASH_NUM || index->type == SLASH_RANGE)) {
-	slash_exit_interpreter_err("list indices must be number or range");
+	report_runtime_error("List indices must be number or range");
 	ASSERT_NOT_REACHED;
     }
 
@@ -127,7 +127,7 @@ void slash_list_item_assign(SlashValue *self, SlashValue *index, SlashValue *new
     assert(self->type == SLASH_LIST);
 
     if (index->type != SLASH_NUM) {
-	slash_exit_interpreter_err("list indices must be number");
+	report_runtime_error("List indices must be number");
 	ASSERT_NOT_REACHED;
     }
 
@@ -151,8 +151,8 @@ bool slash_list_item_in(SlashValue *self, SlashValue *item)
 
 /* methods */
 SlashMethod slash_list_methods[SLASH_LIST_METHODS_COUNT] = {
-    (SlashMethod){ .name = "pop", .fp = slash_list_pop },
-    (SlashMethod){ .name = "len", .fp = slash_list_len },
+    { .name = "pop", .fp = slash_list_pop },
+    { .name = "len", .fp = slash_list_len },
 };
 
 SlashValue slash_list_pop(SlashValue *self, size_t argc, SlashValue *argv)
@@ -168,14 +168,16 @@ SlashValue slash_list_pop(SlashValue *self, size_t argc, SlashValue *argv)
     }
 
     if (!match_signature("n", argc, argv)) {
-	slash_exit_interpreter_err("bad method args");
+	report_runtime_error("Bad method args");
+	ASSERT_NOT_REACHED;
     }
 
     /* argc must be 1 and type of argv must be num */
     SlashValue key = argv[0];
     size_t idx = (size_t)key.num;
     if (key.num < 0 || idx > underlying->size - 1) {
-	slash_exit_interpreter_err("index out of range");
+	report_runtime_error("Index out of range");
+	ASSERT_NOT_REACHED;
     }
     arraylist_get_copy(underlying, idx, &popped_item);
     arraylist_rm(underlying, idx);
@@ -189,7 +191,7 @@ SlashValue slash_list_len(SlashValue *self, size_t argc, SlashValue *argv)
     ArrayList *underlying = self->list.underlying;
 
     if (!match_signature("", argc, argv)) {
-	slash_exit_interpreter_err("bad method args");
+	report_runtime_error("Bad method args");
 	ASSERT_NOT_REACHED;
     }
 

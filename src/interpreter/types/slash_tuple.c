@@ -17,7 +17,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "common.h"
+#include "interpreter/error.h"
 #include "interpreter/scope.h"
 #include "interpreter/types/slash_tuple.h"
 #include "interpreter/types/slash_value.h"
@@ -62,17 +62,18 @@ size_t *slash_tuple_len(SlashValue *value)
 
 SlashValue slash_tuple_item_get(Scope *scope, SlashValue *self, SlashValue *index)
 {
+    (void)scope;
     assert(self->type == SLASH_TUPLE);
     SlashTuple tuple = self->tuple;
 
     if (index->type != SLASH_NUM) {
-	slash_exit_interpreter_err("list indices must be numbers");
+	report_runtime_error("List indices must be numbers");
 	ASSERT_NOT_REACHED;
     }
 
     size_t idx = (size_t)index->num;
     if (idx > tuple.size) {
-	slash_exit_interpreter_err("list indices must be numbers");
+	report_runtime_error("List indices must be numbers");
 	ASSERT_NOT_REACHED;
     }
 

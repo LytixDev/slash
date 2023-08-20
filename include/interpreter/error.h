@@ -14,19 +14,26 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef COMMON_H
-#define COMMON_H
+#ifndef ERROR_H
+#define ERROR_H
 
+#include "interpreter/lexer.h"
 #include "interpreter/parser.h"
 #include <assert.h>
 
 
-#define ASSERT_NOT_REACHED assert(false && "panic: unreachable code reached")
+#define ASSERT_NOT_REACHED assert(0 && "panic: unreachable code reached")
 
+/*
+ * Here the idea is that maybe we would at some point in the future like to report
+ * errors somewhere else than straight to stderr.
+ */
+#ifndef REPORT_IMPL
+#define REPORT_IMPL(...) fprintf(stderr, __VA_ARGS__)
+#endif
 
-void slash_exit_lex_err(char *err_msg);
-void slash_exit_parse_err(Parser *parser, char *err_msg);
-void slash_exit_interpreter_err(char *err_msg);
-void slash_exit_internal_err(char *err_msg);
+void report_lex_err(Lexer *lexer, bool print_offending, char *msg);
+void report_parse_err(Parser *parser, char *msg);
+void report_runtime_error(char *msg);
 
-#endif /* COMMON_H */
+#endif /* ERROR_H */

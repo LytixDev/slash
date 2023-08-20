@@ -16,7 +16,7 @@
  */
 #include <string.h>
 
-#include "common.h"
+#include "interpreter/error.h"
 #include "interpreter/types/method.h"
 #include "interpreter/types/slash_value.h"
 
