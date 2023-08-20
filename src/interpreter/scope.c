@@ -153,7 +153,7 @@ void var_assign_simple(Scope *current, StrView *var_name, SlashValue *value)
 	current = current->enclosing;
     } while (current != NULL);
 
-    slash_exit_interpreter_err("cannot assign a variable that is not defined");
+    report_runtime_error("Cannot assign a variable that is not defined");
 }
 
 void var_assign(StrView *var_name, Scope *var_owner, Scope *current, SlashValue *value)

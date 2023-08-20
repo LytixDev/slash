@@ -32,10 +32,8 @@
 #define REPORT_IMPL(...) fprintf(stderr, __VA_ARGS__)
 #endif
 
-void slash_exit_interpreter_err(char *err_msg);
-void slash_exit_internal_err(char *err_msg);
-
 void report_lex_err(Lexer *lexer, bool print_offending, char *msg);
 void report_parse_err(Parser *parser, char *msg);
+void report_runtime_error(char *msg);
 
 #endif /* ERROR_H */

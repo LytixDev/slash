@@ -37,17 +37,17 @@ void slash_print_not_defined(SlashValue *value)
 
 void slash_item_get_not_defined(void)
 {
-    slash_exit_interpreter_err("item no get");
+    report_runtime_error("Subscript not defined for this type");
 }
 
 void slash_item_assign_not_defined(void)
 {
-    slash_exit_interpreter_err("item assignment not defined for this type");
+    report_runtime_error("Item assignment not defined for this type");
 }
 
 void slash_item_in_not_defined(void)
 {
-    slash_exit_interpreter_err("item in not defined for this type");
+    report_runtime_error("Item in not defined for this type");
 }
 
 SlashPrintFunc slash_print[SLASH_TYPE_COUNT] = {

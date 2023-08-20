@@ -66,13 +66,13 @@ SlashValue slash_tuple_item_get(Scope *scope, SlashValue *self, SlashValue *inde
     SlashTuple tuple = self->tuple;
 
     if (index->type != SLASH_NUM) {
-	slash_exit_interpreter_err("list indices must be numbers");
+	report_runtime_error("List indices must be numbers");
 	ASSERT_NOT_REACHED;
     }
 
     size_t idx = (size_t)index->num;
     if (idx > tuple.size) {
-	slash_exit_interpreter_err("list indices must be numbers");
+	report_runtime_error("List indices must be numbers");
 	ASSERT_NOT_REACHED;
     }
 

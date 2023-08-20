@@ -37,6 +37,6 @@ SlashValue dynamic_cast(Interpreter *interpreter, SlashValue value, SlashType ne
 	return (SlashValue){ .type = SLASH_STR, .str = view };
     }
 
-    slash_exit_interpreter_err("cast not supported");
+    report_runtime_error("Cast not supported");
     return (SlashValue){ 0 };
 }

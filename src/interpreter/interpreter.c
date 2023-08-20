@@ -85,7 +85,7 @@ static char **cmd_args_fmt(Interpreter *interpreter, CmdStmt *stmt)
 	    str[v.str.size] = 0;
 	    argv[i] = str;
 	} else {
-	    slash_exit_interpreter_err("only support evaluing str args");
+	    report_runtime_error("Currently only support evaluating number and string arguments");
 	}
 	i++;
     }
@@ -105,7 +105,7 @@ static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt)
 static void check_num_operands(SlashValue *left, SlashValue *right)
 {
     if (!(left->type == SLASH_NUM && right->type == SLASH_NUM))
-	slash_exit_interpreter_err("only support operations on numbers");
+	report_runtime_error("Binary operations only supported on numbers");
 }
 
 
@@ -149,8 +149,8 @@ static SlashValue cmp_binary_values(SlashValue left, SlashValue right, TokenType
 	    slash_list_append(&left.list, right);
 	    result = left;
 	} else {
-	    slash_exit_interpreter_err(
-		"plus operator only supported for num and num or list and list");
+	    report_runtime_error(
+		"Plus operator only supported for number and number or list and list");
 	    ASSERT_NOT_REACHED;
 	}
 	break;
@@ -169,7 +169,7 @@ static SlashValue cmp_binary_values(SlashValue left, SlashValue right, TokenType
 	break;
 
     default:
-	slash_exit_interpreter_err("binary operator not supported");
+	report_runtime_error("Binary operator not supported");
 	ASSERT_NOT_REACHED;
 	return (SlashValue){ 0 };
     }
@@ -327,9 +327,8 @@ static SlashValue eval_method(Interpreter *interpreter, MethodExpr *expr)
 
     /* get method */
     MethodFunc method = get_method(&self, method_name);
-    if (method == NULL) {
-	slash_exit_interpreter_err("method does not exist :-(");
-    }
+    if (method == NULL)
+	report_runtime_error("Method does not exist");
 
     /*
      * first argument will always be the object that the method is called "on"
@@ -453,7 +452,7 @@ static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
     }
 
     if (stmt->var->type != EXPR_ACCESS) {
-	slash_exit_interpreter_err("can't assign that type !!");
+	report_runtime_error("Internal error: bad expr type");
 	ASSERT_NOT_REACHED;
     }
 
@@ -461,7 +460,7 @@ static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
     StrView var_name = access->var_name;
     ScopeAndValue variable = var_get(interpreter->scope, &var_name);
     if (variable.value == NULL)
-	slash_exit_interpreter_err("cannot modify undefined variable");
+	report_runtime_error("Cannot modify undefined variable");
 
     SlashValue new_value = eval(interpreter, stmt->value);
 
@@ -512,7 +511,7 @@ static void exec_assert(Interpreter *interpreter, AssertStmt *stmt)
 {
     SlashValue result = eval(interpreter, stmt->expr);
     if (!is_truthy(&result))
-	slash_exit_interpreter_err("assertion failed");
+	report_runtime_error("Assertion failed");
 }
 
 static void exec_loop(Interpreter *interpreter, LoopStmt *stmt)
@@ -644,7 +643,7 @@ static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
 	exec_iter_loop_range(interpreter, stmt, underlying.range);
 	break;
     default:
-	slash_exit_interpreter_err("type can't be iterated over");
+	report_runtime_error("Type can't be iterated over");
 	ASSERT_NOT_REACHED;
     }
 
@@ -712,7 +711,7 @@ static SlashValue eval(Interpreter *interpreter, Expr *expr)
 	return eval_cast(interpreter, (CastExpr *)expr);
 
     default:
-	slash_exit_internal_err("interpreter: expr type not handled");
+	report_runtime_error("Expression type not handled");
 	/* will never happen, but lets make the compiler happy */
 	return (SlashValue){ 0 };
     }
@@ -767,7 +766,7 @@ static void exec(Interpreter *interpreter, Stmt *stmt)
 
 
     default:
-	slash_exit_internal_err("interpreter: stmt type not handled");
+	report_runtime_error("Statement type not handled");
     }
 }
 

@@ -112,14 +112,8 @@ void report_parse_err(Parser *parser, char *msg)
     parser->had_error = true;
 }
 
-void slash_exit_interpreter_err(char *err_msg)
+void report_runtime_error(char *msg)
 {
-    fprintf(stderr, "Error during interpreting: %s\n", err_msg);
-    exit(1);
-}
-
-void slash_exit_internal_err(char *err_msg)
-{
-    fprintf(stderr, "Internal error: %s\n", err_msg);
+    REPORT_IMPL("Error during runtime: %s\n", msg);
     exit(1);
 }
