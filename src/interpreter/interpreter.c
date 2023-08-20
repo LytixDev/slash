@@ -114,8 +114,17 @@ static void check_num_operands(SlashValue *left, SlashValue *right)
  */
 static SlashValue eval_unary(Interpreter *interpreter, UnaryExpr *expr)
 {
-    (void)interpreter;
-    (void)expr;
+    SlashValue right = eval(interpreter, expr->right);
+    if (expr->operator_ == t_not)
+	return (SlashValue){ .type = SLASH_BOOL, .boolean = !is_truthy(&right) };
+    if (expr->operator_ == t_minus) {
+	if (right.type != SLASH_NUM)
+	    report_runtime_error("'-' operator only supported for numbers");
+	right.num = -right.num;
+	return right;
+    }
+
+    ASSERT_NOT_REACHED;
     return (SlashValue){ 0 };
 }
 

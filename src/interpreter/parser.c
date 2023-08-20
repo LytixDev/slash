@@ -59,6 +59,7 @@ static Expr *comparison(Parser *parser);
 static Expr *term(Parser *parser);
 static Expr *factor(Parser *parser);
 static Expr *unary(Parser *parser);
+static Expr *single(Parser *parser);
 static Expr *subshell(Parser *parser);
 static Expr *subscript(Parser *parser);
 static Expr *access(Parser *parser);
@@ -552,6 +553,17 @@ static Expr *factor(Parser *parser)
 }
 
 static Expr *unary(Parser *parser)
+{
+    if (!match(parser, t_not, t_minus))
+	return single(parser);
+
+    UnaryExpr *expr = (UnaryExpr *)expr_alloc(parser->ast_arena, EXPR_UNARY);
+    expr->operator_ = previous(parser)->type;
+    expr->right = unary(parser);
+    return (Expr *)expr;
+}
+
+static Expr *single(Parser *parser)
 {
     Expr *left;
     if (match(parser, t_lparen)) {
