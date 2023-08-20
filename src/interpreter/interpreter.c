@@ -114,6 +114,8 @@ static void check_num_operands(SlashValue *left, SlashValue *right)
  */
 static SlashValue eval_unary(Interpreter *interpreter, UnaryExpr *expr)
 {
+    (void)interpreter;
+    (void)expr;
     return (SlashValue){ 0 };
 }
 
@@ -204,6 +206,7 @@ static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
 
 static SlashValue eval_literal(Interpreter *interpreter, LiteralExpr *expr)
 {
+    (void)interpreter;
     return expr->value;
 }
 

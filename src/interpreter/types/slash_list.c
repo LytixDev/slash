@@ -151,8 +151,8 @@ bool slash_list_item_in(SlashValue *self, SlashValue *item)
 
 /* methods */
 SlashMethod slash_list_methods[SLASH_LIST_METHODS_COUNT] = {
-    (SlashMethod){ .name = "pop", .fp = slash_list_pop },
-    (SlashMethod){ .name = "len", .fp = slash_list_len },
+    { .name = "pop", .fp = slash_list_pop },
+    { .name = "len", .fp = slash_list_len },
 };
 
 SlashValue slash_list_pop(SlashValue *self, size_t argc, SlashValue *argv)

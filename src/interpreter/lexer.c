@@ -145,21 +145,6 @@ static void backup(Lexer *lexer)
     lexer->pos--;
 }
 
-static bool check(Lexer *lexer, char expected)
-{
-    return peek(lexer) == expected;
-}
-
-static bool check_any(Lexer *lexer, char *expected)
-{
-    do {
-	if (check(lexer, *expected))
-	    return true;
-    } while (*expected++ != 0);
-
-    return false;
-}
-
 static bool match(Lexer *lexer, char expected)
 {
     if (peek(lexer) == expected) {

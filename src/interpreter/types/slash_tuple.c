@@ -62,6 +62,7 @@ size_t *slash_tuple_len(SlashValue *value)
 
 SlashValue slash_tuple_item_get(Scope *scope, SlashValue *self, SlashValue *index)
 {
+    (void)scope;
     assert(self->type == SLASH_TUPLE);
     SlashTuple tuple = self->tuple;
 

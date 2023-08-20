@@ -23,7 +23,7 @@
 #include "sac/sac.h"
 #include "str_view.h"
 
-SlashValue slash_glob_none = (SlashValue){ .type = SLASH_NONE };
+SlashValue slash_glob_none = { .type = SLASH_NONE };
 
 void slash_print_none(void)
 {
