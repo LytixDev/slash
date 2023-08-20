@@ -68,7 +68,7 @@ Stmt *stmt_alloc(Arena *ast_arena, StmtType type)
 /* arena */
 void ast_arena_init(Arena *ast_arena)
 {
-    m_arena_init_dynamic(ast_arena, 2, 32);
+    m_arena_init_dynamic(ast_arena, 2, 512);
 }
 
 void ast_arena_release(Arena *ast_arena)

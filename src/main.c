@@ -120,6 +120,8 @@ int main(int argc, char **argv)
     printf("lex time:\t%f seconds.\n", lex_elapsed);
     printf("parse time:\t%f seconds.\n", parse_elapsed);
     printf("interpret time:\t%f seconds.\n", interpret_elapsed);
+    printf("lex+parse:\t%11.1fK l/s.\n",
+	   ((lex_result.line_count + 1) / (lex_elapsed + parse_elapsed)) / 1000);
 #endif /* DEBUG_PERF */
 
     /* clean up */
