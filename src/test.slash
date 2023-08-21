@@ -1,1 +1,3 @@
-assert not true == false
+var n = 10
+$n %= 3
+echo $n
