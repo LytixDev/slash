@@ -5,3 +5,35 @@ assert 0xff + 1 == 256
 assert 0xff - 256 == -1
 assert 0b1000 == 8
 assert 1_000_000 == 1000000
+
+assert 1 * 1 == 1
+assert 2 * 4 == 8
+assert 300 * 10 == 3_000
+assert -3 * 4 == -12
+
+assert 10 / 2 == 5
+assert -25 / 5 == -5
+assert 0 / 5 == 0
+assert 10 // 3 == 3
+
+assert 10 % 2 == 0
+assert 10 % 3 == 1
+assert -17 % 5 == 3
+assert -17 % -5 == -2
+assert 123456789 % 10 == 9
+
+assert 2 ** 3 == 8
+assert 5 ** 0 == 1
+assert 4 ** 2 == 16
+assert (-2) ** 2 == 4
+assert (-2) ** 3 == -8
+assert 1.5 ** 2 == 2.25
+assert 0 ** 4 == 0
+assert (-3) ** 2 == 9
+
+assert (10 + 5) * 2 / 3 == 10
+assert 15 // 4 + 7 * 3 == 24
+assert (8 - 3) ** 2 + 10 // 2 == 30
+assert (9 // 2) * 3 + 5 ** 2 == 37
+assert 25 / 5 + 3 * 2 - 10 // 3 == 8
+assert 2 ** 3 - 5 * (6 // 2) == -7

@@ -264,9 +264,6 @@ StateFn lex_any(Lexer *lexer)
 	case ':':
 	    emit(lexer, t_colon);
 	    break;
-	case '*':
-	    emit(lexer, t_star);
-	    break;
 	case '~':
 	    emit(lexer, t_tilde);
 	    break;
@@ -308,6 +305,29 @@ StateFn lex_any(Lexer *lexer)
 	case '-':
 	    emit(lexer, match(lexer, '=') ? t_minus_equal : t_minus);
 	    break;
+	case '%':
+	    emit(lexer, match(lexer, '=') ? t_percent_equal : t_percent);
+	    break;
+	case '/': {
+	    /* '/', '/=', '//', '//=' */
+	    if (match(lexer, '='))
+		emit(lexer, t_slash_equal);
+	    else if (match(lexer, '/'))
+		emit(lexer, match(lexer, '=') ? t_slash_slash_equal : t_slash_slash);
+	    else
+		emit(lexer, t_slash);
+	    break;
+	}
+	case '*': {
+	    /* '*', '*=', '**', '**=' */
+	    if (match(lexer, '='))
+		emit(lexer, t_star_equal);
+	    else if (match(lexer, '*'))
+		emit(lexer, match(lexer, '=') ? t_star_star_equal : t_star_star);
+	    else
+		emit(lexer, t_star);
+	    break;
+	}
 
 	case '$':
 	    return STATE_FN(lex_access);

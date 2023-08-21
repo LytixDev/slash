@@ -64,7 +64,6 @@
     X(rbrace)              \
     X(lbracket)            \
     X(rbracket)            \
-    X(star)                \
     X(tilde)               \
     X(backslash)           \
     X(comma)               \
@@ -91,17 +90,20 @@
     X(minus)                   \
     X(minus_equal)             \
     X(at)                      \
-    X(at_lbracket)
+    X(at_lbracket)             \
+    X(slash)                   \
+    X(slash_slash)             \
+    X(slash_equal)             \
+    X(slash_slash_equal)       \
+    X(star)                    \
+    X(star_star)               \
+    X(star_equal)              \
+    X(star_star_equal)         \
+    X(percent)                 \
+    X(percent_equal)
 #define DATA_TYPE_TOKENS \
     X(dt_str)            \
-    X(dt_num)            \
-    X(dt_range)          \
-    X(dt_bool)           \
-    X(dt_shident)        \
-    X(dt_list)           \
-    X(dt_tuple)          \
-    X(dt_map)            \
-    X(dt_none)
+    X(dt_num) X(dt_range) X(dt_bool) X(dt_shident) X(dt_list) X(dt_tuple) X(dt_map) X(dt_none)
 #define REST_TOKENS \
     X(access)       \
     X(ident)        \

@@ -9,6 +9,7 @@ OBJS := $(SRCS:%.c=$(OBJDIR)/%.o)
 
 CFLAGS = -Iinclude -Wall -Wpedantic -Wextra -Wshadow -std=c11
 CFLAGS += -DNDEBUG
+LDFLAGS = -lm
 
 .PHONY: format clean tags bear $(OBJDIR)
 TARGET = slash

@@ -58,6 +58,7 @@ static Expr *equality(Parser *parser);
 static Expr *comparison(Parser *parser);
 static Expr *term(Parser *parser);
 static Expr *factor(Parser *parser);
+static Expr *exponentiation(Parser *parser);
 static Expr *unary(Parser *parser);
 static Expr *single(Parser *parser);
 static Expr *subshell(Parser *parser);
@@ -418,7 +419,8 @@ static Stmt *assignment_stmt(Parser *parser)
 
     // TODO: throw parse error if not AccessExpr or ItemAccessExpr ?
     Expr *var = subscript(parser);
-    if (!match(parser, t_equal, t_plus_equal, t_minus_equal)) {
+    if (!match(parser, t_equal, t_plus_equal, t_minus_equal, t_star_equal, t_star_star_equal,
+	       t_slash_equal, t_slash_slash_equal, t_percent_equal)) {
 	/* if next token after access is not an assignment op, then ignore everything we just did */
 	// TODO: can we just return the `var` as an ExpressionStmt ?
 	parser->token_pos = pos;
@@ -549,7 +551,34 @@ static Expr *term(Parser *parser)
 
 static Expr *factor(Parser *parser)
 {
-    return unary(parser);
+    Expr *expr = exponentiation(parser);
+
+    while (match(parser, t_slash, t_slash_slash, t_star, t_percent)) {
+	Token *operator_ = previous(parser);
+	Expr *right = exponentiation(parser);
+
+	BinaryExpr *bin_expr = (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY);
+	bin_expr->left = expr;
+	bin_expr->operator_ = operator_->type;
+	bin_expr->right = right;
+	expr = (Expr *)bin_expr;
+    }
+    return expr;
+}
+
+static Expr *exponentiation(Parser *parser)
+{
+    Expr *expr = unary(parser);
+
+    while (match(parser, t_star_star)) {
+	Expr *right = unary(parser);
+	BinaryExpr *bin_expr = (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY);
+	bin_expr->left = expr;
+	bin_expr->operator_ = t_star_star;
+	bin_expr->right = right;
+	expr = (Expr *)bin_expr;
+    }
+    return expr;
 }
 
 static Expr *unary(Parser *parser)

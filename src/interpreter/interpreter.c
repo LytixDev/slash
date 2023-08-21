@@ -14,6 +14,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -150,7 +151,7 @@ static SlashValue cmp_binary_values(SlashValue left, SlashValue right, TokenType
 	result = (SlashValue){ .type = SLASH_BOOL, .boolean = left.num <= right.num };
 	break;
 
-    case t_plus:
+    case t_plus: {
 	if (left.type == SLASH_NUM && right.type == SLASH_NUM) {
 	    result = (SlashValue){ .type = SLASH_NUM, .num = left.num + right.num };
 	} else if (left.type == SLASH_LIST && right.type == SLASH_LIST) {
@@ -165,10 +166,46 @@ static SlashValue cmp_binary_values(SlashValue left, SlashValue right, TokenType
 	    ASSERT_NOT_REACHED;
 	}
 	break;
+    }
 
     case t_minus:
 	check_num_operands(&left, &right);
 	result = (SlashValue){ .type = SLASH_NUM, .num = left.num - right.num };
+	break;
+
+    case t_slash: {
+	if (right.num == 0)
+	    report_runtime_error("Division by zero error");
+	check_num_operands(&left, &right);
+	result = (SlashValue){ .type = SLASH_NUM, .num = left.num / right.num };
+	break;
+    }
+    case t_slash_slash: {
+	if (right.num == 0)
+	    report_runtime_error("Division by zero error");
+	check_num_operands(&left, &right);
+	result = (SlashValue){ .type = SLASH_NUM, .num = (int)(left.num / right.num) };
+	break;
+    }
+
+    case t_percent: {
+	if (right.num == 0)
+	    report_runtime_error("Modulo by zero error");
+	check_num_operands(&left, &right);
+	double m = fmod(left.num, right.num);
+	/* same behaviour as we tend to see in maths */
+	m = m < 0 && right.num > 0 ? m + right.num : m;
+	result = (SlashValue){ .type = SLASH_NUM, .num = m };
+	break;
+    }
+
+    case t_star:
+	check_num_operands(&left, &right);
+	result = (SlashValue){ .type = SLASH_NUM, .num = left.num * right.num };
+	break;
+    case t_star_star:
+	check_num_operands(&left, &right);
+	result = (SlashValue){ .type = SLASH_NUM, .num = pow(left.num, right.num) };
 	break;
 
     case t_equal_equal:
@@ -191,16 +228,14 @@ static SlashValue cmp_binary_values(SlashValue left, SlashValue right, TokenType
 static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
 {
     SlashValue left = eval(interpreter, expr->left);
+    /* logical operators */
     if (expr->operator_ == t_and) {
-	/* short circuit */
 	if (!is_truthy(&left))
 	    return (SlashValue){ .type = SLASH_BOOL, .boolean = false };
 	SlashValue right = eval(interpreter, expr->right);
 	return (SlashValue){ .type = SLASH_BOOL, .boolean = is_truthy(&right) };
     }
-
     SlashValue right = eval(interpreter, expr->right);
-
     if (expr->operator_ == t_or)
 	return (SlashValue){ .type = SLASH_BOOL, .boolean = is_truthy(&left) || is_truthy(&right) };
 
@@ -481,12 +516,37 @@ static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
 	return;
     }
 
-    /* convert from += to + and -= to - */
-    TokenType operator= stmt->assignment_op == t_plus_equal ? t_plus : t_minus;
-    new_value = cmp_binary_values(*variable.value, new_value, operator);
+    /* convert from assignment operator to correct binary operator */
+    TokenType operator_ = t_none;
+    switch (stmt->assignment_op) {
+    case t_plus_equal:
+	operator_ = t_plus;
+	break;
+    case t_minus_equal:
+	operator_ = t_minus;
+	break;
+    case t_star_equal:
+	operator_ = t_star;
+	break;
+    case t_star_star_equal:
+	operator_ = t_star_star;
+	break;
+    case t_slash_equal:
+	operator_ = t_slash;
+	break;
+    case t_slash_slash_equal:
+	operator_ = t_slash_slash;
+	break;
+    case t_percent_equal:
+	operator_ = t_percent;
+	break;
+    default:
+	report_runtime_error("Assignment operator not supported");
+	ASSERT_NOT_REACHED;
+    }
+    new_value = cmp_binary_values(*variable.value, new_value, operator_);
     /*
-     * 1. We know operator was either += or -=.
-     * 2. For dynamic types the binary compare will update the underlying object.
+     * For dynamic types the binary compare will update the underlying object.
      * Therefore we only assign if the variable type is not dynamic.
      */
     if (!SLASH_TYPE_DYNAMIC(variable.value->type))

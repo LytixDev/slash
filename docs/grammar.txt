@@ -47,7 +47,7 @@ cmd_stmt        -> SHIDENT argument* ;
 
 block           -> "{" declaration* "}" ;
 
-assignment_stmt -> subscript ( "=" | "+=" | "-=" ) expression newline_or_block_end ;
+assignment_stmt -> subscript ( "=" | "+=" | "-=" | "*=" | "**=" | "%=" | "%=" ) expression newline_or_block_end ;
 
 expr_stmt       -> expression newline_or_block_end ;
 
@@ -71,7 +71,9 @@ comparison      -> term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
 
 term            -> factor ( ( "-" | "+" ) factor )* ;
 
-factor          -> unary ;
+factor          -> exponentiation ( ("/" | "//" | "*" | "%" ) exponentiation )* ;
+
+exponentiation  -> unary ( "**" unary )* ;
 
 unary           -> ("not" | "-") unary
                 |  single ;
