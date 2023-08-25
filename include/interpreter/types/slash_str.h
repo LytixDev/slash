@@ -24,5 +24,6 @@ typedef struct slash_value_t SlashValue; // Forward declaration of SlashValue
 void slash_str_print(SlashValue *value);
 size_t *slash_str_len(SlashValue *value);
 
+int slash_str_cmp(const void *a, const void *b);
 
 #endif /* SLASH_STR_H */

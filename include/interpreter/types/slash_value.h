@@ -68,6 +68,9 @@ bool is_truthy(SlashValue *value);
 
 bool slash_value_eq(SlashValue *a, SlashValue *b);
 
+int slash_value_cmp_lt(const void *a, const void *b);
+int slash_value_cmp_gt(const void *a, const void *b);
+
 // SlashToStrFunc
 // SlashToReprFunc
 typedef void (*SlashPrintFunc)(SlashValue *self);
@@ -91,8 +94,8 @@ extern SlashItemAssignFunc slash_item_assign[SLASH_TYPE_COUNT];
 
 extern SlashItemInFunc slash_item_in[SLASH_TYPE_COUNT];
 
-
 extern SlashValue slash_glob_none;
 
+extern int slash_cmp_precedence[SLASH_TYPE_COUNT];
 
 #endif /* SLASH_VALUE_H */

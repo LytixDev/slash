@@ -29,3 +29,10 @@ size_t *slash_str_len(SlashValue *value)
 {
     return &value->str.size;
 }
+
+int slash_str_cmp(const void *a, const void *b)
+{
+    SlashValue *A = (SlashValue *)a;
+    SlashValue *B = (SlashValue *)b;
+    return str_view_cmp(A->str, B->str);
+}

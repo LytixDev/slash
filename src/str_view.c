@@ -176,3 +176,8 @@ bool str_view_eq(StrView a, StrView b)
 
     return true;
 }
+
+int str_view_cmp(StrView a, StrView b)
+{
+    return memcmp(a.view, b.view, a.size < b.size ? a.size : b.size);
+}
