@@ -23,7 +23,7 @@ $(OBJDIR)/%.o: %.c Makefile | $(OBJDIR)
 
 $(TARGET): $(OBJS)
 	@echo [LD] $@
-	@$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+	@$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
 $(TARGET-FUZZ): $(OBJS)
 	@echo [LD] $@
