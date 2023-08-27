@@ -7,7 +7,7 @@ DIRS := $(shell find $(SRC) -type d)
 SRCS := $(shell find $(SRC) -type f -name "*.c")
 OBJS := $(SRCS:%.c=$(OBJDIR)/%.o)
 
-CFLAGS = -Iinclude -Wall -Wpedantic -Wextra -Wshadow -std=c11
+CFLAGS = -Iinclude -Wall -Wpedantic -Wextra -Wshadow -std=gnu11
 CFLAGS += -DNDEBUG
 LDFLAGS = -lm
 
@@ -23,13 +23,13 @@ $(OBJDIR)/%.o: %.c Makefile | $(OBJDIR)
 
 $(TARGET): $(OBJS)
 	@echo [LD] $@
-	@$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+	@$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
 $(TARGET-FUZZ): $(OBJS)
 	@echo [LD] $@
 	@$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
-debug: CFLAGS = -Iinclude -Wall -Wpedantic -Wextra -Wshadow -std=c11 -g -DDEBUG -DDEBUG_PERF
+debug: CFLAGS = -Iinclude -Wall -Wpedantic -Wextra -Wshadow -std=gnu11 -g -DDEBUG -DDEBUG_PERF
 debug: $(TARGET)
 
 fuzz: CFLAGS += -fsanitize=address -fsanitize=undefined
