@@ -24,22 +24,3 @@ void slash_num_print(SlashValue *value)
     else
 	printf("%f", value->num);
 }
-
-int slash_num_cmp(const void *a, const void *b)
-{
-    SlashValue *A = (SlashValue *)a;
-    SlashValue *B = (SlashValue *)b;
-
-    double sum = A->num - B->num;
-
-    if (sum < 1 && sum > -1) {
-	if (A->num > B->num)
-	    return 1;
-	else if (A->num < B->num)
-	    return -1;
-	else
-	    return 0;
-    }
-
-    return (int)(sum);
-}

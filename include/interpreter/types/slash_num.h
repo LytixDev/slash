@@ -21,6 +21,4 @@ typedef struct slash_value_t SlashValue; // Forward declaration of SlashValue
 
 void slash_num_print(SlashValue *value);
 
-int slash_num_cmp(const void *a, const void *b);
-
 #endif /* SLASH_NUM_H */

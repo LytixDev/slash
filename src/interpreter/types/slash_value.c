@@ -194,7 +194,8 @@ bool slash_value_eq(SlashValue *a, SlashValue *b)
 	return false;
 
     default:
-	fprintf(stderr, "equality not defined for this type, returning false");
+	report_runtime_error("Equality not defined for this type. Consider contributing :-).");
+	ASSERT_NOT_REACHED;
     }
 
     return false;
@@ -238,14 +239,18 @@ int slash_value_cmp(SlashValue *a, SlashValue *b)
 
     switch (a->type) {
     case SLASH_STR:
-	return slash_str_cmp(a, b);
+	return str_view_cmp(a->str, b->str);
     case SLASH_BOOL:
 	return a->boolean - b->boolean;
     case SLASH_NUM:
-	return slash_num_cmp(a, b);
+	return a->num - b->num;
     case SLASH_TUPLE:
-	return slash_tuple_cmp(a, b);
+	return slash_tuple_cmp(a->tuple, b->tuple);
     default:
-	return __INT_MAX__;
+	report_runtime_error(
+	    "Cannot sort list (yet) that contains this type. Consider contributing :-).");
     }
+
+    ASSERT_NOT_REACHED;
+    return 0;
 }

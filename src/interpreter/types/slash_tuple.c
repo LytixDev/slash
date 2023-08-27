@@ -93,21 +93,14 @@ bool slash_tuple_item_in(SlashValue *self, SlashValue *item)
     return false;
 }
 
-int slash_tuple_cmp(const void *a, const void *b)
+int slash_tuple_cmp(SlashTuple a, SlashTuple b)
 {
-    SlashValue *A = (SlashValue *)a;
-    SlashValue *B = (SlashValue *)b;
-
     int result = 0;
-
     size_t i = 0;
-    size_t min_size = A->tuple.size < B->tuple.size ? A->tuple.size : B->tuple.size;
+    size_t min_size = a.size < b.size ? a.size : b.size;
 
     while (i < min_size && result == 0) {
-	if (A->type != B->type)
-	    return -__INT_MAX__;
-
-	result = slash_value_cmp(&A->tuple.values[i], &B->tuple.values[i]);
+	result = slash_value_cmp(&a.values[i], &b.values[i]);
 	i++;
     }
 
