@@ -17,6 +17,9 @@
 #include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#ifdef EXEC_DEBUG
+#include <stdio.h>
+#endif /* EXEC_DEBUG */
 
 #include "interpreter/interpreter.h"
 #include "nicc/nicc.h"
@@ -35,7 +38,6 @@ static void close_active_fds(ArrayList *active_fds)
 int exec_program(StreamCtx *stream_ctx, char **argv)
 {
 #ifdef EXEC_DEBUG
-#include <stdio.h>
     char **argv_cpy = argv;
     for (char *argv_cur = *argv_cpy; argv_cur != NULL;) {
 	printf("'%s'\n", argv_cur);
@@ -43,7 +45,6 @@ int exec_program(StreamCtx *stream_ctx, char **argv)
 	argv_cur = *argv_cpy;
     }
 #endif /* EXEC_DEBUG */
-#include <stdio.h>
 
     int status;
     pid_t new_pid = fork();
