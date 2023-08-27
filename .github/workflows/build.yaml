@@ -20,5 +20,9 @@ jobs:
         run: |
           sudo apt-get update -qyy
 
+        if: startswith(matrix.os, 'macos-')
+        run: |
+          brew update --quiet
+
       - name: Build
         run: make CC="${{matrix.cc}}"
