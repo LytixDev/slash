@@ -15,3 +15,7 @@ slash-fuzz
 
 .idea/*
 idea
+
+# ignore vscode settings
+.vscode/*
+.vscode

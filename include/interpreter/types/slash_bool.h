@@ -22,5 +22,4 @@ typedef struct slash_value_t SlashValue; // Forward declaration of SlashValue
 
 void slash_bool_print(SlashValue *value);
 
-
 #endif /* SLASH_BOOL_H */

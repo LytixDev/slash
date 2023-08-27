@@ -9,15 +9,14 @@ loop $interval > 0 {
     var i = $interval
     loop $i < $numbers.len() {
         var temp = $numbers[$i]
-        echo "Temp: " $temp
         var j = $i
-        loop $j >= $interval and $numbers[$j - $interval] > $temp{
+        loop $j >= $interval and $numbers[$j - $interval] > $temp {
             $numbers[$j] = $numbers[$j - $interval]
-            $j = $j - $interval
+            $j -= $interval
         }
 
         $numbers[$j] = $temp
-        $i = $i + 1
+        $i += 1
     }
 
     $interval = $interval // 2

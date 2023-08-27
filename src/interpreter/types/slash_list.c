@@ -84,7 +84,6 @@ bool slash_list_eq(SlashList *a, SlashList *b)
     return true;
 }
 
-
 /* common functions */
 
 void slash_list_print(SlashValue *value)
@@ -148,11 +147,11 @@ bool slash_list_item_in(SlashValue *self, SlashValue *item)
     return false;
 }
 
-
 /* methods */
 SlashMethod slash_list_methods[SLASH_LIST_METHODS_COUNT] = {
     { .name = "pop", .fp = slash_list_pop },
     { .name = "len", .fp = slash_list_len },
+    { .name = "sort", .fp = slash_list_sort },
 };
 
 SlashValue slash_list_pop(SlashValue *self, size_t argc, SlashValue *argv)
@@ -197,4 +196,23 @@ SlashValue slash_list_len(SlashValue *self, size_t argc, SlashValue *argv)
 
     SlashValue len = { .type = SLASH_NUM, .num = (double)underlying->size };
     return len;
+}
+
+SlashValue slash_list_sort(SlashValue *self, size_t argc, SlashValue *argv)
+{
+    assert(self->type == SLASH_LIST);
+
+    ArrayList *underlying = self->list.underlying;
+
+    if (match_signature("", argc, argv)) {
+	arraylist_sort(underlying, slash_value_cmp_stub);
+    } else if (match_signature("b", argc, argv)) {
+	arraylist_sort(underlying,
+		       argv[0].boolean ? slash_value_cmp_rev_stub : slash_value_cmp_stub);
+    } else {
+	report_runtime_error("Bad method args, expected no args or a single boolean.");
+	ASSERT_NOT_REACHED;
+    }
+
+    return (SlashValue){ .type = SLASH_NONE };
 }

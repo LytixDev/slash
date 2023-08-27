@@ -194,8 +194,63 @@ bool slash_value_eq(SlashValue *a, SlashValue *b)
 	return false;
 
     default:
-	fprintf(stderr, "equality not defined for this type, returning false");
+	report_runtime_error("Equality not defined for this type. Consider contributing :-).");
+	ASSERT_NOT_REACHED;
     }
 
     return false;
+}
+
+int slash_cmp_precedence[SLASH_TYPE_COUNT] = {
+    /* bool */
+    0,
+    /* str */
+    2,
+    /* num */
+    1,
+    /* shident */
+    __INT_MAX__,
+    /* range */
+    __INT_MAX__,
+    /* list */
+    __INT_MAX__,
+    /* tuple */
+    3,
+    /* map */
+    __INT_MAX__,
+    /* none */
+    __INT_MAX__,
+};
+
+int slash_value_cmp_stub(const void *a, const void *b)
+{
+    return slash_value_cmp((SlashValue *)a, (SlashValue *)b);
+}
+
+int slash_value_cmp_rev_stub(const void *a, const void *b)
+{
+    return slash_value_cmp((SlashValue *)b, (SlashValue *)a);
+}
+
+int slash_value_cmp(SlashValue *a, SlashValue *b)
+{
+    if (a->type != b->type)
+	return slash_cmp_precedence[a->type] - slash_cmp_precedence[b->type];
+
+    switch (a->type) {
+    case SLASH_STR:
+	return str_view_cmp(a->str, b->str);
+    case SLASH_BOOL:
+	return a->boolean - b->boolean;
+    case SLASH_NUM:
+	return a->num - b->num;
+    case SLASH_TUPLE:
+	return slash_tuple_cmp(a->tuple, b->tuple);
+    default:
+	report_runtime_error(
+	    "Cannot sort list (yet) that contains this type. Consider contributing :-).");
+    }
+
+    ASSERT_NOT_REACHED;
+    return 0;
 }
