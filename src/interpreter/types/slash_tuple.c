@@ -107,7 +107,7 @@ int slash_tuple_cmp(const void *a, const void *b)
 	if (A->type != B->type)
 	    return -__INT_MAX__;
 
-	result = slash_value_cmp_lt(&A->tuple.values[i], &B->tuple.values[i]);
+	result = slash_value_cmp(&A->tuple.values[i], &B->tuple.values[i]);
 	i++;
     }
 

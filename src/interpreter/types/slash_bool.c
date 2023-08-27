@@ -22,10 +22,3 @@ void slash_bool_print(SlashValue *value)
 {
     printf("%s", value->boolean == true ? "true" : "false");
 }
-
-int slash_bool_cmp(const void *a, const void *b)
-{
-    SlashValue *A = (SlashValue *)a;
-    SlashValue *B = (SlashValue *)b;
-    return A->boolean - B->boolean;
-}

@@ -205,9 +205,10 @@ SlashValue slash_list_sort(SlashValue *self, size_t argc, SlashValue *argv)
     ArrayList *underlying = self->list.underlying;
 
     if (match_signature("", argc, argv)) {
-	arraylist_sort(underlying, slash_value_cmp_lt);
+	arraylist_sort(underlying, slash_value_cmp_stub);
     } else if (match_signature("b", argc, argv)) {
-	arraylist_sort(underlying, argv[0].boolean ? slash_value_cmp_lt : slash_value_cmp_gt);
+	arraylist_sort(underlying, argv[0].boolean ? 
+                       slash_value_cmp_rev_stub : slash_value_cmp_stub);
     } else {
 	report_runtime_error("Bad method args, expected no args or a single boolean.");
 	ASSERT_NOT_REACHED;

@@ -221,47 +221,30 @@ int slash_cmp_precedence[SLASH_TYPE_COUNT] = {
     __INT_MAX__,
 };
 
-int slash_value_cmp_lt(const void *a, const void *b)
+int slash_value_cmp_stub(const void *a, const void *b)
 {
-    SlashValue *A = (SlashValue *)a;
-    SlashValue *B = (SlashValue *)b;
+    return slash_value_cmp((SlashValue *)a, (SlashValue *)b);
+}
 
-    if (A->type != B->type) {
-	return slash_cmp_precedence[A->type] - slash_cmp_precedence[B->type];
-    }
+int slash_value_cmp_rev_stub(const void *a, const void *b)
+{
+    return slash_value_cmp((SlashValue *)b, (SlashValue *)a);
+}
 
-    switch (A->type) {
+int slash_value_cmp(SlashValue *a, SlashValue *b)
+{
+    if (a->type != b->type)
+	return slash_cmp_precedence[a->type] - slash_cmp_precedence[b->type];
+
+    switch (a->type) {
     case SLASH_STR:
 	return slash_str_cmp(a, b);
     case SLASH_BOOL:
-	return slash_bool_cmp(a, b);
+	return a->boolean - b->boolean;
     case SLASH_NUM:
 	return slash_num_cmp(a, b);
     case SLASH_TUPLE:
 	return slash_tuple_cmp(a, b);
-    default:
-	return __INT_MAX__;
-    }
-}
-
-int slash_value_cmp_gt(const void *a, const void *b)
-{
-    SlashValue *A = (SlashValue *)a;
-    SlashValue *B = (SlashValue *)b;
-
-    if (A->type != B->type) {
-	return slash_cmp_precedence[B->type] - slash_cmp_precedence[A->type];
-    }
-
-    switch (A->type) {
-    case SLASH_STR:
-	return slash_str_cmp(b, a);
-    case SLASH_BOOL:
-	return slash_bool_cmp(b, a);
-    case SLASH_NUM:
-	return slash_num_cmp(b, a);
-    case SLASH_TUPLE:
-	return slash_tuple_cmp(b, a);
     default:
 	return __INT_MAX__;
     }

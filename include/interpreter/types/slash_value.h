@@ -67,9 +67,10 @@ SlashValue *slash_value_arena_alloc(Arena *arena, SlashType type);
 bool is_truthy(SlashValue *value);
 
 bool slash_value_eq(SlashValue *a, SlashValue *b);
-
-int slash_value_cmp_lt(const void *a, const void *b);
-int slash_value_cmp_gt(const void *a, const void *b);
+int slash_value_cmp_stub(const void *a, const void *b);
+int slash_value_cmp_rev_stub(const void *a, const void *b);
+/* returns positive if a > b */
+int slash_value_cmp(SlashValue *a, SlashValue *b);
 
 // SlashToStrFunc
 // SlashToReprFunc
