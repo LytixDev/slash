@@ -20,6 +20,7 @@ jobs:
         run: |
           sudo apt-get update -qyy
 
+      - name: Dependencies2
         if: startswith(matrix.os, 'macos-')
         run: |
           brew update --quiet
