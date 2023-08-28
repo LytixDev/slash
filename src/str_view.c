@@ -179,5 +179,11 @@ bool str_view_eq(StrView a, StrView b)
 
 int str_view_cmp(StrView a, StrView b)
 {
-    return memcmp(a.view, b.view, a.size < b.size ? a.size : b.size);
+    char *A = a.view;
+    char *B = b.view;
+    while (*A && (*A == *B)) {
+	A++;
+	B++;
+    }
+    return *(const unsigned char *)A - *(const unsigned char *)B;
 }
