@@ -173,6 +173,7 @@ typedef struct {
 typedef struct {
     StmtType type;
     StrView name;
+    SlashType type_hint; // optional: defaults to SLASH_ANY
     Expr *initializer;
 } VarStmt;
 

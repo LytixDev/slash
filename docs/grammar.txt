@@ -13,6 +13,9 @@ Non-terminals are lowercase words.
 
 program         -> declaration* EOF ;
 
+/* returns a SlashType, not a an AST node */
+type_hint       -> ":" TYPE ;
+
 newline         -> ( "\n" | ";" )+ ;
 
 expr_promotion  -> newline | "}" | "&&" | "||" ;
@@ -20,9 +23,10 @@ expr_promotion  -> newline | "}" | "&&" | "||" ;
 declaration     -> var_declaration
                 |  and_or ;
 
-var_declaration -> "var" IDENTIFIER "=" expression newline ;
+var_declaration -> "var" IDENTIFIER type_hint? "=" expression newline ;
 
 and_or          -> statement ( ( "&&" | "||" ) statement )* ;
+
 
 
 /* statements */

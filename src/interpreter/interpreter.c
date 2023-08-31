@@ -430,6 +430,10 @@ static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
 static void exec_var(Interpreter *interpreter, VarStmt *stmt)
 {
     SlashValue value = eval(interpreter, stmt->initializer);
+    if (stmt->type_hint != SLASH_ANY && stmt->type_hint != value.type) {
+	report_runtime_error("Type mismatch. Expected X, but got Y.");
+	ASSERT_NOT_REACHED;
+    }
     var_define(interpreter->scope, &stmt->name, &value);
 }
 
