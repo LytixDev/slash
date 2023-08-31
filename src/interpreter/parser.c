@@ -33,6 +33,7 @@ static void report_err_and_sync(Parser *parser, char *err_msg);
  * non-terminal grammar rule functions
  */
 
+static SlashType type_hint(Parser *parser);
 static void newline(Parser *parser);
 static void expr_promotion(Parser *parser);
 static Stmt *declaration(Parser *parser);
@@ -216,6 +217,16 @@ static void report_err_and_sync(Parser *parser, char *err_msg)
 
 
 /* grammar functions */
+static SlashType type_hint(Parser *parser)
+{
+    /* came from ':' */
+    if (!match(parser, t_num, t_str, t_bool)) {
+	report_err_and_sync(parser, "Expected type keyword after ':'");
+	return SLASH_ANY;
+    }
+    return token_type_to_slash_type(previous(parser)->type);
+}
+
 static void newline(Parser *parser)
 {
     consume(parser, t_newline, "Expected newline or semicolon");
@@ -248,13 +259,20 @@ static Stmt *declaration(Parser *parser)
 static Stmt *var_decl(Parser *parser)
 {
     /* came from 'var' */
+    VarStmt *stmt = (VarStmt *)stmt_alloc(parser->ast_arena, STMT_VAR);
     Token *name = consume(parser, t_ident, "Expected variable name");
+    stmt->name = name->lexeme;
+
+    /* optional type */
+    if (match(parser, t_colon))
+	stmt->type_hint = type_hint(parser);
+    else
+	stmt->type_hint = SLASH_ANY;
+
     consume(parser, t_equal, "Expected variable definition");
     Expr *initializer = expression(parser);
     expr_promotion(parser);
 
-    VarStmt *stmt = (VarStmt *)stmt_alloc(parser->ast_arena, STMT_VAR);
-    stmt->name = name->lexeme;
     stmt->initializer = initializer;
     return (Stmt *)stmt;
 }

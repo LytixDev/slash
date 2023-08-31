@@ -40,7 +40,8 @@ typedef enum {
     SLASH_TUPLE,
     SLASH_MAP,
     SLASH_NONE,
-    SLASH_TYPE_COUNT,
+    SLASH_TYPE_COUNT, /* not any actual type */
+    SLASH_ANY, /* special type that a value cannot hold in runtime */
 } SlashType;
 
 #define SLASH_TYPE_DYNAMIC(slash_type) \
