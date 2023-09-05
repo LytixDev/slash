@@ -31,7 +31,7 @@ void slash_tuple_init(Scope *scope, SlashTuple *tuple, size_t size)
     } else {
 	tuple->values = malloc(sizeof(SlashValue) * size);
     }
-    scope_register_owning(scope, &(SlashValue){ .type = SLASH_TUPLE, .tuple = *tuple });
+    // scope_register_owning(scope, &(SlashValue){ .type = SLASH_TUPLE, .tuple = *tuple });
 }
 
 void slash_tuple_free(SlashTuple *tuple)

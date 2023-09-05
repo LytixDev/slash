@@ -26,7 +26,7 @@ void slash_map_init(Scope *scope, SlashMap *map)
 {
     map->underlying = malloc(sizeof(HashMap));
     hashmap_init(map->underlying);
-    scope_register_owning(scope, &(SlashValue){ .type = SLASH_MAP, .map = *map });
+    // scope_register_owning(scope, &(SlashValue){ .type = SLASH_MAP, .map = *map });
 }
 
 void slash_map_free(SlashMap *map)

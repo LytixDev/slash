@@ -512,7 +512,7 @@ static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
     SlashValue new_value = eval(interpreter, stmt->value);
 
     if (stmt->assignment_op == t_equal) {
-	var_assign(&var_name, variable.scope, interpreter->scope, &new_value);
+	var_assign(&var_name, interpreter->scope, &new_value);
 	return;
     }
 
@@ -550,7 +550,7 @@ static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
      * Therefore we only assign if the variable type is not dynamic.
      */
     if (!SLASH_TYPE_DYNAMIC(variable.value->type))
-	var_assign(&var_name, variable.scope, interpreter->scope, &new_value);
+	var_assign(&var_name, interpreter->scope, &new_value);
 }
 
 static void exec_pipeline(Interpreter *interpreter, PipelineStmt *stmt)
@@ -610,7 +610,7 @@ static void exec_iter_loop_list(Interpreter *interpreter, IterLoopStmt *stmt, Sl
     SlashValue *iterator_value;
     for (size_t i = 0; i < iterable.underlying->size; i++) {
 	iterator_value = slash_list_get(&iterable, i);
-	var_assign_simple(interpreter->scope, &stmt->var_name, iterator_value);
+	var_assign(&stmt->var_name, interpreter->scope, iterator_value);
 	exec_block_body(interpreter, stmt->body_block);
     }
 }
@@ -623,7 +623,7 @@ static void exec_iter_loop_tuple(Interpreter *interpreter, IterLoopStmt *stmt, S
     SlashValue *iterator_value;
     for (size_t i = 0; i < iterable.size; i++) {
 	iterator_value = &iterable.values[i];
-	var_assign_simple(interpreter->scope, &stmt->var_name, iterator_value);
+	var_assign(&stmt->var_name, interpreter->scope, iterator_value);
 	exec_block_body(interpreter, stmt->body_block);
     }
 }
@@ -640,7 +640,7 @@ static void exec_iter_loop_map(Interpreter *interpreter, IterLoopStmt *stmt, Sla
 
     for (size_t i = 0; i < keys.size; i++) {
 	iterator_value = keys.values[i];
-	var_assign_simple(interpreter->scope, &stmt->var_name, &iterator_value);
+	var_assign(&stmt->var_name, interpreter->scope, &iterator_value);
 	exec_block_body(interpreter, stmt->body_block);
     }
 }
@@ -667,7 +667,7 @@ static void exec_iter_loop_str(Interpreter *interpreter, IterLoopStmt *stmt, Str
     while (t != NULL) {
 	str = (StrView){ .view = t, .size = strlen(t) };
 	iterator_value.str = str;
-	var_assign_simple(interpreter->scope, &stmt->var_name, &iterator_value);
+	var_assign(&stmt->var_name, interpreter->scope, &iterator_value);
 	exec_block_body(interpreter, stmt->body_block);
 	t = strtok(NULL, ifs_char);
     }
@@ -685,7 +685,7 @@ static void exec_iter_loop_range(Interpreter *interpreter, IterLoopStmt *stmt, S
     while (iterator_value.num != iterable.end) {
 	exec_block_body(interpreter, stmt->body_block);
 	iterator_value.num++;
-	var_assign_simple(interpreter->scope, &stmt->var_name, &iterator_value);
+	var_assign(&stmt->var_name, interpreter->scope, &iterator_value);
     }
 
     /* don't need to undefine the iterator value as the scope will be destroyed imminently */
