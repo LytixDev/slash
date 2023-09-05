@@ -32,7 +32,7 @@ typedef struct slash_value_t SlashValue; // Forward declaration of SlashValue
  * compare-function.
  */
 typedef struct {
-    ArrayList *underlying; // malloced, managed by the owning scope
+    ArrayList *underlying;
     // SlashValueType underlying_T;
 } SlashList;
 

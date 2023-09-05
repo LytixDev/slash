@@ -52,33 +52,26 @@ SlashValue *slash_map_get(SlashMap *map, SlashValue *key)
 /* common slash value functions */
 void slash_map_print(SlashValue *value)
 {
+    HashMap *underlying = value->map.underlying;
+    SlashValue **keys = malloc(sizeof(SlashValue *) * underlying->len);
+    SlashValue **values = malloc(sizeof(SlashValue *) * underlying->len);
+    hashmap_get_keys(underlying, (void **)keys);
+    hashmap_get_values(underlying, (void **)values);
     printf("@[");
-    HashMap *m = value->map.underlying;
-    SlashValue *k, *v;
-    struct hm_bucket_t *bucket;
-    struct hm_entry_t entry;
 
-    bool first_print = true;
-
-    for (int i = 0; i < N_BUCKETS(m->size_log2); i++) {
-	bucket = &m->buckets[i];
-	for (int j = 0; j < HM_BUCKET_SIZE; j++) {
-	    entry = bucket->entries[j];
-	    if (entry.key == NULL)
-		continue;
-
-	    if (!first_print)
-		printf(", ");
-	    first_print = false;
-
-	    k = entry.key;
-	    v = entry.value;
-	    slash_print[k->type](k);
-	    printf(": ");
-	    slash_print[v->type](v);
-	}
+    for (size_t i = 0; i < underlying->len; i++) {
+	SlashValue *k = keys[i];
+	SlashValue *v = values[i];
+	slash_print[k->type](k);
+	printf(": ");
+	slash_print[v->type](v);
+	if (i != underlying->len - 1)
+	    printf(", ");
     }
+
     printf("]");
+    free(keys);
+    free(values);
 }
 
 size_t *slash_map_len(SlashValue *value)

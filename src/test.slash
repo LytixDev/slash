@@ -1,6 +1,6 @@
-var list1 = ["Nicolai", "Callum", 2, "Aidan", 4, "Zach", "Brendan", 1]
-$list1.sort()
-var i = 0
-loop item in $list1 {
-    echo $item
+var a = [1, 2, 3]
+{
+    var b = [0]
+    $a = [69]
 }
+$a

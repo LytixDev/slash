@@ -512,7 +512,7 @@ static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
     SlashValue new_value = eval(interpreter, stmt->value);
 
     if (stmt->assignment_op == t_equal) {
-	var_assign(&var_name, interpreter->scope, &new_value);
+	var_assign(&var_name, variable.scope, &new_value);
 	return;
     }
 
@@ -550,7 +550,7 @@ static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
      * Therefore we only assign if the variable type is not dynamic.
      */
     if (!SLASH_TYPE_DYNAMIC(variable.value->type))
-	var_assign(&var_name, interpreter->scope, &new_value);
+	var_assign(&var_name, variable.scope, &new_value);
 }
 
 static void exec_pipeline(Interpreter *interpreter, PipelineStmt *stmt)
