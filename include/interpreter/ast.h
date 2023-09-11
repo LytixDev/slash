@@ -112,7 +112,7 @@ typedef struct {
 
 typedef struct {
     ExprType type;
-    SlashType list_type; // tuple or list
+    bool is_list;
     SequenceExpr *exprs; // will be NULL for the empty list
 } ListExpr;
 

@@ -1,0 +1,53 @@
+/*
+ *  Copyright (C) 2023 Nicolai Brand (https://lytix.dev)
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+#ifndef SLASH_OBJ_H
+#define SLASH_OBJ_H
+
+#include <stdbool.h>
+
+#include "interpreter/scope.h"
+#include "interpreter/types/trait.h"
+
+typedef enum {
+    SLASH_OBJ_LIST,
+    SLASH_OBJ_TUPLE,
+    SLASH_OBJ_MAP,
+    SLASH_OBJ_TYPE_COUNT,
+} SlashObjType;
+
+typedef struct slash_obj_t SlashObj; // Forward decl
+typedef struct slash_value_t SlashValue; // Forward decl
+
+/* Every object type type MUST implement all traits */
+typedef struct {
+    TraitPrint print;
+    TraitItemGet item_get;
+    TraitItemAssign item_assign;
+    TraitItemIn item_in;
+    // ...
+    // ToStrTrait to_str;
+} ObjTraits;
+
+struct slash_obj_t {
+    SlashObjType type;
+    bool gc_marked;
+    // TODO: can use type as index into a static table of pointers to these functions
+    ObjTraits *traits;
+};
+
+
+#endif /* SLASH_OBJ_H */

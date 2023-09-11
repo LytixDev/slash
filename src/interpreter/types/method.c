@@ -27,9 +27,9 @@ char slash_type_to_char[SLASH_TYPE_COUNT] = {
     'n', // num
     '-', // shident
     'r', // range
-    'l', // list
-    't', // tuple
-    'm', // map
+    // 'l', // list
+    // 't', // tuple
+    // 'm', // map
     '-', // none
 };
 
@@ -41,10 +41,10 @@ MethodFunc get_method(SlashValue *self, char *method_name)
 
     // TODO: this could be a table
     switch (self->type) {
-    case SLASH_LIST:
-	methods_count = SLASH_LIST_METHODS_COUNT;
-	methods = slash_list_methods;
-	break;
+	//    case SLASH_LIST:
+	//	methods_count = SLASH_LIST_METHODS_COUNT;
+	//	methods = slash_list_methods;
+	//	break;
 
     default:
 	return NULL;

@@ -38,10 +38,10 @@ void slash_tuple_free(SlashTuple *tuple);
 
 /* common slash value functions */
 
-void slash_tuple_print(SlashValue *value);
-size_t *slash_tuple_len(SlashValue *value);
-SlashValue slash_tuple_item_get(Scope *scope, SlashValue *self, SlashValue *index);
-bool slash_tuple_item_in(SlashValue *self, SlashValue *item);
-int slash_tuple_cmp(SlashTuple a, SlashTuple b);
+// void slash_tuple_print(SlashValue *value);
+// size_t *slash_tuple_len(SlashValue *value);
+// SlashValue slash_tuple_item_get(Scope *scope, SlashValue *self, SlashValue *index);
+// bool slash_tuple_item_in(SlashValue *self, SlashValue *item);
+// int slash_tuple_cmp(SlashTuple a, SlashTuple b);
 
 #endif /* SLASH_TUPLE_H */

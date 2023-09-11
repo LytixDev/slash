@@ -19,25 +19,21 @@
 
 #include "interpreter/scope.h"
 #include "interpreter/types/method.h"
+#include "interpreter/types/slash_obj.h"
 #include "interpreter/types/slash_range.h"
 #include "nicc/nicc.h"
 
-typedef struct slash_value_t SlashValue; // Forward declaration of SlashValue
-
 /*
  * The SlashList is just a wrapper over the dynamic ArrayList impl I wrote for nicc.
- * T stores the type of the items in the list. If there are items of different types, T is SVT_ANY.
- * If T is SVT_NUM or SVT_STR then we can provide default sorting functions.
- * TODO: If T is something else, maybe we should expose some big brain api that takes in a
- * compare-function.
  */
 typedef struct {
-    ArrayList *underlying; // malloced, managed by the owning scope
-    // SlashValueType underlying_T;
+    SlashObj obj;
+    ArrayList underlying;
 } SlashList;
 
-void slash_list_init(Scope *scope, SlashList *list);
-void slash_list_free(SlashList *list);
+extern ObjTraits list_traits;
+
+void slash_list_init(SlashList *list);
 
 bool slash_list_append(SlashList *list, SlashValue val);
 void slash_list_append_list(SlashList *list, SlashList *to_append);
@@ -59,12 +55,12 @@ void slash_list_item_assign(SlashValue *self, SlashValue *index, SlashValue *new
 bool slash_list_item_in(SlashValue *self, SlashValue *item);
 
 /* slash list methods */
-#define SLASH_LIST_METHODS_COUNT 3
-extern SlashMethod slash_list_methods[SLASH_LIST_METHODS_COUNT];
-
-SlashValue slash_list_pop(SlashValue *self, size_t argc, SlashValue *argv);
-SlashValue slash_list_len(SlashValue *self, size_t argc, SlashValue *argv);
-SlashValue slash_list_sort(SlashValue *self, size_t argc, SlashValue *argv);
+// #define SLASH_LIST_METHODS_COUNT 3
+// extern SlashMethod slash_list_methods[SLASH_LIST_METHODS_COUNT];
+//
+// SlashValue slash_list_pop(SlashValue *self, size_t argc, SlashValue *argv);
+// SlashValue slash_list_len(SlashValue *self, size_t argc, SlashValue *argv);
+// SlashValue slash_list_sort(SlashValue *self, size_t argc, SlashValue *argv);
 
 
 #endif /* SLASH_LIST_H */

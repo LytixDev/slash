@@ -758,7 +758,7 @@ static Expr *list(Parser *parser)
 {
     /* came from '[' */
     ListExpr *expr = (ListExpr *)expr_alloc(parser->ast_arena, EXPR_LIST);
-    expr->list_type = SLASH_LIST;
+    expr->is_list = true;
 
     /* if next is not ']', parse list initializer */
     if (!match(parser, t_rbracket)) {
@@ -795,7 +795,7 @@ static Expr *tuple(Parser *parser)
 {
     /* came from ''' */
     ListExpr *expr = (ListExpr *)expr_alloc(parser->ast_arena, EXPR_LIST);
-    expr->list_type = SLASH_TUPLE;
+    expr->is_list = false;
 
     /* if next is not ''', parse list initializer */
     if (!match(parser, t_qoute)) {
