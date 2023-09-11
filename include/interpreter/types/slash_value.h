@@ -20,10 +20,6 @@
 #include <stdbool.h>
 
 #include "interpreter/lexer.h"
-#include "interpreter/types/slash_bool.h"
-#include "interpreter/types/slash_num.h"
-#include "interpreter/types/slash_range.h"
-#include "interpreter/types/slash_str.h"
 #include "sac/sac.h"
 
 
@@ -42,6 +38,11 @@ typedef enum {
 
 #define IS_OBJ(slash_type) (slash_type == SLASH_OBJ)
 
+typedef struct {
+    int32_t start;
+    int32_t end;
+} SlashRange;
+
 typedef struct slash_value_t {
     SlashType type;
     union {
@@ -50,7 +51,6 @@ typedef struct slash_value_t {
 	bool boolean;
 	double num;
 	SlashRange range;
-
 	/* pointers to heap allocated data */
 	SlashObj *obj;
     };
@@ -64,6 +64,13 @@ int slash_value_cmp_stub(const void *a, const void *b);
 int slash_value_cmp_rev_stub(const void *a, const void *b);
 /* returns positive if a > b */
 int slash_value_cmp(SlashValue *a, SlashValue *b);
+
+/* */
+void slash_bool_print(SlashValue *value);
+void slash_num_print(SlashValue *value);
+void slash_str_print(SlashValue *value);
+void slash_range_print(SlashValue *value);
+
 
 extern int slash_cmp_precedence[SLASH_TYPE_COUNT];
 

@@ -20,7 +20,7 @@
 #include "interpreter/scope.h"
 #include "interpreter/types/method.h"
 #include "interpreter/types/slash_obj.h"
-#include "interpreter/types/slash_range.h"
+#include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
 
 /*

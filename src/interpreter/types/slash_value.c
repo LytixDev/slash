@@ -122,3 +122,29 @@ int slash_value_cmp(SlashValue *a, SlashValue *b)
     ASSERT_NOT_REACHED;
     return 0;
 }
+
+
+void slash_bool_print(SlashValue *value)
+{
+    printf("%s", value->boolean == true ? "true" : "false");
+}
+
+void slash_num_print(SlashValue *value)
+{
+    if (value->num == (int)value->num)
+	printf("%d", (int)value->num);
+    else
+	printf("%f", value->num);
+}
+
+void slash_str_print(SlashValue *value)
+{
+    // putchar('"');
+    str_view_print(value->str);
+    // putchar('"');
+}
+
+void slash_range_print(SlashValue *value)
+{
+    printf("%d..%d", value->range.start, value->range.end);
+}
