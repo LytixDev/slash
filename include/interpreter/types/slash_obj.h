@@ -29,19 +29,6 @@ typedef enum {
     SLASH_OBJ_TYPE_COUNT,
 } SlashObjType;
 
-typedef struct slash_obj_t SlashObj; // Forward decl
-typedef struct slash_value_t SlashValue; // Forward decl
-
-/* Every object type type MUST implement all traits */
-typedef struct {
-    TraitPrint print;
-    TraitItemGet item_get;
-    TraitItemAssign item_assign;
-    TraitItemIn item_in;
-    // ...
-    // ToStrTrait to_str;
-} ObjTraits;
-
 struct slash_obj_t {
     SlashObjType type;
     bool gc_marked;

@@ -24,6 +24,20 @@ typedef void (*TraitPrint)(SlashValue *self);
 typedef SlashValue (*TraitItemGet)(Scope *scope, SlashValue *self, SlashValue *);
 typedef void (*TraitItemAssign)(SlashValue *self, SlashValue *, SlashValue *);
 typedef bool (*TraitItemIn)(SlashValue *self, SlashValue *);
+typedef bool (*TraitTruthy)(SlashValue *self);
+typedef bool (*TraitEquals)(SlashValue *self, SlashValue *other);
+typedef bool (*TraitCmp)(SlashValue *self, SlashValue *other);
+
+/* Every object type type MUST implement all traits */
+typedef struct {
+    TraitPrint print;
+    TraitItemGet item_get;
+    TraitItemAssign item_assign;
+    TraitItemIn item_in;
+    TraitTruthy truthy;
+    TraitEquals equals;
+    TraitCmp cmp;
+} ObjTraits;
 
 /*
  * Table containing function pointers implementing print for each type
@@ -34,11 +48,8 @@ typedef bool (*TraitItemIn)(SlashValue *self, SlashValue *);
  * print_func(&value)
  */
 extern TraitPrint trait_print[SLASH_TYPE_COUNT];
-
 extern TraitItemGet trait_item_get[SLASH_TYPE_COUNT];
-
 extern TraitItemAssign trait_item_assign[SLASH_TYPE_COUNT];
-
 extern TraitItemIn trait_item_in[SLASH_TYPE_COUNT];
 
 

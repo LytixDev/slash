@@ -28,7 +28,10 @@
 ObjTraits list_traits = { .print = slash_list_print,
 			  .item_get = slash_list_item_get,
 			  .item_assign = slash_list_item_assign,
-			  .item_in = slash_list_item_in };
+			  .item_in = slash_list_item_in,
+			  .truthy = slash_list_truthy,
+			  .equals = slash_list_eq,
+			  .cmp = NULL };
 
 
 void slash_list_init(SlashList *list)
@@ -67,23 +70,10 @@ void slash_list_from_ranged_copy(Scope *scope, SlashList *ret_ptr, SlashList *to
 	arraylist_append(&ret_ptr->underlying, arraylist_get(&to_copy->underlying, i));
 }
 
-bool slash_list_eq(SlashList *a, SlashList *b)
-{
-    if (a->underlying.size != b->underlying.size)
-	return false;
 
-    SlashValue *A;
-    SlashValue *B;
-    for (size_t i = 0; i < a->underlying.size; i++) {
-	A = slash_list_get(a, i);
-	B = slash_list_get(b, i);
-	if (!slash_value_eq(A, B))
-	    return false;
-    }
-    return true;
-}
-
-/* common functions */
+/* 
+ * traits 
+ */
 
 void slash_list_print(SlashValue *value)
 {
@@ -148,7 +138,34 @@ bool slash_list_item_in(SlashValue *self, SlashValue *item)
     return false;
 }
 
-/* methods */
+bool slash_list_truthy(SlashValue *self)
+{
+    SlashList *list = (SlashList *)self->obj;
+    return list->underlying.size != 0;
+}
+
+bool slash_list_eq(SlashValue *a, SlashValue *b)
+{
+    SlashList *list_a = (SlashList *)a->obj;
+    SlashList *list_b = (SlashList *)b->obj;
+    if (list_a->underlying.size != list_b->underlying.size)
+	return false;
+
+    SlashValue *A;
+    SlashValue *B;
+    for (size_t i = 0; i < list_a->underlying.size; i++) {
+	A = slash_list_get(list_a, i);
+	B = slash_list_get(list_b, i);
+	if (!slash_value_eq(A, B))
+	    return false;
+    }
+    return true;
+}
+
+
+/* 
+ * methods 
+ */
 // SlashMethod slash_list_methods[SLASH_LIST_METHODS_COUNT] = {
 //     { .name = "pop", .fp = slash_list_pop },
 //     { .name = "len", .fp = slash_list_len },
