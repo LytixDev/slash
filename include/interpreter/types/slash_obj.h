@@ -14,13 +14,27 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "interpreter/types/slash_value.h"
-#include <stdio.h>
+#ifndef SLASH_OBJ_H
+#define SLASH_OBJ_H
 
-void slash_num_print(SlashValue *value)
-{
-    if (value->num == (int)value->num)
-	printf("%d", (int)value->num);
-    else
-	printf("%f", value->num);
-}
+#include <stdbool.h>
+
+#include "interpreter/scope.h"
+#include "interpreter/types/trait.h"
+
+typedef enum {
+    SLASH_OBJ_LIST,
+    SLASH_OBJ_TUPLE,
+    SLASH_OBJ_MAP,
+    SLASH_OBJ_TYPE_COUNT,
+} SlashObjType;
+
+struct slash_obj_t {
+    SlashObjType type;
+    bool gc_marked;
+    // TODO: can use type as index into a static table of pointers to these functions
+    ObjTraits *traits;
+};
+
+
+#endif /* SLASH_OBJ_H */

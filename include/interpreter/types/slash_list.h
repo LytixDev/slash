@@ -17,54 +17,54 @@
 #ifndef SLASH_LIST_H
 #define SLASH_LIST_H
 
+#include "interpreter/interpreter.h"
 #include "interpreter/scope.h"
 #include "interpreter/types/method.h"
-#include "interpreter/types/slash_range.h"
+#include "interpreter/types/slash_obj.h"
+#include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
-
-typedef struct slash_value_t SlashValue; // Forward declaration of SlashValue
 
 /*
  * The SlashList is just a wrapper over the dynamic ArrayList impl I wrote for nicc.
- * T stores the type of the items in the list. If there are items of different types, T is SVT_ANY.
- * If T is SVT_NUM or SVT_STR then we can provide default sorting functions.
- * TODO: If T is something else, maybe we should expose some big brain api that takes in a
- * compare-function.
  */
 typedef struct {
-    ArrayList *underlying; // malloced, managed by the owning scope
-    // SlashValueType underlying_T;
+    SlashObj obj;
+    ArrayList underlying;
 } SlashList;
 
-void slash_list_init(Scope *scope, SlashList *list);
-void slash_list_free(SlashList *list);
 
+void slash_list_init(SlashList *list);
 bool slash_list_append(SlashList *list, SlashValue val);
 void slash_list_append_list(SlashList *list, SlashList *to_append);
-
 SlashValue *slash_list_get(SlashList *list, size_t idx);
-
 bool slash_list_set(SlashList *list, SlashValue *val, size_t idx);
+SlashList *slash_list_from_ranged_copy(Interpreter *interpreter, SlashList *to_copy,
+				       SlashRange range);
 
-/* NOTE: function assumes ret_ptr is NOT initialized */
-void slash_list_from_ranged_copy(Scope *scope, SlashList *ret_ptr, SlashList *to_copy,
-				 SlashRange range);
 
-bool slash_list_eq(SlashList *a, SlashList *b);
-
-/* common slash value functions */
+/*
+ * traits
+ */
 void slash_list_print(SlashValue *value);
-SlashValue slash_list_item_get(Scope *scope, SlashValue *self, SlashValue *index);
+SlashValue slash_list_item_get(Interpreter *interpreter, SlashValue *self, SlashValue *index);
 void slash_list_item_assign(SlashValue *self, SlashValue *index, SlashValue *new_value);
 bool slash_list_item_in(SlashValue *self, SlashValue *item);
+bool slash_list_truthy(SlashValue *self);
+bool slash_list_eq(SlashValue *a, SlashValue *b);
 
-/* slash list methods */
+
+/*
+ * methods
+ */
 #define SLASH_LIST_METHODS_COUNT 3
 extern SlashMethod slash_list_methods[SLASH_LIST_METHODS_COUNT];
 
-SlashValue slash_list_pop(SlashValue *self, size_t argc, SlashValue *argv);
-SlashValue slash_list_len(SlashValue *self, size_t argc, SlashValue *argv);
-SlashValue slash_list_sort(SlashValue *self, size_t argc, SlashValue *argv);
+SlashValue slash_list_pop(Interpreter *interpreter, SlashValue *self, size_t argc,
+			  SlashValue *argv);
+SlashValue slash_list_len(Interpreter *interpreter, SlashValue *self, size_t argc,
+			  SlashValue *argv);
+SlashValue slash_list_sort(Interpreter *interpreter, SlashValue *self, size_t argc,
+			   SlashValue *argv);
 
 
 #endif /* SLASH_LIST_H */

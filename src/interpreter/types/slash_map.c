@@ -17,51 +17,61 @@
 #include <assert.h>
 #include <stdio.h>
 
+#include "interpreter/gc.h"
+#include "interpreter/interpreter.h"
 #include "interpreter/types/slash_map.h"
+#include "interpreter/types/slash_tuple.h"
 #include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
 
 
-void slash_map_init(Scope *scope, SlashMap *map)
+ObjTraits map_traits = { .print = slash_map_print,
+			 .item_get = slash_map_item_get,
+			 .item_assign = slash_map_item_assign,
+			 .item_in = slash_map_item_in,
+			 .truthy = slash_map_truthy,
+			 .equals = slash_map_eq,
+			 .cmp = NULL };
+
+
+void slash_map_init(SlashMap *map)
 {
-    map->underlying = malloc(sizeof(HashMap));
-    hashmap_init(map->underlying);
-    scope_register_owning(scope, &(SlashValue){ .type = SLASH_MAP, .map = *map });
+    hashmap_init(&map->underlying);
+    map->obj.traits = &map_traits;
 }
 
-void slash_map_free(SlashMap *map)
+static void slash_map_put(SlashMap *map, SlashValue *key, SlashValue *value)
 {
-    hashmap_free(map->underlying);
-    free(map->underlying);
+    hashmap_put(&map->underlying, key, sizeof(SlashValue), value, sizeof(SlashValue), true);
 }
 
-void slash_map_put(SlashMap *map, SlashValue *key, SlashValue *value)
+static SlashValue *slash_map_get(SlashMap *map, SlashValue *key)
 {
-    hashmap_put(map->underlying, key, sizeof(SlashValue), value, sizeof(SlashValue), true);
-}
-
-SlashValue *slash_map_get(SlashMap *map, SlashValue *key)
-{
-    SlashValue *value = hashmap_get(map->underlying, key, sizeof(SlashValue));
+    SlashValue *value = hashmap_get(&map->underlying, key, sizeof(SlashValue));
     if (value == NULL)
 	return &slash_glob_none;
     return value;
 }
 
 
-/* common slash value functions */
+/*
+ * traits
+ */
 void slash_map_print(SlashValue *value)
 {
+    assert(value->type == SLASH_OBJ);
+    assert(value->obj->type == SLASH_OBJ_MAP);
+
     printf("@[");
-    HashMap *m = value->map.underlying;
+    HashMap m = ((SlashMap *)value->obj)->underlying;
     SlashValue *k, *v;
     struct hm_bucket_t *bucket;
     struct hm_entry_t entry;
 
     bool first_print = true;
 
-    for (int i = 0; i < N_BUCKETS(m->size_log2); i++) {
-	bucket = &m->buckets[i];
+    for (int i = 0; i < N_BUCKETS(m.size_log2); i++) {
+	bucket = &m.buckets[i];
 	for (int j = 0; j < HM_BUCKET_SIZE; j++) {
 	    entry = bucket->entries[j];
 	    if (entry.key == NULL)
@@ -73,51 +83,89 @@ void slash_map_print(SlashValue *value)
 
 	    k = entry.key;
 	    v = entry.value;
-	    slash_print[k->type](k);
+	    trait_print[k->type](k);
 	    printf(": ");
-	    slash_print[v->type](v);
+	    trait_print[v->type](v);
 	}
     }
     printf("]");
 }
 
-size_t *slash_map_len(SlashValue *value)
+SlashValue slash_map_item_get(Interpreter *interpreter, SlashValue *self, SlashValue *index)
 {
-    return (size_t *)&value->map.underlying->len;
-}
+    (void)interpreter;
+    assert(self->type == SLASH_OBJ);
+    assert(self->obj->type == SLASH_OBJ_MAP);
 
-SlashValue slash_map_item_get(Scope *scope, SlashValue *self, SlashValue *index)
-{
-    (void)scope;
-    assert(self->type == SLASH_MAP);
-
-    return *slash_map_get(&self->map, index);
+    SlashMap *map = (SlashMap *)self->obj;
+    return *slash_map_get(map, index);
 }
 
 void slash_map_item_assign(SlashValue *self, SlashValue *index, SlashValue *new_value)
 {
-    assert(self->type == SLASH_MAP);
-    slash_map_put(&self->map, index, new_value);
+    assert(self->type == SLASH_OBJ);
+    assert(self->obj->type == SLASH_OBJ_MAP);
+    SlashMap *map = (SlashMap *)self->obj;
+    slash_map_put(map, index, new_value);
 }
 
 bool slash_map_item_in(SlashValue *self, SlashValue *item)
 {
-    assert(self->type == SLASH_MAP);
+    assert(self->type == SLASH_OBJ);
+    assert(self->obj->type == SLASH_OBJ_MAP);
     /* "in" means that the item is a key in the dict */
-
-    SlashMap map = self->map;
-    SlashValue *value = hashmap_get(map.underlying, item, sizeof(SlashValue));
+    SlashMap *map = (SlashMap *)self->obj;
+    SlashValue *value = hashmap_get(&map->underlying, item, sizeof(SlashValue));
     return value != NULL;
 }
 
-
-/* methods */
-SlashTuple slash_map_get_keys(Scope *scope, SlashMap *map)
+bool slash_map_truthy(SlashValue *self)
 {
-    SlashTuple map_keys;
-    slash_tuple_init(scope, &map_keys, map->underlying->len);
+    SlashMap *map = (SlashMap *)self->obj;
+    return map->underlying.len != 0;
+}
 
-    HashMap *m = map->underlying;
+bool slash_map_eq(SlashValue *a, SlashValue *b)
+{
+    assert(a->type == SLASH_OBJ);
+    assert(a->obj->type == SLASH_OBJ_MAP);
+    assert(b->type == SLASH_OBJ);
+    assert(b->obj->type == SLASH_OBJ_MAP);
+
+    HashMap *A = &((SlashMap *)a->obj)->underlying;
+    HashMap *B = &((SlashMap *)b->obj)->underlying;
+    if (A->len != B->len)
+	return false;
+
+    // TODO: loop over all keys and check if associated values are equal
+    return true;
+}
+
+
+/*
+ * methods
+ */
+SlashMethod slash_map_methods[SLASH_MAP_METHODS_COUNT] = {
+    { .name = "keys", .fp = slash_map_get_keys_method_stub }
+};
+
+SlashValue slash_map_get_keys_method_stub(Interpreter *interpreter, SlashValue *self, size_t argc,
+					  SlashValue *argv)
+{
+    (void)argc;
+    (void)argv;
+    return slash_map_get_keys(interpreter, (SlashMap *)self->obj);
+}
+
+SlashValue slash_map_get_keys(Interpreter *interpreter, SlashMap *map)
+{
+    SlashTuple *map_keys = (SlashTuple *)gc_alloc(&interpreter->gc_objs, SLASH_OBJ_TUPLE);
+    SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)map_keys };
+    slash_tuple_init(map_keys, map->underlying.len);
+    if (map_keys->size == 0)
+	return value;
+
+    HashMap *m = &map->underlying;
     struct hm_bucket_t *bucket;
     struct hm_entry_t entry;
     size_t counter = 0;
@@ -129,9 +177,9 @@ SlashTuple slash_map_get_keys(Scope *scope, SlashMap *map)
 	    if (entry.key == NULL)
 		continue;
 
-	    map_keys.values[counter++] = *(SlashValue *)entry.key;
+	    map_keys->values[counter++] = *(SlashValue *)entry.key;
 	}
     }
 
-    return map_keys;
+    return value;
 }

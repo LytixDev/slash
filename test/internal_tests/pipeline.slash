@@ -5,3 +5,6 @@ if $count {
 } else {
     assert false
 }
+
+var success = (ls | grep runall | wc -l) as bool
+assert $success

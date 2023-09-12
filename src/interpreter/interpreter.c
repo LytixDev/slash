@@ -23,12 +23,17 @@
 #include "interpreter/ast.h"
 #include "interpreter/core/exec.h"
 #include "interpreter/error.h"
+#include "interpreter/gc.h"
 #include "interpreter/interpreter.h"
 #include "interpreter/lexer.h"
 #include "interpreter/scope.h"
 #include "interpreter/types/cast.h"
 #include "interpreter/types/method.h"
+#include "interpreter/types/slash_list.h"
+#include "interpreter/types/slash_map.h"
+#include "interpreter/types/slash_tuple.h"
 #include "interpreter/types/slash_value.h"
+#include "interpreter/types/trait.h"
 #include "nicc/nicc.h"
 #include "str_view.h"
 
@@ -154,12 +159,17 @@ static SlashValue cmp_binary_values(SlashValue left, SlashValue right, TokenType
     case t_plus: {
 	if (left.type == SLASH_NUM && right.type == SLASH_NUM) {
 	    result = (SlashValue){ .type = SLASH_NUM, .num = left.num + right.num };
-	} else if (left.type == SLASH_LIST && right.type == SLASH_LIST) {
-	    slash_list_append_list(&left.list, &right.list);
-	    result = left;
-	} else if (left.type == SLASH_LIST) {
-	    slash_list_append(&left.list, right);
-	    result = left;
+	} else if (IS_OBJ(left.type) && left.obj->type == SLASH_OBJ_LIST) {
+	    if (IS_OBJ(right.type) && right.obj->type == SLASH_OBJ_LIST) {
+		slash_list_append_list((SlashList *)left.obj, (SlashList *)right.obj);
+		return left;
+	    } else if (!IS_OBJ(right.type)) {
+		slash_list_append((SlashList *)left.obj, right);
+		return left;
+	    } else {
+		report_runtime_error("list + object not supported");
+		ASSERT_NOT_REACHED;
+	    }
 	} else {
 	    report_runtime_error(
 		"Plus operator only supported for number and number or list and list");
@@ -243,7 +253,7 @@ static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
 	return cmp_binary_values(left, right, expr->operator_);
 
     /* left "IN" right */
-    SlashItemInFunc func = slash_item_in[right.type];
+    TraitItemIn func = trait_item_in[right.type];
     bool rc = func(&right, &left);
     return (SlashValue){ .type = SLASH_BOOL, .boolean = rc };
 }
@@ -268,8 +278,8 @@ static SlashValue eval_subscript(Interpreter *interpreter, SubscriptExpr *expr)
 {
     SlashValue value = eval(interpreter, expr->expr);
     SlashValue access_index = eval(interpreter, expr->access_value);
-    SlashItemGetFunc func = slash_item_get[value.type];
-    SlashValue item = func(interpreter->scope, &value, &access_index);
+    TraitItemGet func = trait_item_get[value.type];
+    SlashValue item = func(interpreter, &value, &access_index);
     return item;
 }
 
@@ -302,32 +312,34 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
 
 static SlashValue eval_tuple(Interpreter *interpreter, ListExpr *expr)
 {
-    SlashTuple tuple;
+    SlashTuple *tuple = (SlashTuple *)gc_alloc(&interpreter->gc_objs, SLASH_OBJ_TUPLE);
+    SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)tuple };
     /* empty initializer -> size is 0 */
     if (expr->exprs == NULL) {
-	slash_tuple_init(interpreter->scope, &tuple, 0);
-	return (SlashValue){ .type = SLASH_TUPLE, .tuple = tuple };
+	slash_tuple_init(tuple, 0);
+	return value;
     }
 
-    slash_tuple_init(interpreter->scope, &tuple, expr->exprs->seq.size);
+    slash_tuple_init(tuple, expr->exprs->seq.size);
     size_t i = 0;
     LLItem *item;
     ARENA_LL_FOR_EACH(&expr->exprs->seq, item)
     {
 	SlashValue element_value = eval(interpreter, item->value);
-	tuple.values[i++] = element_value;
+	tuple->values[i++] = element_value;
     }
 
-    return (SlashValue){ .type = SLASH_TUPLE, .tuple = tuple };
+    return value;
 }
 
 static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
 {
-    if (expr->list_type == SLASH_TUPLE)
+    if (!expr->is_list)
 	return eval_tuple(interpreter, expr);
 
-    SlashValue value = { .type = SLASH_LIST };
-    slash_list_init(interpreter->scope, &value.list);
+    SlashList *list = (SlashList *)gc_alloc(&interpreter->gc_objs, SLASH_OBJ_LIST);
+    slash_list_init(list);
+    SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)list };
 
     if (expr->exprs == NULL)
 	return value;
@@ -336,7 +348,7 @@ static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
     ARENA_LL_FOR_EACH(&expr->exprs->seq, item)
     {
 	SlashValue element_value = eval(interpreter, item->value);
-	slash_list_append(&value.list, element_value);
+	slash_list_append(list, element_value);
     }
 
     return value;
@@ -344,23 +356,24 @@ static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
 
 static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
 {
-    SlashValue map = { .type = SLASH_MAP };
-    slash_map_init(interpreter->scope, &map.map);
+    SlashMap *map = (SlashMap *)gc_alloc(&interpreter->gc_objs, SLASH_OBJ_MAP);
+    slash_map_init(map);
+    SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)map };
 
     if (expr->key_value_pairs == NULL)
-	return map;
+	return value;
 
     LLItem *item;
     KeyValuePair *pair;
     ARENA_LL_FOR_EACH(expr->key_value_pairs, item)
     {
 	pair = item->value;
-	SlashValue key = eval(interpreter, pair->key);
-	SlashValue value = eval(interpreter, pair->value);
-	slash_map_put(&map.map, &key, &value);
+	SlashValue k = eval(interpreter, pair->key);
+	SlashValue v = eval(interpreter, pair->value);
+	value.obj->traits->item_assign(&value, &k, &v);
     }
 
-    return map;
+    return value;
 }
 
 static SlashValue eval_method(Interpreter *interpreter, MethodExpr *expr)
@@ -377,12 +390,8 @@ static SlashValue eval_method(Interpreter *interpreter, MethodExpr *expr)
     if (method == NULL)
 	report_runtime_error("Method does not exist");
 
-    /*
-     * first argument will always be the object that the method is called "on"
-     * second argument will always be the number of following arguments (argc)
-     */
     if (expr->args == NULL)
-	return method(&self, 0, NULL);
+	return method(interpreter, &self, 0, NULL);
 
     SlashValue argv[expr->args->seq.size];
     size_t i = 0;
@@ -394,7 +403,7 @@ static SlashValue eval_method(Interpreter *interpreter, MethodExpr *expr)
     }
 
     assert(i == expr->args->seq.size);
-    return method(&self, i, argv);
+    return method(interpreter, &self, i, argv);
 }
 
 static SlashValue eval_grouping(Interpreter *interpreter, GroupingExpr *expr)
@@ -417,12 +426,12 @@ static SlashValue eval_cast(Interpreter *interpreter, CastExpr *expr)
 
 
 /*
- * statment execution functions
+ * statement execution functions
  */
 static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
 {
     SlashValue value = eval(interpreter, stmt->expression);
-    SlashPrintFunc print_func = slash_print[value.type];
+    TraitPrint print_func = trait_print[value.type];
     print_func(&value);
     // putchar('\n');
 }
@@ -476,7 +485,7 @@ static void exec_subscript_assign(Interpreter *interpreter, AssignStmt *stmt)
     SlashValue *self = current.value;
 
     if (stmt->assignment_op == t_equal) {
-	SlashItemAssignFunc func = slash_item_assign[self->type];
+	TraitItemAssign func = trait_item_assign[self->type];
 	func(self, &access_index, &new_value);
 	return;
     }
@@ -487,7 +496,7 @@ static void exec_subscript_assign(Interpreter *interpreter, AssignStmt *stmt)
     TokenType operator= stmt->assignment_op == t_plus_equal ? t_plus : t_minus;
     new_value = cmp_binary_values(current_item_value, new_value, operator);
 
-    SlashItemAssignFunc func = slash_item_assign[self->type];
+    TraitItemAssign func = trait_item_assign[self->type];
     func(self, &access_index, &new_value);
 }
 
@@ -512,7 +521,7 @@ static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
     SlashValue new_value = eval(interpreter, stmt->value);
 
     if (stmt->assignment_op == t_equal) {
-	var_assign(&var_name, variable.scope, interpreter->scope, &new_value);
+	var_assign(&var_name, variable.scope, &new_value);
 	return;
     }
 
@@ -547,10 +556,10 @@ static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
     new_value = cmp_binary_values(*variable.value, new_value, operator_);
     /*
      * For dynamic types the binary compare will update the underlying object.
-     * Therefore we only assign if the variable type is not dynamic.
+     * Therefore, we only assign if the variable type is not dynamic.
      */
-    if (!SLASH_TYPE_DYNAMIC(variable.value->type))
-	var_assign(&var_name, variable.scope, interpreter->scope, &new_value);
+    if (!IS_OBJ(variable.value->type))
+	var_assign(&var_name, variable.scope, &new_value);
 }
 
 static void exec_pipeline(Interpreter *interpreter, PipelineStmt *stmt)
@@ -570,7 +579,7 @@ static void exec_pipeline(Interpreter *interpreter, PipelineStmt *stmt)
     arraylist_append(&stream_ctx->active_fds, &fd[1]);
 
     stream_ctx->write_fd = final_out_fd;
-    stream_ctx->read_fd = fd[STRAM_READ_END];
+    stream_ctx->read_fd = fd[STREAM_READ_END];
 
     exec(interpreter, stmt->right);
 
@@ -602,45 +611,46 @@ static void exec_loop(Interpreter *interpreter, LoopStmt *stmt)
     scope_destroy(&loop_scope);
 }
 
-static void exec_iter_loop_list(Interpreter *interpreter, IterLoopStmt *stmt, SlashList iterable)
+static void exec_iter_loop_list(Interpreter *interpreter, IterLoopStmt *stmt, SlashList *iterable)
 {
     /* define the loop variable that holds the current iterator value */
     var_define(interpreter->scope, &stmt->var_name, NULL);
 
     SlashValue *iterator_value;
-    for (size_t i = 0; i < iterable.underlying->size; i++) {
-	iterator_value = slash_list_get(&iterable, i);
-	var_assign_simple(interpreter->scope, &stmt->var_name, iterator_value);
+    for (size_t i = 0; i < iterable->underlying.size; i++) {
+	iterator_value = slash_list_get(iterable, i);
+	var_assign(&stmt->var_name, interpreter->scope, iterator_value);
 	exec_block_body(interpreter, stmt->body_block);
     }
 }
 
-static void exec_iter_loop_tuple(Interpreter *interpreter, IterLoopStmt *stmt, SlashTuple iterable)
+static void exec_iter_loop_tuple(Interpreter *interpreter, IterLoopStmt *stmt, SlashTuple *iterable)
 {
     /* define the loop variable that holds the current iterator value */
     var_define(interpreter->scope, &stmt->var_name, NULL);
 
     SlashValue *iterator_value;
-    for (size_t i = 0; i < iterable.size; i++) {
-	iterator_value = &iterable.values[i];
-	var_assign_simple(interpreter->scope, &stmt->var_name, iterator_value);
+    for (size_t i = 0; i < iterable->size; i++) {
+	iterator_value = &iterable->values[i];
+	var_assign(&stmt->var_name, interpreter->scope, iterator_value);
 	exec_block_body(interpreter, stmt->body_block);
     }
 }
 
-static void exec_iter_loop_map(Interpreter *interpreter, IterLoopStmt *stmt, SlashMap iterable)
+static void exec_iter_loop_map(Interpreter *interpreter, IterLoopStmt *stmt, SlashMap *iterable)
 {
-    SlashTuple keys = slash_map_get_keys(interpreter->scope, &iterable);
-    if (keys.size == 0)
+    if (iterable->underlying.len == 0)
 	return;
 
-    SlashValue iterator_value = slash_glob_none;
+    SlashValue keys = slash_map_get_keys(interpreter, iterable);
+    SlashTuple *keys_tuple = (SlashTuple *)keys.obj;
     /* define the loop variable that holds the current iterator value */
-    var_define(interpreter->scope, &stmt->var_name, &iterator_value);
+    var_define(interpreter->scope, &stmt->var_name, NULL);
 
-    for (size_t i = 0; i < keys.size; i++) {
-	iterator_value = keys.values[i];
-	var_assign_simple(interpreter->scope, &stmt->var_name, &iterator_value);
+    SlashValue *iterator_value;
+    for (size_t i = 0; i < keys_tuple->size; i++) {
+	iterator_value = &keys_tuple->values[i];
+	var_assign(&stmt->var_name, interpreter->scope, iterator_value);
 	exec_block_body(interpreter, stmt->body_block);
     }
 }
@@ -667,7 +677,7 @@ static void exec_iter_loop_str(Interpreter *interpreter, IterLoopStmt *stmt, Str
     while (t != NULL) {
 	str = (StrView){ .view = t, .size = strlen(t) };
 	iterator_value.str = str;
-	var_assign_simple(interpreter->scope, &stmt->var_name, &iterator_value);
+	var_assign(&stmt->var_name, interpreter->scope, &iterator_value);
 	exec_block_body(interpreter, stmt->body_block);
 	t = strtok(NULL, ifs_char);
     }
@@ -685,7 +695,7 @@ static void exec_iter_loop_range(Interpreter *interpreter, IterLoopStmt *stmt, S
     while (iterator_value.num != iterable.end) {
 	exec_block_body(interpreter, stmt->body_block);
 	iterator_value.num++;
-	var_assign_simple(interpreter->scope, &stmt->var_name, &iterator_value);
+	var_assign(&stmt->var_name, interpreter->scope, &iterator_value);
     }
 
     /* don't need to undefine the iterator value as the scope will be destroyed imminently */
@@ -702,18 +712,26 @@ static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
     case SLASH_STR:
 	exec_iter_loop_str(interpreter, stmt, underlying.str);
 	break;
-    case SLASH_LIST:
-	exec_iter_loop_list(interpreter, stmt, underlying.list);
-	break;
-    case SLASH_TUPLE:
-	exec_iter_loop_tuple(interpreter, stmt, underlying.tuple);
-	break;
-    case SLASH_MAP:
-	exec_iter_loop_map(interpreter, stmt, underlying.map);
-	break;
     case SLASH_RANGE:
 	exec_iter_loop_range(interpreter, stmt, underlying.range);
 	break;
+    case SLASH_OBJ: {
+	switch (underlying.obj->type) {
+	case SLASH_OBJ_LIST:
+	    exec_iter_loop_list(interpreter, stmt, (SlashList *)underlying.obj);
+	    break;
+	case SLASH_OBJ_TUPLE:
+	    exec_iter_loop_tuple(interpreter, stmt, (SlashTuple *)underlying.obj);
+	    break;
+	case SLASH_OBJ_MAP:
+	    exec_iter_loop_map(interpreter, stmt, (SlashMap *)underlying.obj);
+	    break;
+	default:
+	    report_runtime_error("Object type can't be iterated over");
+	    ASSERT_NOT_REACHED;
+	}
+
+    } break;
     default:
 	report_runtime_error("Type can't be iterated over");
 	ASSERT_NOT_REACHED;
@@ -850,6 +868,8 @@ int interpret(ArrayList *statements)
 
     scope_init_global(&interpreter.globals, &interpreter.arena);
     interpreter.scope = &interpreter.globals;
+
+    linkedlist_init(&interpreter.gc_objs, sizeof(SlashObj *));
 
     /* init default StreamCtx */
     StreamCtx stream_ctx = { .read_fd = STDIN_FILENO, .write_fd = STDOUT_FILENO };

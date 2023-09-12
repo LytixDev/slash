@@ -20,15 +20,10 @@
 #include <stdbool.h>
 
 #include "interpreter/lexer.h"
-#include "interpreter/types/slash_bool.h"
-#include "interpreter/types/slash_list.h"
-#include "interpreter/types/slash_map.h"
-#include "interpreter/types/slash_num.h"
-#include "interpreter/types/slash_range.h"
-#include "interpreter/types/slash_str.h"
-#include "interpreter/types/slash_tuple.h"
 #include "sac/sac.h"
 
+
+typedef struct slash_obj_t SlashObj; // Forward decl
 
 typedef enum {
     SLASH_BOOL = 0,
@@ -36,15 +31,17 @@ typedef enum {
     SLASH_NUM,
     SLASH_SHIDENT,
     SLASH_RANGE,
-    SLASH_LIST,
-    SLASH_TUPLE,
-    SLASH_MAP,
+    SLASH_OBJ,
     SLASH_NONE,
     SLASH_TYPE_COUNT,
 } SlashType;
 
-#define SLASH_TYPE_DYNAMIC(slash_type) \
-    (slash_type == SLASH_MAP || slash_type == SLASH_LIST || slash_type == SLASH_TUPLE)
+#define IS_OBJ(slash_type) (slash_type == SLASH_OBJ)
+
+typedef struct {
+    int32_t start;
+    int32_t end;
+} SlashRange;
 
 typedef struct slash_value_t {
     SlashType type;
@@ -55,48 +52,28 @@ typedef struct slash_value_t {
 	double num;
 	SlashRange range;
 	/* pointers to heap allocated data */
-	SlashList list;
-	SlashTuple tuple;
-	SlashMap map;
+	SlashObj *obj;
     };
 } SlashValue;
 
 
-SlashValue *slash_value_arena_alloc(Arena *arena, SlashType type);
-
 bool is_truthy(SlashValue *value);
-
 bool slash_value_eq(SlashValue *a, SlashValue *b);
 int slash_value_cmp_stub(const void *a, const void *b);
 int slash_value_cmp_rev_stub(const void *a, const void *b);
 /* returns positive if a > b */
 int slash_value_cmp(SlashValue *a, SlashValue *b);
 
-// SlashToStrFunc
-// SlashToReprFunc
-typedef void (*SlashPrintFunc)(SlashValue *self);
-typedef SlashValue (*SlashItemGetFunc)(Scope *scope, SlashValue *self, SlashValue *);
-typedef void (*SlashItemAssignFunc)(SlashValue *self, SlashValue *, SlashValue *);
-typedef bool (*SlashItemInFunc)(SlashValue *self, SlashValue *);
+/* */
+void slash_bool_print(SlashValue *value);
+void slash_num_print(SlashValue *value);
+void slash_str_print(SlashValue *value);
+void slash_range_print(SlashValue *value);
+void slash_none_print(void);
 
-/*
- * Table containing function pointers implementing print for each type
- *
- * Example usage for printing a SlashValue:
- * SlashValue value = ...
- * print_func = slash_print[value.type]
- * print_func(&value)
- */
-extern SlashPrintFunc slash_print[SLASH_TYPE_COUNT];
-
-extern SlashItemGetFunc slash_item_get[SLASH_TYPE_COUNT];
-
-extern SlashItemAssignFunc slash_item_assign[SLASH_TYPE_COUNT];
-
-extern SlashItemInFunc slash_item_in[SLASH_TYPE_COUNT];
-
-extern SlashValue slash_glob_none;
 
 extern int slash_cmp_precedence[SLASH_TYPE_COUNT];
+
+extern SlashValue slash_glob_none;
 
 #endif /* SLASH_VALUE_H */

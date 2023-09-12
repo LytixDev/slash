@@ -17,34 +17,44 @@
 #ifndef SLASH_MAP_H
 #define SLASH_MAP_H
 
+#include "interpreter/interpreter.h"
 #include "interpreter/scope.h"
+#include "interpreter/types/method.h"
+#include "interpreter/types/slash_obj.h"
 #include "interpreter/types/slash_tuple.h"
+#include "interpreter/types/slash_value.h"
+#include "interpreter/types/trait.h"
 #include "nicc/nicc.h"
 
-typedef struct slash_value_t SlashValue; // Forward declaration of SlashValue
 
 typedef struct {
-    HashMap *underlying;
+    SlashObj obj;
+    HashMap underlying;
 } SlashMap;
 
 
-void slash_map_init(Scope *scope, SlashMap *map);
-void slash_map_free(SlashMap *map);
+void slash_map_init(SlashMap *map);
+SlashValue slash_map_get_keys(Interpreter *interpreter, SlashMap *map);
 
-void slash_map_put(SlashMap *map, SlashValue *key, SlashValue *value);
-/* returns NULL if key does not have an associated value */
-SlashValue *slash_map_get(SlashMap *map, SlashValue *key);
-
-/* common slash value functions */
+/*
+ * traits
+ */
 /* O(n) */
 void slash_map_print(SlashValue *value);
-size_t *slash_map_len(SlashValue *value);
-SlashValue slash_map_item_get(Scope *scope, SlashValue *self, SlashValue *index);
+SlashValue slash_map_item_get(Interpreter *interpreter, SlashValue *self, SlashValue *index);
 void slash_map_item_assign(SlashValue *self, SlashValue *index, SlashValue *new_value);
 bool slash_map_item_in(SlashValue *self, SlashValue *item);
+bool slash_map_truthy(SlashValue *self);
+bool slash_map_eq(SlashValue *a, SlashValue *b);
 
-/* methods on slash map */
-SlashTuple slash_map_get_keys(Scope *scope, SlashMap *map);
+/*
+ * methods
+ */
+#define SLASH_MAP_METHODS_COUNT 1
+extern SlashMethod slash_map_methods[SLASH_MAP_METHODS_COUNT];
+
+SlashValue slash_map_get_keys_method_stub(Interpreter *interpreter, SlashValue *self, size_t argc,
+					  SlashValue *argv);
 
 
 #endif /* SLASH_MAP_H */

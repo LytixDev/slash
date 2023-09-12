@@ -16,36 +16,62 @@
  */
 #include <string.h>
 
-#include "interpreter/error.h"
 #include "interpreter/types/method.h"
+#include "interpreter/types/slash_list.h"
+#include "interpreter/types/slash_map.h"
 #include "interpreter/types/slash_value.h"
 
 
-char slash_type_to_char[SLASH_TYPE_COUNT] = {
+char slash_value_to_char[] = {
     'b', // bool
     's', // str
     'n', // num
     '-', // shident
     'r', // range
-    'l', // list
-    't', // tuple
-    'm', // map
+    'o', // any object
     '-', // none
 };
 
+
+static char value_to_char_type(SlashValue *value)
+{
+    if (IS_OBJ(value->type)) {
+	switch (value->obj->type) {
+	case SLASH_OBJ_LIST:
+	    return 'l';
+	case SLASH_OBJ_TUPLE:
+	    return 't';
+	case SLASH_OBJ_MAP:
+	    return 'm';
+	default:
+	    return 'o';
+	}
+    }
+    return slash_value_to_char[value->type];
+}
 
 MethodFunc get_method(SlashValue *self, char *method_name)
 {
     size_t methods_count;
     SlashMethod *methods;
 
-    // TODO: this could be a table
     switch (self->type) {
-    case SLASH_LIST:
-	methods_count = SLASH_LIST_METHODS_COUNT;
-	methods = slash_list_methods;
-	break;
+    case SLASH_OBJ: {
+	switch (self->obj->type) {
+	case SLASH_OBJ_LIST:
+	    methods_count = SLASH_LIST_METHODS_COUNT;
+	    methods = slash_list_methods;
+	    break;
+	case SLASH_OBJ_MAP:
+	    methods_count = SLASH_MAP_METHODS_COUNT;
+	    methods = slash_map_methods;
+	    break;
+	default:
+	    return NULL;
+	};
 
+	break;
+    };
     default:
 	return NULL;
     }
@@ -62,7 +88,7 @@ MethodFunc get_method(SlashValue *self, char *method_name)
 }
 
 /*
- * count occurences of whitespace + 1
+ * count occurrences of whitespace + 1
  */
 static size_t signature_arg_count(char *signature)
 {
@@ -90,7 +116,7 @@ bool match_signature(char *signature, size_t argc, SlashValue *argv)
     size_t i = 0;
 
     while (arg != NULL) {
-	char type = slash_type_to_char[argv[i].type];
+	char type = value_to_char_type(&argv[i]);
 	bool okay = false;
 	while (*arg != 0 && *arg != ' ') {
 	    if (*signature == 'a' || *signature == type) {

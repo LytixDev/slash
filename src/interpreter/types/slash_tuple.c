@@ -18,12 +18,21 @@
 #include <stdio.h>
 
 #include "interpreter/error.h"
-#include "interpreter/scope.h"
+#include "interpreter/interpreter.h"
 #include "interpreter/types/slash_tuple.h"
 #include "interpreter/types/slash_value.h"
 
 
-void slash_tuple_init(Scope *scope, SlashTuple *tuple, size_t size)
+ObjTraits tuple_traits = { .print = slash_tuple_print,
+			   .item_get = slash_tuple_item_get,
+			   .item_assign = NULL,
+			   .item_in = slash_tuple_item_in,
+			   .truthy = slash_tuple_truthy,
+			   .equals = slash_tuple_eq,
+			   .cmp = NULL };
+
+
+void slash_tuple_init(SlashTuple *tuple, size_t size)
 {
     tuple->size = size;
     if (size == 0) {
@@ -31,78 +40,102 @@ void slash_tuple_init(Scope *scope, SlashTuple *tuple, size_t size)
     } else {
 	tuple->values = malloc(sizeof(SlashValue) * size);
     }
-    scope_register_owning(scope, &(SlashValue){ .type = SLASH_TUPLE, .tuple = *tuple });
-}
-
-void slash_tuple_free(SlashTuple *tuple)
-{
-    if (tuple->values != NULL)
-	free(tuple->values);
+    tuple->obj.traits = &tuple_traits;
 }
 
 void slash_tuple_print(SlashValue *value)
 {
-    SlashTuple tuple = value->tuple;
+    assert(value->type == SLASH_OBJ);
+    assert(value->obj->type == SLASH_OBJ_TUPLE);
+
+    SlashTuple *tuple = (SlashTuple *)value->obj;
     SlashValue current;
     printf("'");
-    for (size_t i = 0; i < tuple.size; i++) {
-	current = tuple.values[i];
+    for (size_t i = 0; i < tuple->size; i++) {
+	current = tuple->values[i];
 	/* call the print function directly */
-	slash_print[current.type](&current);
-	if (i != tuple.size - 1)
+	trait_print[current.type](&current);
+	if (i != tuple->size - 1)
 	    printf(", ");
     }
     printf("'");
 }
 
-size_t *slash_tuple_len(SlashValue *value)
+SlashValue slash_tuple_item_get(Interpreter *interpreter, SlashValue *self, SlashValue *index)
 {
-    return &value->tuple.size;
-}
+    (void)interpreter;
+    assert(self->type == SLASH_OBJ);
+    assert(self->obj->type == SLASH_OBJ_TUPLE);
 
-SlashValue slash_tuple_item_get(Scope *scope, SlashValue *self, SlashValue *index)
-{
-    (void)scope;
-    assert(self->type == SLASH_TUPLE);
-    SlashTuple tuple = self->tuple;
-
+    SlashTuple *tuple = (SlashTuple *)self->obj;
     if (index->type != SLASH_NUM) {
 	report_runtime_error("List indices must be numbers");
 	ASSERT_NOT_REACHED;
     }
 
     size_t idx = (size_t)index->num;
-    if (idx > tuple.size) {
-	report_runtime_error("List indices must be numbers");
+    if (idx > tuple->size) {
+	report_runtime_error("List indices out of range");
 	ASSERT_NOT_REACHED;
     }
 
-    return tuple.values[idx];
+    return tuple->values[idx];
 }
 
 bool slash_tuple_item_in(SlashValue *self, SlashValue *item)
 {
-    assert(self->type == SLASH_TUPLE);
-    SlashTuple tuple = self->tuple;
+    assert(self->type == SLASH_OBJ);
+    assert(self->obj->type == SLASH_OBJ_TUPLE);
 
-    for (size_t i = 0; i < tuple.size; i++) {
-	if (slash_value_eq(&tuple.values[i], item))
+    SlashTuple *tuple = (SlashTuple *)self->obj;
+    for (size_t i = 0; i < tuple->size; i++) {
+	if (slash_value_eq(&tuple->values[i], item))
 	    return true;
     }
 
     return false;
 }
 
-int slash_tuple_cmp(SlashTuple a, SlashTuple b)
+bool slash_tuple_truthy(SlashValue *self)
 {
-    int result = 0;
-    size_t i = 0;
-    size_t min_size = a.size < b.size ? a.size : b.size;
+    assert(self->type == SLASH_OBJ);
+    assert(self->obj->type == SLASH_OBJ_TUPLE);
 
-    while (i < min_size && result == 0) {
-	result = slash_value_cmp(&a.values[i], &b.values[i]);
-	i++;
-    }
-
-    return result;
+    SlashTuple *tuple = (SlashTuple *)self->obj;
+    return tuple->size != 0;
 }
+
+bool slash_tuple_eq(SlashValue *a, SlashValue *b)
+{
+    assert(a->type == SLASH_OBJ);
+    assert(a->obj->type == SLASH_OBJ_TUPLE);
+    assert(b->type == SLASH_OBJ);
+    assert(b->obj->type == SLASH_OBJ_TUPLE);
+
+    SlashTuple *A = (SlashTuple *)a->obj;
+    SlashTuple *B = (SlashTuple *)b->obj;
+    if (A->size != B->size)
+	return false;
+
+    for (size_t i = 0; i < A->size; i++) {
+	SlashValue AV = A->values[i];
+	SlashValue BV = B->values[i];
+	if (!slash_value_eq(&AV, &BV))
+	    return false;
+    }
+    return true;
+}
+
+// int slash_tuple_cmp(SlashTuple a, SlashTuple b)
+//{
+//     int result = 0;
+//     size_t i = 0;
+//     size_t min_size = a.size < b.size ? a.size : b.size;
+//
+//     while (i < min_size && result == 0) {
+//	result = slash_value_cmp(&a.values[i], &b.values[i]);
+//	i++;
+//     }
+//
+//     return result;
+// }

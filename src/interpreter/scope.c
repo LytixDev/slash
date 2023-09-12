@@ -16,7 +16,6 @@
  */
 #include <assert.h>
 
-#include "interpreter/error.h"
 #include "interpreter/scope.h"
 #include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
@@ -68,7 +67,6 @@ void scope_init_global(Scope *scope, Arena *arena)
     scope->enclosing = NULL;
     scope->depth = 0;
     hashmap_init(&scope->values);
-    arraylist_init(&scope->owning, sizeof(SlashValue));
     set_globals(scope);
 }
 
@@ -78,44 +76,12 @@ void scope_init(Scope *scope, Scope *enclosing)
     scope->enclosing = enclosing;
     scope->depth = enclosing->depth + 1;
     hashmap_init(&scope->values);
-    arraylist_init(&scope->owning, sizeof(SlashValue));
 }
 
 void scope_destroy(Scope *scope)
 {
-    /* free all owning references */
-    for (size_t i = 0; i < scope->owning.size; i++) {
-	SlashValue *sv = arraylist_get(&scope->owning, i);
-	assert(SLASH_TYPE_DYNAMIC(sv->type));
-
-	if (sv->type == SLASH_LIST)
-	    slash_list_free(&sv->list);
-	else if (sv->type == SLASH_MAP)
-	    slash_map_free(&sv->map);
-	else
-	    slash_tuple_free(&sv->tuple);
-    }
-    arraylist_free(&scope->owning);
     hashmap_free(&scope->values);
     m_arena_tmp_release(scope->arena_tmp);
-}
-
-void scope_register_owning(Scope *scope, SlashValue *sv)
-{
-    arraylist_append(&scope->owning, sv);
-}
-
-void scope_transfer_owning(Scope *owner, Scope *new_owner, SlashValue *sv)
-{
-    /* remove sv from current owner */
-    for (size_t i = 0; i < owner->owning.size; i++) {
-	if (nicc_data_eq(arraylist_get(&owner->owning, i), sv, owner->owning.T_size)) {
-	    arraylist_rm(&owner->owning, i);
-	    break;
-	}
-    }
-
-    scope_register_owning(new_owner, sv);
 }
 
 void *scope_alloc(Scope *scope, size_t size)
@@ -135,54 +101,10 @@ void var_define(Scope *scope, StrView *key, SlashValue *value)
     hashmap_put(&scope->values, key->view, (uint32_t)key->size, value, sizeof(SlashValue), true);
 }
 
-void var_undefine(Scope *scope, StrView *key)
+void var_assign(StrView *var_name, Scope *scope, SlashValue *value)
 {
-    hashmap_rm(&scope->values, key->view, (uint32_t)key->size);
-}
-
-void var_assign_simple(Scope *current, StrView *var_name, SlashValue *value)
-{
-    do {
-	SlashValue *current_value =
-	    hashmap_get(&current->values, var_name->view, (uint32_t)var_name->size);
-	if (current_value != NULL) {
-	    hashmap_put(&current->values, var_name->view, (uint32_t)var_name->size, value,
-			sizeof(SlashValue), true);
-	    return;
-	}
-	current = current->enclosing;
-    } while (current != NULL);
-
-    report_runtime_error("Cannot assign a variable that is not defined");
-}
-
-void var_assign(StrView *var_name, Scope *var_owner, Scope *current, SlashValue *value)
-{
-    /*
-     * only need to transfer ownership for dynamic variables whos new value is allocated at a
-     * deeper scope loc
-     */
-    if (!(SLASH_TYPE_DYNAMIC(value->type) && current->depth > var_owner->depth)) {
-	var_assign_simple(current, var_name, value);
-	return;
-    }
-
-    scope_transfer_owning(current, var_owner, value);
-    hashmap_put(&var_owner->values, var_name->view, (uint32_t)var_name->size, value,
-		sizeof(SlashValue), true);
-}
-
-Scope *get_scope_of_var(Scope *scope, StrView *key)
-{
-    do {
-	SlashValue *current = hashmap_get(&scope->values, key->view, (uint32_t)key->size);
-	if (current != NULL) {
-	    return scope;
-	}
-	scope = scope->enclosing;
-    } while (scope != NULL);
-
-    return NULL;
+    hashmap_put(&scope->values, var_name->view, (uint32_t)var_name->size, value, sizeof(SlashValue),
+		true);
 }
 
 ScopeAndValue var_get(Scope *scope, StrView *key)

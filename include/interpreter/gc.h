@@ -14,18 +14,19 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include "interpreter/types/slash_value.h"
-#include "str_view.h"
-#include <stdio.h>
+#ifndef GC_H
+#define GC_H
 
-void slash_str_print(SlashValue *value)
-{
-    // putchar('"');
-    str_view_print(value->str);
-    // putchar('"');
-}
+#define DEBUG_STRESS_GC
+#define DEBUG_LOG_GC
 
-size_t *slash_str_len(SlashValue *value)
-{
-    return &value->str.size;
-}
+#include "interpreter/types/slash_obj.h"
+#include "nicc/nicc.h"
+
+SlashObj *gc_alloc(LinkedList *gc_objs, SlashObjType type);
+
+void gc_register(LinkedList *gc_objs, SlashObj *obj);
+
+void gc_collect(void);
+
+#endif /* GC_H */
