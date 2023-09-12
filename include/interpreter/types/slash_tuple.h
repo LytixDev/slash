@@ -42,7 +42,7 @@ void slash_tuple_init(SlashTuple *tuple, size_t size);
  */
 
 void slash_tuple_print(SlashValue *value);
-SlashValue slash_tuple_item_get(Scope *scope, SlashValue *self, SlashValue *index);
+SlashValue slash_tuple_item_get(Interpreter *interpreter, SlashValue *self, SlashValue *index);
 bool slash_tuple_item_in(SlashValue *self, SlashValue *item);
 // int slash_tuple_cmp(SlashTuple a, SlashTuple b);
 

@@ -18,7 +18,7 @@
 #include <stdio.h>
 
 #include "interpreter/error.h"
-#include "interpreter/scope.h"
+#include "interpreter/interpreter.h"
 #include "interpreter/types/slash_tuple.h"
 #include "interpreter/types/slash_value.h"
 
@@ -61,8 +61,9 @@ void slash_tuple_print(SlashValue *value)
     printf("'");
 }
 
-SlashValue slash_tuple_item_get(Scope *scope, SlashValue *self, SlashValue *index)
+SlashValue slash_tuple_item_get(Interpreter *interpreter, SlashValue *self, SlashValue *index)
 {
+    (void)interpreter;
     assert(self->type == SLASH_OBJ);
     assert(self->obj->type == SLASH_OBJ_TUPLE);
 

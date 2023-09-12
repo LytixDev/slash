@@ -20,9 +20,11 @@
 #include <stdbool.h>
 #include <stdlib.h> // size_t decl
 
+#include "interpreter/interpreter.h"
 #include "interpreter/types/slash_value.h"
 
-typedef SlashValue (*MethodFunc)(SlashValue *self, size_t argc, SlashValue *argv);
+typedef SlashValue (*MethodFunc)(Interpreter *interpreter, SlashValue *self, size_t argc,
+				 SlashValue *argv);
 
 typedef struct {
     char *name;

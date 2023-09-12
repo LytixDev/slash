@@ -19,6 +19,7 @@
 #include "interpreter/error.h"
 #include "interpreter/types/method.h"
 #include "interpreter/types/slash_list.h"
+#include "interpreter/types/slash_map.h"
 #include "interpreter/types/slash_obj.h"
 #include "interpreter/types/slash_value.h"
 
@@ -56,7 +57,6 @@ MethodFunc get_method(SlashValue *self, char *method_name)
     size_t methods_count;
     SlashMethod *methods;
 
-    // TODO: this could be a table
     switch (self->type) {
     case SLASH_OBJ: {
 	switch (self->obj->type) {
@@ -64,7 +64,10 @@ MethodFunc get_method(SlashValue *self, char *method_name)
 	    methods_count = SLASH_LIST_METHODS_COUNT;
 	    methods = slash_list_methods;
 	    break;
-
+	case SLASH_OBJ_MAP:
+	    methods_count = SLASH_MAP_METHODS_COUNT;
+	    methods = slash_map_methods;
+	    break;
 	default:
 	    return NULL;
 	};

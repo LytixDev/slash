@@ -17,11 +17,12 @@
 #ifndef SLASH_TRAIT_H
 #define SLASH_TRAIT_H
 
+#include "interpreter/interpreter.h"
 #include "interpreter/scope.h"
 #include "interpreter/types/slash_value.h"
 
 typedef void (*TraitPrint)(SlashValue *self);
-typedef SlashValue (*TraitItemGet)(Scope *scope, SlashValue *self, SlashValue *);
+typedef SlashValue (*TraitItemGet)(Interpreter *interpreter, SlashValue *self, SlashValue *);
 typedef void (*TraitItemAssign)(SlashValue *self, SlashValue *, SlashValue *);
 typedef bool (*TraitItemIn)(SlashValue *self, SlashValue *);
 typedef bool (*TraitTruthy)(SlashValue *self);

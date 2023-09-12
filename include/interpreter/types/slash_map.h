@@ -19,6 +19,7 @@
 
 #include "interpreter/interpreter.h"
 #include "interpreter/scope.h"
+#include "interpreter/types/method.h"
 #include "interpreter/types/slash_obj.h"
 #include "interpreter/types/slash_tuple.h"
 #include "interpreter/types/slash_value.h"
@@ -33,14 +34,14 @@ typedef struct {
 
 
 void slash_map_init(SlashMap *map);
-
+SlashValue slash_map_get_keys(Interpreter *interpreter, SlashMap *map);
 
 /*
  * traits
  */
 /* O(n) */
 void slash_map_print(SlashValue *value);
-SlashValue slash_map_item_get(Scope *scope, SlashValue *self, SlashValue *index);
+SlashValue slash_map_item_get(Interpreter *interpreter, SlashValue *self, SlashValue *index);
 void slash_map_item_assign(SlashValue *self, SlashValue *index, SlashValue *new_value);
 bool slash_map_item_in(SlashValue *self, SlashValue *item);
 
@@ -48,7 +49,11 @@ bool slash_map_item_in(SlashValue *self, SlashValue *item);
 /*
  * methods
  */
-SlashValue slash_map_get_keys(Interpreter *interpreter, SlashMap *map);
+#define SLASH_MAP_METHODS_COUNT 1
+extern SlashMethod slash_map_methods[SLASH_MAP_METHODS_COUNT];
+
+SlashValue slash_map_get_keys_method_stub(Interpreter *interpreter, SlashValue *self, size_t argc,
+					  SlashValue *argv);
 
 
 #endif /* SLASH_MAP_H */

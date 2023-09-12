@@ -274,7 +274,7 @@ static SlashValue eval_subscript(Interpreter *interpreter, SubscriptExpr *expr)
     SlashValue value = eval(interpreter, expr->expr);
     SlashValue access_index = eval(interpreter, expr->access_value);
     TraitItemGet func = trait_item_get[value.type];
-    SlashValue item = func(interpreter->scope, &value, &access_index);
+    SlashValue item = func(interpreter, &value, &access_index);
     return item;
 }
 
@@ -385,12 +385,8 @@ static SlashValue eval_method(Interpreter *interpreter, MethodExpr *expr)
     if (method == NULL)
 	report_runtime_error("Method does not exist");
 
-    /*
-     * first argument will always be the object that the method is called "on"
-     * second argument will always be the number of following arguments (argc)
-     */
     if (expr->args == NULL)
-	return method(&self, 0, NULL);
+	return method(interpreter, &self, 0, NULL);
 
     SlashValue argv[expr->args->seq.size];
     size_t i = 0;
@@ -402,7 +398,7 @@ static SlashValue eval_method(Interpreter *interpreter, MethodExpr *expr)
     }
 
     assert(i == expr->args->seq.size);
-    return method(&self, i, argv);
+    return method(interpreter, &self, i, argv);
 }
 
 static SlashValue eval_grouping(Interpreter *interpreter, GroupingExpr *expr)

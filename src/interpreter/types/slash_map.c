@@ -18,6 +18,7 @@
 #include <stdio.h>
 
 #include "interpreter/gc.h"
+#include "interpreter/interpreter.h"
 #include "interpreter/types/slash_map.h"
 #include "interpreter/types/slash_tuple.h"
 #include "interpreter/types/slash_value.h"
@@ -90,8 +91,9 @@ void slash_map_print(SlashValue *value)
     printf("]");
 }
 
-SlashValue slash_map_item_get(Scope *scope, SlashValue *self, SlashValue *index)
+SlashValue slash_map_item_get(Interpreter *interpreter, SlashValue *self, SlashValue *index)
 {
+    (void)interpreter;
     assert(self->type == SLASH_OBJ);
     assert(self->obj->type == SLASH_OBJ_MAP);
 
@@ -118,7 +120,21 @@ bool slash_map_item_in(SlashValue *self, SlashValue *item)
 }
 
 
-/* methods */
+/*
+ * methods
+ */
+SlashMethod slash_map_methods[SLASH_MAP_METHODS_COUNT] = {
+    { .name = "keys", .fp = slash_map_get_keys_method_stub }
+};
+
+SlashValue slash_map_get_keys_method_stub(Interpreter *interpreter, SlashValue *self, size_t argc,
+					  SlashValue *argv)
+{
+    (void)argc;
+    (void)argv;
+    return slash_map_get_keys(interpreter, (SlashMap *)self->obj);
+}
+
 SlashValue slash_map_get_keys(Interpreter *interpreter, SlashMap *map)
 {
     SlashTuple *map_keys = (SlashTuple *)gc_alloc(&interpreter->gc_objs, SLASH_OBJ_TUPLE);

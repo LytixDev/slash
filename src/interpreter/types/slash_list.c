@@ -19,7 +19,8 @@
 #include <stdio.h>
 
 #include "interpreter/error.h"
-#include "interpreter/scope.h"
+#include "interpreter/gc.h"
+#include "interpreter/interpreter.h"
 #include "interpreter/types/slash_list.h"
 #include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
@@ -61,13 +62,16 @@ SlashValue *slash_list_get(SlashList *list, size_t idx)
     return arraylist_get(&list->underlying, idx);
 }
 
-void slash_list_from_ranged_copy(Scope *scope, SlashList *ret_ptr, SlashList *to_copy,
-				 SlashRange range)
+SlashList *slash_list_from_ranged_copy(Interpreter *interpreter, SlashList *to_copy,
+				       SlashRange range)
 {
-    // slash_list_init(scope, ret_ptr);
-    // assert((size_t)range.end <= to_copy->underlying->size);
+    SlashList *list = (SlashList *)gc_alloc(&interpreter->gc_objs, SLASH_OBJ_LIST);
+    slash_list_init(list);
+    assert((size_t)range.end <= to_copy->underlying.size);
     for (int i = range.start; i < range.end; i++)
-	arraylist_append(&ret_ptr->underlying, arraylist_get(&to_copy->underlying, i));
+	arraylist_append(&list->underlying, arraylist_get(&to_copy->underlying, i));
+
+    return list;
 }
 
 
@@ -93,7 +97,7 @@ void slash_list_print(SlashValue *value)
     putchar(']');
 }
 
-SlashValue slash_list_item_get(Scope *scope, SlashValue *self, SlashValue *index)
+SlashValue slash_list_item_get(Interpreter *interpreter, SlashValue *self, SlashValue *index)
 {
     SlashList *list = (SlashList *)self->obj;
     if (!(index->type == SLASH_NUM || index->type == SLASH_RANGE)) {
@@ -106,10 +110,8 @@ SlashValue slash_list_item_get(Scope *scope, SlashValue *self, SlashValue *index
 	return *slash_list_get(list, idx);
     }
 
-    SlashList ranged_copy;
-    slash_list_from_ranged_copy(scope, &ranged_copy, list, index->range);
-    return (SlashValue){ 0 };
-    // return (SlashValue){ .type = SLASH_LIST, .list = ranged_copy };
+    SlashList *ranged_copy = slash_list_from_ranged_copy(interpreter, list, index->range);
+    return (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)ranged_copy };
 }
 
 void slash_list_item_assign(SlashValue *self, SlashValue *index, SlashValue *new_value)
@@ -172,8 +174,9 @@ SlashMethod slash_list_methods[SLASH_LIST_METHODS_COUNT] = {
     { .name = "sort", .fp = slash_list_sort },
 };
 
-SlashValue slash_list_pop(SlashValue *self, size_t argc, SlashValue *argv)
+SlashValue slash_list_pop(Interpreter *interpreter, SlashValue *self, size_t argc, SlashValue *argv)
 {
+    (void)interpreter;
     assert(self->type == SLASH_OBJ);
     assert(self->obj->type == SLASH_OBJ_LIST);
 
@@ -202,8 +205,9 @@ SlashValue slash_list_pop(SlashValue *self, size_t argc, SlashValue *argv)
     return popped_item;
 }
 
-SlashValue slash_list_len(SlashValue *self, size_t argc, SlashValue *argv)
+SlashValue slash_list_len(Interpreter *interpreter, SlashValue *self, size_t argc, SlashValue *argv)
 {
+    (void)interpreter;
     assert(self->type == SLASH_OBJ);
     assert(self->obj->type == SLASH_OBJ_LIST);
 
@@ -218,8 +222,10 @@ SlashValue slash_list_len(SlashValue *self, size_t argc, SlashValue *argv)
     return len;
 }
 
-SlashValue slash_list_sort(SlashValue *self, size_t argc, SlashValue *argv)
+SlashValue slash_list_sort(Interpreter *interpreter, SlashValue *self, size_t argc,
+			   SlashValue *argv)
 {
+    (void)interpreter;
     assert(self->type == SLASH_OBJ);
     assert(self->obj->type == SLASH_OBJ_LIST);
 

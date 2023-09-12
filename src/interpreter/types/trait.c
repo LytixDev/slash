@@ -17,6 +17,7 @@
 #include <stdio.h>
 
 #include "interpreter/error.h"
+#include "interpreter/interpreter.h"
 #include "interpreter/types/slash_obj.h"
 #include "interpreter/types/slash_value.h"
 #include "interpreter/types/trait.h"
@@ -54,10 +55,10 @@ void slash_obj_print(SlashValue *value)
 }
 
 
-SlashValue slash_obj_item_get(Scope *scope, SlashValue *self, SlashValue *idx)
+SlashValue slash_obj_item_get(Interpreter *interpreter, SlashValue *self, SlashValue *idx)
 {
     SlashObj *obj = self->obj;
-    return obj->traits->item_get(scope, self, idx);
+    return obj->traits->item_get(interpreter, self, idx);
 }
 
 void slash_obj_item_assign(SlashValue *self, SlashValue *a, SlashValue *b)

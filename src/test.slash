@@ -1,12 +1,2 @@
-# var l = [1, 2, 3]
-# 
-# loop v in $l {
-#     echo $v
-# }
-
-
-var m = @["hello": 1, "world": 2]
-
-loop key in $m {
-    echo $key
-}
+var m = @["apple": 5, "banana": 10]
+$m.keys()

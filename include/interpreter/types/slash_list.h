@@ -17,6 +17,7 @@
 #ifndef SLASH_LIST_H
 #define SLASH_LIST_H
 
+#include "interpreter/interpreter.h"
 #include "interpreter/scope.h"
 #include "interpreter/types/method.h"
 #include "interpreter/types/slash_obj.h"
@@ -37,16 +38,15 @@ bool slash_list_append(SlashList *list, SlashValue val);
 void slash_list_append_list(SlashList *list, SlashList *to_append);
 SlashValue *slash_list_get(SlashList *list, size_t idx);
 bool slash_list_set(SlashList *list, SlashValue *val, size_t idx);
-/* NOTE: function assumes ret_ptr is NOT initialized */
-void slash_list_from_ranged_copy(Scope *scope, SlashList *ret_ptr, SlashList *to_copy,
-				 SlashRange range);
+SlashList *slash_list_from_ranged_copy(Interpreter *interpreter, SlashList *to_copy,
+				       SlashRange range);
 
 
 /*
  * traits
  */
 void slash_list_print(SlashValue *value);
-SlashValue slash_list_item_get(Scope *scope, SlashValue *self, SlashValue *index);
+SlashValue slash_list_item_get(Interpreter *interpreter, SlashValue *self, SlashValue *index);
 void slash_list_item_assign(SlashValue *self, SlashValue *index, SlashValue *new_value);
 bool slash_list_item_in(SlashValue *self, SlashValue *item);
 bool slash_list_truthy(SlashValue *self);
@@ -59,9 +59,12 @@ bool slash_list_eq(SlashValue *a, SlashValue *b);
 #define SLASH_LIST_METHODS_COUNT 3
 extern SlashMethod slash_list_methods[SLASH_LIST_METHODS_COUNT];
 
-SlashValue slash_list_pop(SlashValue *self, size_t argc, SlashValue *argv);
-SlashValue slash_list_len(SlashValue *self, size_t argc, SlashValue *argv);
-SlashValue slash_list_sort(SlashValue *self, size_t argc, SlashValue *argv);
+SlashValue slash_list_pop(Interpreter *interpreter, SlashValue *self, size_t argc,
+			  SlashValue *argv);
+SlashValue slash_list_len(Interpreter *interpreter, SlashValue *self, size_t argc,
+			  SlashValue *argv);
+SlashValue slash_list_sort(Interpreter *interpreter, SlashValue *self, size_t argc,
+			   SlashValue *argv);
 
 
 #endif /* SLASH_LIST_H */
