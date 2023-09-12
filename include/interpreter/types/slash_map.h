@@ -44,7 +44,8 @@ void slash_map_print(SlashValue *value);
 SlashValue slash_map_item_get(Interpreter *interpreter, SlashValue *self, SlashValue *index);
 void slash_map_item_assign(SlashValue *self, SlashValue *index, SlashValue *new_value);
 bool slash_map_item_in(SlashValue *self, SlashValue *item);
-
+bool slash_map_truthy(SlashValue *self);
+bool slash_map_eq(SlashValue *a, SlashValue *b);
 
 /*
  * methods

@@ -23,11 +23,6 @@
 #include "interpreter/types/trait.h"
 
 
-void slash_print_none(void)
-{
-    printf("none");
-}
-
 void slash_print_not_defined(SlashValue *value)
 {
     printf("Print not defined for %d", value->type);
@@ -51,6 +46,8 @@ void slash_item_in_not_defined(void)
 void slash_obj_print(SlashValue *value)
 {
     SlashObj *obj = value->obj;
+    if (obj->traits->print == NULL)
+	report_runtime_error("Printing not defined for this type");
     obj->traits->print(value);
 }
 
@@ -58,18 +55,24 @@ void slash_obj_print(SlashValue *value)
 SlashValue slash_obj_item_get(Interpreter *interpreter, SlashValue *self, SlashValue *idx)
 {
     SlashObj *obj = self->obj;
+    if (obj->traits->item_get == NULL)
+	report_runtime_error("Get not defined for this type");
     return obj->traits->item_get(interpreter, self, idx);
 }
 
 void slash_obj_item_assign(SlashValue *self, SlashValue *a, SlashValue *b)
 {
     SlashObj *obj = self->obj;
+    if (obj->traits->item_assign == NULL)
+	report_runtime_error("Assign not defined for this type");
     obj->traits->item_assign(self, a, b);
 }
 
 bool slash_obj_item_in(SlashValue *self, SlashValue *a)
 {
     SlashObj *obj = self->obj;
+    if (obj->traits->item_in == NULL)
+	report_runtime_error("In not defined for this type");
     return obj->traits->item_in(self, a);
 }
 
@@ -87,7 +90,7 @@ TraitPrint trait_print[SLASH_TYPE_COUNT] = {
     /* obj */
     (TraitPrint)slash_obj_print,
     /* none */
-    (TraitPrint)slash_print_none,
+    (TraitPrint)slash_none_print,
 };
 
 TraitItemGet trait_item_get[SLASH_TYPE_COUNT] = {

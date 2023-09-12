@@ -29,7 +29,6 @@ typedef bool (*TraitTruthy)(SlashValue *self);
 typedef bool (*TraitEquals)(SlashValue *self, SlashValue *other);
 typedef bool (*TraitCmp)(SlashValue *self, SlashValue *other);
 
-/* Every object type type MUST implement all traits */
 typedef struct {
     TraitPrint print;
     TraitItemGet item_get;

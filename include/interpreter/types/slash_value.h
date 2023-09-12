@@ -69,6 +69,7 @@ void slash_bool_print(SlashValue *value);
 void slash_num_print(SlashValue *value);
 void slash_str_print(SlashValue *value);
 void slash_range_print(SlashValue *value);
+void slash_none_print(void);
 
 
 extern int slash_cmp_precedence[SLASH_TYPE_COUNT];

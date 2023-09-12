@@ -8,10 +8,7 @@ loop value in $t {
 
 assert $t[0] == 1
 
-# assert out of bounds is none
-# assert $t[3] == none
-
-
+# tuple holding tuple
 {
     var t = ' 1, 2, '3, 4' '
 }

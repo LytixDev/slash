@@ -29,8 +29,8 @@ ObjTraits map_traits = { .print = slash_map_print,
 			 .item_get = slash_map_item_get,
 			 .item_assign = slash_map_item_assign,
 			 .item_in = slash_map_item_in,
-			 .truthy = NULL,
-			 .equals = NULL,
+			 .truthy = slash_map_truthy,
+			 .equals = slash_map_eq,
 			 .cmp = NULL };
 
 
@@ -117,6 +117,28 @@ bool slash_map_item_in(SlashValue *self, SlashValue *item)
     SlashMap *map = (SlashMap *)self->obj;
     SlashValue *value = hashmap_get(&map->underlying, item, sizeof(SlashValue));
     return value != NULL;
+}
+
+bool slash_map_truthy(SlashValue *self)
+{
+    SlashMap *map = (SlashMap *)self->obj;
+    return map->underlying.len != 0;
+}
+
+bool slash_map_eq(SlashValue *a, SlashValue *b)
+{
+    assert(a->type == SLASH_OBJ);
+    assert(a->obj->type == SLASH_OBJ_MAP);
+    assert(b->type == SLASH_OBJ);
+    assert(b->obj->type == SLASH_OBJ_MAP);
+
+    HashMap *A = &((SlashMap *)a->obj)->underlying;
+    HashMap *B = &((SlashMap *)b->obj)->underlying;
+    if (A->len != B->len)
+	return false;
+
+    // TODO: loop over all keys and check if associated values are equal
+    return true;
 }
 
 

@@ -1,2 +1,16 @@
-var m = @["apple": 5, "banana": 10]
-$m.keys()
+true && assert true
+false || assert true
+
+true && assert true || assert false
+false && assert false || assert true
+
+# && and || is left associative
+true || assert false && assert true
+# becomes:
+# ( true || assert false ) && assert true
+
+(ls | grep "*.png" | wc -l) as num > 1000 && assert false || assert true
+# same as:
+# ( ( (ls | grep "*.png" | wc -l) as num > 1000 && assert false ) || assert true )
+
+(ls | grep "slash" | wc -l) as num >= 0 && assert true

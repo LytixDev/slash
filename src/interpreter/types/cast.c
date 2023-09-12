@@ -22,20 +22,14 @@
 #include "interpreter/types/slash_value.h"
 
 
-// TODO: support more casts and maybe rework the logic
 SlashValue dynamic_cast(Interpreter *interpreter, SlashValue value, SlashType new_type)
 {
+    (void)interpreter;
     if (value.type == new_type)
 	return value;
     /* str -> num */
     if (value.type == SLASH_STR && new_type == SLASH_NUM)
 	return (SlashValue){ .type = SLASH_NUM, .num = str_view_to_double(value.str) };
-    /* num -> str */
-    if (value.type == SLASH_NUM && new_type == SLASH_STR) {
-	StrView view = { .view = scope_alloc(interpreter->scope, 64), .size = 64 };
-	snprintf(view.view, 64, "%f", value.num);
-	return (SlashValue){ .type = SLASH_STR, .str = view };
-    }
 
     report_runtime_error("Cast not supported");
     return (SlashValue){ 0 };

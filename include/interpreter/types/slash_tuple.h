@@ -44,6 +44,8 @@ void slash_tuple_init(SlashTuple *tuple, size_t size);
 void slash_tuple_print(SlashValue *value);
 SlashValue slash_tuple_item_get(Interpreter *interpreter, SlashValue *self, SlashValue *index);
 bool slash_tuple_item_in(SlashValue *self, SlashValue *item);
+bool slash_tuple_truthy(SlashValue *self);
+bool slash_tuple_eq(SlashValue *a, SlashValue *b);
 // int slash_tuple_cmp(SlashTuple a, SlashTuple b);
 
 #endif /* SLASH_TUPLE_H */

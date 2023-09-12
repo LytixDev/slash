@@ -159,13 +159,18 @@ static SlashValue cmp_binary_values(SlashValue left, SlashValue right, TokenType
     case t_plus: {
 	if (left.type == SLASH_NUM && right.type == SLASH_NUM) {
 	    result = (SlashValue){ .type = SLASH_NUM, .num = left.num + right.num };
-	    //} else if (left.type == SLASH_LIST && right.type == SLASH_LIST) {
-	    //    slash_list_append_list(&left.list, &right.list);
-	    //    result = left;
-	    //} else if (left.type == SLASH_LIST) {
-	    //    slash_list_append(&left.list, right);
-	    //    result = left;
-	    //} else {
+	} else if (IS_OBJ(left.type) && left.obj->type == SLASH_OBJ_LIST) {
+	    if (IS_OBJ(right.type) && right.obj->type == SLASH_OBJ_LIST) {
+		slash_list_append_list((SlashList *)left.obj, (SlashList *)right.obj);
+		return left;
+	    } else if (!IS_OBJ(right.type)) {
+		slash_list_append((SlashList *)left.obj, right);
+		return left;
+	    } else {
+		report_runtime_error("list + object not supported");
+		ASSERT_NOT_REACHED;
+	    }
+	} else {
 	    report_runtime_error(
 		"Plus operator only supported for number and number or list and list");
 	    ASSERT_NOT_REACHED;

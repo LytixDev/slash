@@ -27,8 +27,8 @@ ObjTraits tuple_traits = { .print = slash_tuple_print,
 			   .item_get = slash_tuple_item_get,
 			   .item_assign = NULL,
 			   .item_in = slash_tuple_item_in,
-			   .truthy = NULL,
-			   .equals = NULL,
+			   .truthy = slash_tuple_truthy,
+			   .equals = slash_tuple_eq,
 			   .cmp = NULL };
 
 
@@ -94,6 +94,36 @@ bool slash_tuple_item_in(SlashValue *self, SlashValue *item)
     }
 
     return false;
+}
+
+bool slash_tuple_truthy(SlashValue *self)
+{
+    assert(self->type == SLASH_OBJ);
+    assert(self->obj->type == SLASH_OBJ_TUPLE);
+
+    SlashTuple *tuple = (SlashTuple *)self->obj;
+    return tuple->size != 0;
+}
+
+bool slash_tuple_eq(SlashValue *a, SlashValue *b)
+{
+    assert(a->type == SLASH_OBJ);
+    assert(a->obj->type == SLASH_OBJ_TUPLE);
+    assert(b->type == SLASH_OBJ);
+    assert(b->obj->type == SLASH_OBJ_TUPLE);
+
+    SlashTuple *A = (SlashTuple *)a->obj;
+    SlashTuple *B = (SlashTuple *)b->obj;
+    if (A->size != B->size)
+	return false;
+
+    for (size_t i = 0; i < A->size; i++) {
+	SlashValue AV = A->values[i];
+	SlashValue BV = B->values[i];
+	if (!slash_value_eq(&AV, &BV))
+	    return false;
+    }
+    return true;
 }
 
 // int slash_tuple_cmp(SlashTuple a, SlashTuple b)

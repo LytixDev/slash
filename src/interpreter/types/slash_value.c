@@ -146,3 +146,8 @@ void slash_range_print(SlashValue *value)
 {
     printf("%d..%d", value->range.start, value->range.end);
 }
+
+void slash_none_print(void)
+{
+    printf("none");
+}
