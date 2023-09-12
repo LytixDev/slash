@@ -426,7 +426,7 @@ static SlashValue eval_cast(Interpreter *interpreter, CastExpr *expr)
 
 
 /*
- * statment execution functions
+ * statement execution functions
  */
 static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
 {
@@ -556,7 +556,7 @@ static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
     new_value = cmp_binary_values(*variable.value, new_value, operator_);
     /*
      * For dynamic types the binary compare will update the underlying object.
-     * Therefore we only assign if the variable type is not dynamic.
+     * Therefore, we only assign if the variable type is not dynamic.
      */
     if (!IS_OBJ(variable.value->type))
 	var_assign(&var_name, variable.scope, &new_value);
@@ -579,7 +579,7 @@ static void exec_pipeline(Interpreter *interpreter, PipelineStmt *stmt)
     arraylist_append(&stream_ctx->active_fds, &fd[1]);
 
     stream_ctx->write_fd = final_out_fd;
-    stream_ctx->read_fd = fd[STRAM_READ_END];
+    stream_ctx->read_fd = fd[STREAM_READ_END];
 
     exec(interpreter, stmt->right);
 

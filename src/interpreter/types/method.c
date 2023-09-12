@@ -16,11 +16,9 @@
  */
 #include <string.h>
 
-#include "interpreter/error.h"
 #include "interpreter/types/method.h"
 #include "interpreter/types/slash_list.h"
 #include "interpreter/types/slash_map.h"
-#include "interpreter/types/slash_obj.h"
 #include "interpreter/types/slash_value.h"
 
 
@@ -90,7 +88,7 @@ MethodFunc get_method(SlashValue *self, char *method_name)
 }
 
 /*
- * count occurences of whitespace + 1
+ * count occurrences of whitespace + 1
  */
 static size_t signature_arg_count(char *signature)
 {

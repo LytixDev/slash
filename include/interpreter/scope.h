@@ -47,11 +47,10 @@ void *scope_alloc(Scope *scope, size_t size);
  * if value is NULL then the variable is defined as SLASH_NONE
  */
 void var_define(Scope *scope, StrView *key, SlashValue *value);
-void var_undefine(Scope *scope, StrView *key);
 
 /*
- * assigns the value to the variable who's key/name is var_name.
- * transfers the ownership of the reference value of the variable if neededed.
+ * assigns the value to the variable whose key/name is var_name.
+ * transfers the ownership of the reference value of the variable if needed.
  * if not it calls var_assign_simple.
  */
 void var_assign(StrView *var_name, Scope *scope, SlashValue *value);

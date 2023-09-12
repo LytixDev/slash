@@ -30,7 +30,7 @@
 
 /*
  * X macro for the token types.
- * All thats needed to sucesfully add a new token type is to add it somewhere on this list.
+ * All that's needed to successfully add a new token type is to add it somewhere on this list.
  * The identifiers for the TokenType enum will be t_`token` where `token` is the X macro param.
  *
  * hmm, is this too much voodoo?

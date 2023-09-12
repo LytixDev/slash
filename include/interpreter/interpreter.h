@@ -22,7 +22,7 @@
 #include "sac/sac.h"
 
 #define STREAM_WRITE_END 1
-#define STRAM_READ_END 0
+#define STREAM_READ_END 0
 
 typedef struct {
     int read_fd; // the file descriptor we are reading from, defaulted to STDIN
@@ -34,7 +34,7 @@ typedef struct {
     Arena arena;
     Scope globals;
     Scope *scope;
-    LinkedList gc_objs; // objects managed by the garbage colletor
+    LinkedList gc_objs; // objects managed by the garbage collector
     int prev_exit_code;
     StreamCtx *stream_ctx;
 } Interpreter;

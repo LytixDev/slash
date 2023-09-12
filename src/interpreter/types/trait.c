@@ -20,7 +20,6 @@
 #include "interpreter/interpreter.h"
 #include "interpreter/types/slash_obj.h"
 #include "interpreter/types/slash_value.h"
-#include "interpreter/types/trait.h"
 
 
 void slash_print_not_defined(SlashValue *value)

@@ -16,7 +16,6 @@
  */
 #include <assert.h>
 
-#include "interpreter/error.h"
 #include "interpreter/scope.h"
 #include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
@@ -102,28 +101,10 @@ void var_define(Scope *scope, StrView *key, SlashValue *value)
     hashmap_put(&scope->values, key->view, (uint32_t)key->size, value, sizeof(SlashValue), true);
 }
 
-void var_undefine(Scope *scope, StrView *key)
-{
-    hashmap_rm(&scope->values, key->view, (uint32_t)key->size);
-}
-
 void var_assign(StrView *var_name, Scope *scope, SlashValue *value)
 {
     hashmap_put(&scope->values, var_name->view, (uint32_t)var_name->size, value, sizeof(SlashValue),
 		true);
-}
-
-Scope *get_scope_of_var(Scope *scope, StrView *key)
-{
-    do {
-	SlashValue *current = hashmap_get(&scope->values, key->view, (uint32_t)key->size);
-	if (current != NULL) {
-	    return scope;
-	}
-	scope = scope->enclosing;
-    } while (scope != NULL);
-
-    return NULL;
 }
 
 ScopeAndValue var_get(Scope *scope, StrView *key)

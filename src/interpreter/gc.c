@@ -22,7 +22,6 @@
 #include "interpreter/types/slash_map.h"
 #include "interpreter/types/slash_obj.h"
 #include "interpreter/types/slash_tuple.h"
-#include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
 
 #ifdef DEBUG_LOG_GC

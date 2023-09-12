@@ -15,7 +15,6 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <assert.h>
-#include <stdarg.h>
 #include <stdio.h>
 
 #include "interpreter/error.h"
