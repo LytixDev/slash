@@ -20,8 +20,7 @@
 #include <stdbool.h>
 #include <stdlib.h> // size_t decl
 
-
-typedef struct slash_value_t SlashValue; // Forward declaration of SlashValue
+#include "interpreter/types/slash_value.h"
 
 typedef SlashValue (*MethodFunc)(SlashValue *self, size_t argc, SlashValue *argv);
 

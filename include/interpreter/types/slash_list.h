@@ -54,12 +54,12 @@ bool slash_list_eq(SlashValue *a, SlashValue *b);
 
 
 /* slash list methods */
-// #define SLASH_LIST_METHODS_COUNT 3
-// extern SlashMethod slash_list_methods[SLASH_LIST_METHODS_COUNT];
-//
-// SlashValue slash_list_pop(SlashValue *self, size_t argc, SlashValue *argv);
-// SlashValue slash_list_len(SlashValue *self, size_t argc, SlashValue *argv);
-// SlashValue slash_list_sort(SlashValue *self, size_t argc, SlashValue *argv);
+#define SLASH_LIST_METHODS_COUNT 3
+extern SlashMethod slash_list_methods[SLASH_LIST_METHODS_COUNT];
+
+SlashValue slash_list_pop(SlashValue *self, size_t argc, SlashValue *argv);
+SlashValue slash_list_len(SlashValue *self, size_t argc, SlashValue *argv);
+SlashValue slash_list_sort(SlashValue *self, size_t argc, SlashValue *argv);
 
 
 #endif /* SLASH_LIST_H */

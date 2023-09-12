@@ -71,8 +71,8 @@ void slash_list_from_ranged_copy(Scope *scope, SlashList *ret_ptr, SlashList *to
 }
 
 
-/* 
- * traits 
+/*
+ * traits
  */
 
 void slash_list_print(SlashValue *value)
@@ -163,74 +163,78 @@ bool slash_list_eq(SlashValue *a, SlashValue *b)
 }
 
 
-/* 
- * methods 
+/*
+ * methods
  */
-// SlashMethod slash_list_methods[SLASH_LIST_METHODS_COUNT] = {
-//     { .name = "pop", .fp = slash_list_pop },
-//     { .name = "len", .fp = slash_list_len },
-//     { .name = "sort", .fp = slash_list_sort },
-// };
-//
-// SlashValue slash_list_pop(SlashValue *self, size_t argc, SlashValue *argv)
-//{
-//     assert(self->type == SLASH_LIST);
-//
-//     ArrayList *underlying = self->list.underlying;
-//     SlashValue popped_item;
-//
-//     if (match_signature("", argc, argv)) {
-//	arraylist_pop_and_copy(underlying, &popped_item);
-//	return popped_item;
-//     }
-//
-//     if (!match_signature("n", argc, argv)) {
-//	report_runtime_error("Bad method args");
-//	ASSERT_NOT_REACHED;
-//     }
-//
-//     /* argc must be 1 and type of argv must be num */
-//     SlashValue key = argv[0];
-//     size_t idx = (size_t)key.num;
-//     if (key.num < 0 || idx > underlying->size - 1) {
-//	report_runtime_error("Index out of range");
-//	ASSERT_NOT_REACHED;
-//     }
-//     arraylist_get_copy(underlying, idx, &popped_item);
-//     arraylist_rm(underlying, idx);
-//     return popped_item;
-// }
-//
-// SlashValue slash_list_len(SlashValue *self, size_t argc, SlashValue *argv)
-//{
-//     assert(self->type == SLASH_LIST);
-//
-//     ArrayList *underlying = self->list.underlying;
-//
-//     if (!match_signature("", argc, argv)) {
-//	report_runtime_error("Bad method args");
-//	ASSERT_NOT_REACHED;
-//     }
-//
-//     SlashValue len = { .type = SLASH_NUM, .num = (double)underlying->size };
-//     return len;
-// }
-//
-// SlashValue slash_list_sort(SlashValue *self, size_t argc, SlashValue *argv)
-//{
-//     assert(self->type == SLASH_LIST);
-//
-//     ArrayList *underlying = self->list.underlying;
-//
-//     if (match_signature("", argc, argv)) {
-//	arraylist_sort(underlying, slash_value_cmp_stub);
-//     } else if (match_signature("b", argc, argv)) {
-//	arraylist_sort(underlying,
-//		       argv[0].boolean ? slash_value_cmp_rev_stub : slash_value_cmp_stub);
-//     } else {
-//	report_runtime_error("Bad method args, expected no args or a single boolean.");
-//	ASSERT_NOT_REACHED;
-//     }
-//
-//     return (SlashValue){ .type = SLASH_NONE };
-// }
+SlashMethod slash_list_methods[SLASH_LIST_METHODS_COUNT] = {
+    { .name = "pop", .fp = slash_list_pop },
+    { .name = "len", .fp = slash_list_len },
+    { .name = "sort", .fp = slash_list_sort },
+};
+
+SlashValue slash_list_pop(SlashValue *self, size_t argc, SlashValue *argv)
+{
+    assert(self->type == SLASH_OBJ);
+    assert(self->obj->type == SLASH_OBJ_LIST);
+
+    SlashList *list = (SlashList *)self->obj;
+    SlashValue popped_item;
+
+    if (match_signature("", argc, argv)) {
+	arraylist_pop_and_copy(&list->underlying, &popped_item);
+	return popped_item;
+    }
+
+    if (!match_signature("n", argc, argv)) {
+	report_runtime_error("Bad method args");
+	ASSERT_NOT_REACHED;
+    }
+
+    /* argc must be 1 and type of argv must be num */
+    SlashValue key = argv[0];
+    size_t idx = (size_t)key.num;
+    if (key.num < 0 || idx > list->underlying.size - 1) {
+	report_runtime_error("Index out of range");
+	ASSERT_NOT_REACHED;
+    }
+    arraylist_get_copy(&list->underlying, idx, &popped_item);
+    arraylist_rm(&list->underlying, idx);
+    return popped_item;
+}
+
+SlashValue slash_list_len(SlashValue *self, size_t argc, SlashValue *argv)
+{
+    assert(self->type == SLASH_OBJ);
+    assert(self->obj->type == SLASH_OBJ_LIST);
+
+    SlashList *list = (SlashList *)self->obj;
+
+    if (!match_signature("", argc, argv)) {
+	report_runtime_error("Bad method args");
+	ASSERT_NOT_REACHED;
+    }
+
+    SlashValue len = { .type = SLASH_NUM, .num = (double)list->underlying.size };
+    return len;
+}
+
+SlashValue slash_list_sort(SlashValue *self, size_t argc, SlashValue *argv)
+{
+    assert(self->type == SLASH_OBJ);
+    assert(self->obj->type == SLASH_OBJ_LIST);
+
+    SlashList *list = (SlashList *)self->obj;
+    ArrayList underlying = list->underlying;
+
+    if (match_signature("", argc, argv)) {
+	arraylist_sort(&underlying, slash_value_cmp_stub);
+    } else if (match_signature("b", argc, argv)) {
+	arraylist_sort(&underlying,
+		       argv[0].boolean ? slash_value_cmp_rev_stub : slash_value_cmp_stub);
+    } else {
+	report_runtime_error("Bad method args, expected no args or a single boolean.");
+	ASSERT_NOT_REACHED;
+    }
+
+    return (SlashValue){ .type = SLASH_NONE };
+}

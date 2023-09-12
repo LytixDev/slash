@@ -25,21 +25,38 @@
 
 SlashValue slash_glob_none = { .type = SLASH_NONE };
 
-bool is_truthy(SlashValue *sv)
+int slash_cmp_precedence[SLASH_TYPE_COUNT] = {
+    /* bool */
+    0,
+    /* str */
+    2,
+    /* num */
+    1,
+    /* shident */
+    __INT_MAX__,
+    /* range */
+    __INT_MAX__,
+    /* obj */
+    __INT_MAX__,
+    /* none */
+    __INT_MAX__,
+};
+
+
+bool is_truthy(SlashValue *value)
 {
-    switch (sv->type) {
+    switch (value->type) {
     case SLASH_STR:
     case SLASH_SHIDENT:
-	return sv->str.size != 0;
-
+	return value->str.size != 0;
     case SLASH_NUM:
-	return sv->num != 0;
-
+	return value->num != 0;
     case SLASH_BOOL:
-	return sv->boolean;
-
+	return value->boolean;
     case SLASH_NONE:
 	return false;
+    case SLASH_OBJ:
+	return value->obj->traits->truthy(value);
 
     default:
 	fprintf(stderr, "truthy not defined for this type, returning false");
@@ -57,15 +74,14 @@ bool slash_value_eq(SlashValue *a, SlashValue *b)
     case SLASH_STR:
     case SLASH_SHIDENT:
 	return str_view_eq(a->str, b->str);
-
     case SLASH_NUM:
 	return a->num == b->num;
-
     case SLASH_BOOL:
 	return a->boolean == b->boolean;
-
     case SLASH_NONE:
 	return false;
+    case SLASH_OBJ:
+	return a->obj->traits->equals(a, b);
 
     default:
 	report_runtime_error("Equality not defined for this type. Consider contributing :-).");
@@ -74,23 +90,6 @@ bool slash_value_eq(SlashValue *a, SlashValue *b)
 
     return false;
 }
-
-int slash_cmp_precedence[SLASH_TYPE_COUNT] = {
-    /* bool */
-    0,
-    /* str */
-    2,
-    /* num */
-    1,
-    /* shident */
-    __INT_MAX__,
-    /* range */
-    __INT_MAX__,
-    /* obj */
-    __INT_MAX__,
-    /* none */
-    __INT_MAX__,
-};
 
 int slash_value_cmp_stub(const void *a, const void *b)
 {
@@ -122,7 +121,6 @@ int slash_value_cmp(SlashValue *a, SlashValue *b)
     ASSERT_NOT_REACHED;
     return 0;
 }
-
 
 void slash_bool_print(SlashValue *value)
 {

@@ -58,7 +58,6 @@ typedef struct slash_value_t {
 
 
 bool is_truthy(SlashValue *value);
-
 bool slash_value_eq(SlashValue *a, SlashValue *b);
 int slash_value_cmp_stub(const void *a, const void *b);
 int slash_value_cmp_rev_stub(const void *a, const void *b);
