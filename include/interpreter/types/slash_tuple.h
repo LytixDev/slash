@@ -20,28 +20,30 @@
 #include <stdlib.h>
 
 #include "interpreter/scope.h"
+#include "interpreter/types/slash_obj.h"
+#include "interpreter/types/slash_value.h"
+#include "interpreter/types/trait.h"
 #include "nicc/nicc.h"
-
-typedef struct slash_value_t SlashValue; // Forward declaration of SlashValue
 
 /*
  * Tuples are ordered and unchangeable.
  */
 typedef struct {
-    size_t size; // can actually be stored in place since the tuple is unchangeable
+    SlashObj obj;
+    size_t size;
     SlashValue *values;
 } SlashTuple;
 
 
-void slash_tuple_init(Scope *scope, SlashTuple *tuple, size_t size);
-void slash_tuple_free(SlashTuple *tuple);
+void slash_tuple_init(SlashTuple *tuple, size_t size);
 
-/* common slash value functions */
+/*
+ * traits
+ */
 
-// void slash_tuple_print(SlashValue *value);
-// size_t *slash_tuple_len(SlashValue *value);
-// SlashValue slash_tuple_item_get(Scope *scope, SlashValue *self, SlashValue *index);
-// bool slash_tuple_item_in(SlashValue *self, SlashValue *item);
+void slash_tuple_print(SlashValue *value);
+SlashValue slash_tuple_item_get(Scope *scope, SlashValue *self, SlashValue *index);
+bool slash_tuple_item_in(SlashValue *self, SlashValue *item);
 // int slash_tuple_cmp(SlashTuple a, SlashTuple b);
 
 #endif /* SLASH_TUPLE_H */

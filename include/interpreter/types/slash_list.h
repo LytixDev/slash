@@ -31,8 +31,6 @@ typedef struct {
     ArrayList underlying;
 } SlashList;
 
-extern ObjTraits list_traits;
-
 
 void slash_list_init(SlashList *list);
 bool slash_list_append(SlashList *list, SlashValue val);
@@ -44,7 +42,9 @@ void slash_list_from_ranged_copy(Scope *scope, SlashList *ret_ptr, SlashList *to
 				 SlashRange range);
 
 
-/* traits */
+/*
+ * traits
+ */
 void slash_list_print(SlashValue *value);
 SlashValue slash_list_item_get(Scope *scope, SlashValue *self, SlashValue *index);
 void slash_list_item_assign(SlashValue *self, SlashValue *index, SlashValue *new_value);
@@ -53,7 +53,9 @@ bool slash_list_truthy(SlashValue *self);
 bool slash_list_eq(SlashValue *a, SlashValue *b);
 
 
-/* slash list methods */
+/*
+ * methods
+ */
 #define SLASH_LIST_METHODS_COUNT 3
 extern SlashMethod slash_list_methods[SLASH_LIST_METHODS_COUNT];
 

@@ -23,7 +23,16 @@
 #include "interpreter/types/slash_value.h"
 
 
-void slash_tuple_init(Scope *scope, SlashTuple *tuple, size_t size)
+ObjTraits tuple_traits = { .print = slash_tuple_print,
+			   .item_get = slash_tuple_item_get,
+			   .item_assign = NULL,
+			   .item_in = slash_tuple_item_in,
+			   .truthy = NULL,
+			   .equals = NULL,
+			   .cmp = NULL };
+
+
+void slash_tuple_init(SlashTuple *tuple, size_t size)
 {
     tuple->size = size;
     if (size == 0) {
@@ -31,67 +40,61 @@ void slash_tuple_init(Scope *scope, SlashTuple *tuple, size_t size)
     } else {
 	tuple->values = malloc(sizeof(SlashValue) * size);
     }
+    tuple->obj.traits = &tuple_traits;
 }
 
-void slash_tuple_free(SlashTuple *tuple)
+void slash_tuple_print(SlashValue *value)
 {
-    if (tuple->values != NULL)
-	free(tuple->values);
+    assert(value->type == SLASH_OBJ);
+    assert(value->obj->type == SLASH_OBJ_TUPLE);
+
+    SlashTuple *tuple = (SlashTuple *)value->obj;
+    SlashValue current;
+    printf("'");
+    for (size_t i = 0; i < tuple->size; i++) {
+	current = tuple->values[i];
+	/* call the print function directly */
+	trait_print[current.type](&current);
+	if (i != tuple->size - 1)
+	    printf(", ");
+    }
+    printf("'");
 }
 
-// void slash_tuple_print(SlashValue *value)
-//{
-//     SlashTuple tuple = value->tuple;
-//     SlashValue current;
-//     printf("'");
-//     for (size_t i = 0; i < tuple.size; i++) {
-//	current = tuple.values[i];
-//	/* call the print function directly */
-//	slash_print[current.type](&current);
-//	if (i != tuple.size - 1)
-//	    printf(", ");
-//     }
-//     printf("'");
-// }
-//
-// size_t *slash_tuple_len(SlashValue *value)
-//{
-//     return &value->tuple.size;
-// }
-//
-// SlashValue slash_tuple_item_get(Scope *scope, SlashValue *self, SlashValue *index)
-//{
-//     (void)scope;
-//     assert(self->type == SLASH_TUPLE);
-//     SlashTuple tuple = self->tuple;
-//
-//     if (index->type != SLASH_NUM) {
-//	report_runtime_error("List indices must be numbers");
-//	ASSERT_NOT_REACHED;
-//     }
-//
-//     size_t idx = (size_t)index->num;
-//     if (idx > tuple.size) {
-//	report_runtime_error("List indices must be numbers");
-//	ASSERT_NOT_REACHED;
-//     }
-//
-//     return tuple.values[idx];
-// }
-//
-// bool slash_tuple_item_in(SlashValue *self, SlashValue *item)
-//{
-//     assert(self->type == SLASH_TUPLE);
-//     SlashTuple tuple = self->tuple;
-//
-//     for (size_t i = 0; i < tuple.size; i++) {
-//	if (slash_value_eq(&tuple.values[i], item))
-//	    return true;
-//     }
-//
-//     return false;
-// }
-//
+SlashValue slash_tuple_item_get(Scope *scope, SlashValue *self, SlashValue *index)
+{
+    assert(self->type == SLASH_OBJ);
+    assert(self->obj->type == SLASH_OBJ_TUPLE);
+
+    SlashTuple *tuple = (SlashTuple *)self->obj;
+    if (index->type != SLASH_NUM) {
+	report_runtime_error("List indices must be numbers");
+	ASSERT_NOT_REACHED;
+    }
+
+    size_t idx = (size_t)index->num;
+    if (idx > tuple->size) {
+	report_runtime_error("List indices out of range");
+	ASSERT_NOT_REACHED;
+    }
+
+    return tuple->values[idx];
+}
+
+bool slash_tuple_item_in(SlashValue *self, SlashValue *item)
+{
+    assert(self->type == SLASH_OBJ);
+    assert(self->obj->type == SLASH_OBJ_TUPLE);
+
+    SlashTuple *tuple = (SlashTuple *)self->obj;
+    for (size_t i = 0; i < tuple->size; i++) {
+	if (slash_value_eq(&tuple->values[i], item))
+	    return true;
+    }
+
+    return false;
+}
+
 // int slash_tuple_cmp(SlashTuple a, SlashTuple b)
 //{
 //     int result = 0;

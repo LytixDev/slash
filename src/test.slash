@@ -1,3 +1,12 @@
-var l = [4, 1, 2, 3]
-$l.sort()
-$l
+# var l = [1, 2, 3]
+# 
+# loop v in $l {
+#     echo $v
+# }
+
+
+var m = @["hello": 1, "world": 2]
+
+loop key in $m {
+    echo $key
+}

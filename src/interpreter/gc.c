@@ -19,7 +19,9 @@
 #include "interpreter/error.h"
 #include "interpreter/gc.h"
 #include "interpreter/types/slash_list.h"
+#include "interpreter/types/slash_map.h"
 #include "interpreter/types/slash_obj.h"
+#include "interpreter/types/slash_tuple.h"
 #include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
 
@@ -30,17 +32,26 @@
 SlashObj *gc_alloc(LinkedList *gc_objs, SlashObjType type)
 {
     SlashObj *obj = NULL;
+    size_t size = 0;
     switch (type) {
     case SLASH_OBJ_LIST:
-	obj = malloc(sizeof(SlashList));
+	size = sizeof(SlashList);
+	break;
+    case SLASH_OBJ_MAP:
+	size = sizeof(SlashMap);
+	break;
+    case SLASH_OBJ_TUPLE:
+	size = sizeof(SlashTuple);
 	break;
     default:
 	report_runtime_error("Slash obj not implemented");
 	ASSERT_NOT_REACHED;
     }
 
+    obj = malloc(size);
     obj->type = type;
     obj->gc_marked = false;
+    obj->traits = NULL;
 
     gc_register(gc_objs, obj);
     return obj;
