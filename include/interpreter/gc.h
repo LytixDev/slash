@@ -27,6 +27,6 @@ SlashObj *gc_alloc(LinkedList *gc_objs, SlashObjType type);
 
 void gc_register(LinkedList *gc_objs, SlashObj *obj);
 
-void gc_collect(void);
+void gc_collect(Interpreter *interpreter);
 
 #endif /* GC_H */

@@ -876,8 +876,10 @@ int interpret(ArrayList *statements)
     arraylist_init(&stream_ctx.active_fds, sizeof(int));
     interpreter.stream_ctx = &stream_ctx;
 
-    for (size_t i = 0; i < statements->size; i++)
+    for (size_t i = 0; i < statements->size; i++) {
 	exec(&interpreter, *(Stmt **)arraylist_get(statements, i));
+	gc_collect(&interpreter);
+    }
 
     scope_destroy(&interpreter.globals);
     arraylist_free(&stream_ctx.active_fds);
