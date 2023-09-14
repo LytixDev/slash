@@ -35,6 +35,7 @@ typedef struct {
     Scope globals;
     Scope *scope;
     LinkedList gc_objs; // objects managed by the garbage collector
+    ArrayList gc_gray_stack;
     int prev_exit_code;
     StreamCtx *stream_ctx;
 } Interpreter;

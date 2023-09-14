@@ -29,4 +29,6 @@ void gc_register(LinkedList *gc_objs, SlashObj *obj);
 
 void gc_collect(Interpreter *interpreter);
 
+void gc_collect_all(LinkedList *gc_objs);
+
 #endif /* GC_H */

@@ -870,6 +870,7 @@ int interpret(ArrayList *statements)
     interpreter.scope = &interpreter.globals;
 
     linkedlist_init(&interpreter.gc_objs, sizeof(SlashObj *));
+    arraylist_init(&interpreter.gc_gray_stack, sizeof(SlashObj *));
 
     /* init default StreamCtx */
     StreamCtx stream_ctx = { .read_fd = STDIN_FILENO, .write_fd = STDOUT_FILENO };
@@ -881,8 +882,13 @@ int interpret(ArrayList *statements)
 	gc_collect(&interpreter);
     }
 
+    gc_collect_all(&interpreter.gc_objs);
+
+
     scope_destroy(&interpreter.globals);
     arraylist_free(&stream_ctx.active_fds);
+    linkedlist_free(&interpreter.gc_objs);
+    arraylist_free(&interpreter.gc_gray_stack);
 
     return interpreter.prev_exit_code;
 }
