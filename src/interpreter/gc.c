@@ -32,14 +32,24 @@
 static void gc_sweep_obj(SlashObj *obj)
 {
     switch (obj->type) {
-        case SLASH_OBJ_LIST: {
-            SlashList *list = (SlashList *)obj;
-            arraylist_free(&list->underlying);
-            break;
-        }
+    case SLASH_OBJ_LIST: {
+	SlashList *list = (SlashList *)obj;
+	arraylist_free(&list->underlying);
+	break;
+    }
+    case SLASH_OBJ_MAP: {
+	SlashMap *map = (SlashMap *)obj;
+	hashmap_free(&map->underlying);
+	break;
+    }
+    case SLASH_OBJ_TUPLE: {
+	SlashTuple *tuple = (SlashTuple *)obj;
+	free(tuple->values);
+	break;
+    }
 
-        default:
-            report_runtime_error("sweep not implemented for this obj");
+    default:
+	report_runtime_error("sweep not implemented for this obj");
     }
 
     free(obj);
@@ -60,7 +70,7 @@ static void gc_sweep(LinkedList *gc_objs)
 	    print_func(&value);
 	    putchar('\n');
 #endif
-            gc_sweep_obj(obj);
+	    gc_sweep_obj(obj);
 	    to_remove = current;
 	    current = current->next;
 	    linkedlist_remove_item(gc_objs, to_remove);
@@ -83,7 +93,7 @@ static void gc_visit_obj(Interpreter *interpreter, SlashObj *obj)
 {
     assert(obj != NULL);
     if (obj->gc_marked)
-        return;
+	return;
     obj->gc_marked = true;
     arraylist_append(&interpreter->gc_gray_stack, &obj);
 
@@ -114,17 +124,35 @@ static void gc_blacken_obj(Interpreter *interpreter, SlashObj *obj)
 #endif
 
     switch (obj->type) {
-        case SLASH_OBJ_LIST: {
-            SlashList *list = (SlashList *)obj;
-            for (size_t i = 0; i < list->underlying.size; i++) {
-                SlashValue *v = arraylist_get(&list->underlying, i);
-                gc_visit_value(interpreter, v);
-            }
-            break;
-        }
+    case SLASH_OBJ_LIST: {
+	SlashList *list = (SlashList *)obj;
+	for (size_t i = 0; i < list->underlying.size; i++) {
+	    SlashValue *v = arraylist_get(&list->underlying, i);
+	    gc_visit_value(interpreter, v);
+	}
+	break;
+    }
+    case SLASH_OBJ_TUPLE: {
+	SlashTuple *tuple = (SlashTuple *)obj;
+	for (size_t i = 0; i < tuple->size; i++)
+	    gc_visit_value(interpreter, &tuple->values[i]);
+	break;
+    }
+    case SLASH_OBJ_MAP: {
+	SlashMap *map = (SlashMap *)obj;
+	SlashValue *keys[map->underlying.len];
+	hashmap_get_keys(&map->underlying, (void **)keys);
+	for (size_t i = 0; i < map->underlying.len; i++) {
+	    gc_visit_value(interpreter, keys[i]);
+	    SlashValue *v = hashmap_get(&map->underlying, keys[i], sizeof(SlashValue));
+	    assert(v != NULL);
+	    gc_visit_value(interpreter, v);
+	}
+	break;
+    }
 
-        default:
-            report_runtime_error("gc blacken not implemented for this object type");
+    default:
+	report_runtime_error("gc blacken not implemented for this object type");
     }
 }
 
@@ -134,13 +162,12 @@ static void gc_mark_roots(Interpreter *interpreter)
     /* mark all reachable objects */
     for (Scope *scope = interpreter->scope; scope != NULL; scope = scope->enclosing) {
 	/* loop over all values */
-	SlashValue **values = malloc(sizeof(SlashValue *) * scope->values.len);
+	// TODO: can we get a stack overflow if the amount of values grow too large?
+	SlashValue *values[scope->values.len];
 	hashmap_get_values(&scope->values, (void **)values);
 
 	for (size_t i = 0; i < scope->values.len; i++)
 	    gc_visit_value(interpreter, values[i]);
-
-	free(values);
     }
 }
 
@@ -148,8 +175,8 @@ static void gc_trace_references(Interpreter *interpreter)
 {
     SlashObj *obj;
     while (interpreter->gc_gray_stack.size != 0) {
-        arraylist_pop_and_copy(&interpreter->gc_gray_stack, &obj);
-        gc_blacken_obj(interpreter, obj);
+	arraylist_pop_and_copy(&interpreter->gc_gray_stack, &obj);
+	gc_blacken_obj(interpreter, obj);
     }
 }
 
@@ -184,7 +211,7 @@ void gc_collect_all(LinkedList *gc_objs)
 {
     for (LinkedListItem *item = gc_objs->head; item != NULL; item = item->next) {
 	SlashObj *obj = item->data;
-        gc_sweep_obj(obj);
+	gc_sweep_obj(obj);
     }
 }
 
@@ -215,4 +242,3 @@ SlashObj *gc_alloc(LinkedList *gc_objs, SlashObjType type)
     gc_register(gc_objs, obj);
     return obj;
 }
-

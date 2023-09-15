@@ -1,4 +1,8 @@
-var a = [1, 2, 3, [4, 5]]
+var l = [1, 2, 3]
+assert $l == [1, 2, 3]
+assert $l.len() == 3
+
 {
-    var b = $a.pop()
+    var l2 = [4, 5, 6]
+    $l = $l2
 }

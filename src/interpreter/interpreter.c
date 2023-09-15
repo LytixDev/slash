@@ -884,7 +884,6 @@ int interpret(ArrayList *statements)
 
     gc_collect_all(&interpreter.gc_objs);
 
-
     scope_destroy(&interpreter.globals);
     arraylist_free(&stream_ctx.active_fds);
     linkedlist_free(&interpreter.gc_objs);
