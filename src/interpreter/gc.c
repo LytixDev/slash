@@ -48,11 +48,9 @@ static void gc_sweep_obj(SlashObj *obj)
 	free(tuple->values);
 	break;
     }
-
     default:
 	report_runtime_error("sweep not implemented for this obj");
     }
-
     free(obj);
 }
 
@@ -82,12 +80,14 @@ static void gc_sweep(LinkedList *gc_objs)
     }
 }
 
-static void gc_reset(LinkedList *gc_objs)
+static void gc_reset(Interpreter *interpreter)
 {
-    for (LinkedListItem *item = gc_objs->head; item != NULL; item = item->next) {
+    for (LinkedListItem *item = interpreter->gc_objs.head; item != NULL; item = item->next) {
 	SlashObj *obj = item->data;
 	obj->gc_marked = false;
     }
+
+    interpreter->obj_alloced_since_next_gc = 0;
 }
 
 static void gc_visit_obj(Interpreter *interpreter, SlashObj *obj)
@@ -164,6 +164,8 @@ static void gc_mark_roots(Interpreter *interpreter)
     for (Scope *scope = interpreter->scope; scope != NULL; scope = scope->enclosing) {
 	/* loop over all values */
 	// TODO: can we get a stack overflow if the amount of values grow too large?
+	if (scope->values.len == 0)
+	    continue;
 	SlashValue *values[scope->values.len];
 	hashmap_get_values(&scope->values, (void **)values);
 
@@ -191,17 +193,13 @@ void gc_run(Interpreter *interpreter)
 #ifdef DEBUG_LOG_GC
     printf("-- gc begin\n");
 #endif
-
     gc_mark_roots(interpreter);
     gc_trace_references(interpreter);
-
 #ifdef DEBUG_LOG_GC
     printf("-- gc sweep\n");
 #endif
-
     gc_sweep(&interpreter->gc_objs);
-
-    gc_reset(&interpreter->gc_objs);
+    gc_reset(interpreter);
 
 #ifdef DEBUG_LOG_GC
     printf("-- gc end\n");
@@ -216,7 +214,7 @@ void gc_collect_all(LinkedList *gc_objs)
     }
 }
 
-SlashObj *gc_alloc(LinkedList *gc_objs, SlashObjType type)
+SlashObj *gc_alloc(Interpreter *interpreter, SlashObjType type)
 {
     SlashObj *obj = NULL;
     size_t size = 0;
@@ -239,6 +237,16 @@ SlashObj *gc_alloc(LinkedList *gc_objs, SlashObjType type)
     obj->type = type;
     obj->gc_marked = false;
     obj->traits = NULL;
-    gc_register(gc_objs, obj);
+    gc_register(&interpreter->gc_objs, obj);
+
+    // TODO: this is a lousy strategy
+    //       a proper solution should track how many bytes has been allocated since the last
+    //       time the gc ran.
+    interpreter->obj_alloced_since_next_gc++;
+    if (interpreter->obj_alloced_since_next_gc > 15) {
+	obj->gc_marked = true;
+	gc_run(interpreter);
+    }
+
     return obj;
 }

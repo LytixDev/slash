@@ -64,7 +64,7 @@ SlashValue *slash_list_get(SlashList *list, size_t idx)
 SlashList *slash_list_from_ranged_copy(Interpreter *interpreter, SlashList *to_copy,
 				       SlashRange range)
 {
-    SlashList *list = (SlashList *)gc_alloc(&interpreter->gc_objs, SLASH_OBJ_LIST);
+    SlashList *list = (SlashList *)gc_alloc(interpreter, SLASH_OBJ_LIST);
     slash_list_init(list);
     assert((size_t)range.end <= to_copy->underlying.size);
     for (int i = range.start; i < range.end; i++)

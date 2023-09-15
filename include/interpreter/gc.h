@@ -26,7 +26,7 @@
 /*
  * Allocates an object with the given type and registers it for tracking
  */
-SlashObj *gc_alloc(LinkedList *gc_objs, SlashObjType type);
+SlashObj *gc_alloc(Interpreter *interpreter, SlashObjType type);
 
 /*
  * Runs the garbage collector.
