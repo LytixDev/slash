@@ -32,7 +32,6 @@ typedef struct {
     ArrayList underlying;
 } SlashList;
 
-
 void slash_list_init(SlashList *list);
 bool slash_list_append(SlashList *list, SlashValue val);
 void slash_list_append_list(SlashList *list, SlashList *to_append);

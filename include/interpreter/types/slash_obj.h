@@ -36,5 +36,6 @@ struct slash_obj_t {
     ObjTraits *traits;
 };
 
+// extern ObjTraits obj_traits[SLASH_OBJ_TYPE_COUNT];
 
 #endif /* SLASH_OBJ_H */

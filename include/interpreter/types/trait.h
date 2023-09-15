@@ -29,6 +29,9 @@ typedef bool (*TraitTruthy)(SlashValue *self);
 typedef bool (*TraitEquals)(SlashValue *self, SlashValue *other);
 typedef bool (*TraitCmp)(SlashValue *self, SlashValue *other);
 
+typedef void (*ObjInit)(SlashObj *obj);
+typedef void (*ObjFree)(SlashObj *obj);
+
 typedef struct {
     TraitPrint print;
     TraitItemGet item_get;
@@ -37,6 +40,9 @@ typedef struct {
     TraitTruthy truthy;
     TraitEquals equals;
     TraitCmp cmp;
+
+    ObjInit init;
+    ObjFree free;
 } ObjTraits;
 
 /*

@@ -29,6 +29,7 @@
 #include <stdio.h>
 #endif /* DEBUG_LOG_GC */
 
+
 static void gc_sweep_obj(SlashObj *obj)
 {
     switch (obj->type) {
@@ -180,12 +181,12 @@ static void gc_trace_references(Interpreter *interpreter)
     }
 }
 
-void gc_register(LinkedList *gc_objs, SlashObj *obj)
+static void gc_register(LinkedList *gc_objs, SlashObj *obj)
 {
     linkedlist_append(gc_objs, obj);
 }
 
-void gc_collect(Interpreter *interpreter)
+void gc_run(Interpreter *interpreter)
 {
 #ifdef DEBUG_LOG_GC
     printf("-- gc begin\n");
@@ -238,7 +239,6 @@ SlashObj *gc_alloc(LinkedList *gc_objs, SlashObjType type)
     obj->type = type;
     obj->gc_marked = false;
     obj->traits = NULL;
-
     gc_register(gc_objs, obj);
     return obj;
 }

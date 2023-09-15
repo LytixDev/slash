@@ -879,7 +879,7 @@ int interpret(ArrayList *statements)
 
     for (size_t i = 0; i < statements->size; i++) {
 	exec(&interpreter, *(Stmt **)arraylist_get(statements, i));
-	gc_collect(&interpreter);
+	gc_run(&interpreter);
     }
 
     gc_collect_all(&interpreter.gc_objs);
