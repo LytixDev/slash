@@ -159,7 +159,7 @@ SlashValue slash_map_get_keys_method_stub(Interpreter *interpreter, SlashValue *
 
 SlashValue slash_map_get_keys(Interpreter *interpreter, SlashMap *map)
 {
-    SlashTuple *map_keys = (SlashTuple *)gc_alloc(&interpreter->gc_objs, SLASH_OBJ_TUPLE);
+    SlashTuple *map_keys = (SlashTuple *)gc_alloc(interpreter, SLASH_OBJ_TUPLE);
     SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)map_keys };
     slash_tuple_init(map_keys, map->underlying.len);
     if (map_keys->size == 0)

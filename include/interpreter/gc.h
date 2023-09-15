@@ -17,16 +17,27 @@
 #ifndef GC_H
 #define GC_H
 
-#define DEBUG_STRESS_GC
-#define DEBUG_LOG_GC
+// #define DEBUG_STRESS_GC
+// #define DEBUG_LOG_GC
 
 #include "interpreter/types/slash_obj.h"
 #include "nicc/nicc.h"
 
-SlashObj *gc_alloc(LinkedList *gc_objs, SlashObjType type);
+/*
+ * Allocates an object with the given type and registers it for tracking
+ */
+SlashObj *gc_alloc(Interpreter *interpreter, SlashObjType type);
 
-void gc_register(LinkedList *gc_objs, SlashObj *obj);
+/*
+ * Runs the garbage collector.
+ * Finds all unreachable objects and frees them.
+ */
+void gc_run(Interpreter *interpreter);
 
-void gc_collect(void);
+/*
+ * Free all uncollected objects regardless of if they are reachable or not.
+ * Used on exit.
+ */
+void gc_collect_all(LinkedList *gc_objs);
 
 #endif /* GC_H */

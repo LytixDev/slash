@@ -312,7 +312,7 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
 
 static SlashValue eval_tuple(Interpreter *interpreter, ListExpr *expr)
 {
-    SlashTuple *tuple = (SlashTuple *)gc_alloc(&interpreter->gc_objs, SLASH_OBJ_TUPLE);
+    SlashTuple *tuple = (SlashTuple *)gc_alloc(interpreter, SLASH_OBJ_TUPLE);
     SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)tuple };
     /* empty initializer -> size is 0 */
     if (expr->exprs == NULL) {
@@ -337,7 +337,7 @@ static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
     if (!expr->is_list)
 	return eval_tuple(interpreter, expr);
 
-    SlashList *list = (SlashList *)gc_alloc(&interpreter->gc_objs, SLASH_OBJ_LIST);
+    SlashList *list = (SlashList *)gc_alloc(interpreter, SLASH_OBJ_LIST);
     slash_list_init(list);
     SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)list };
 
@@ -356,7 +356,7 @@ static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
 
 static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
 {
-    SlashMap *map = (SlashMap *)gc_alloc(&interpreter->gc_objs, SLASH_OBJ_MAP);
+    SlashMap *map = (SlashMap *)gc_alloc(interpreter, SLASH_OBJ_MAP);
     slash_map_init(map);
     SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)map };
 
@@ -870,6 +870,8 @@ int interpret(ArrayList *statements)
     interpreter.scope = &interpreter.globals;
 
     linkedlist_init(&interpreter.gc_objs, sizeof(SlashObj *));
+    arraylist_init(&interpreter.gc_gray_stack, sizeof(SlashObj *));
+    interpreter.obj_alloced_since_next_gc = 0;
 
     /* init default StreamCtx */
     StreamCtx stream_ctx = { .read_fd = STDIN_FILENO, .write_fd = STDOUT_FILENO };
@@ -879,8 +881,12 @@ int interpret(ArrayList *statements)
     for (size_t i = 0; i < statements->size; i++)
 	exec(&interpreter, *(Stmt **)arraylist_get(statements, i));
 
+    gc_collect_all(&interpreter.gc_objs);
+
     scope_destroy(&interpreter.globals);
     arraylist_free(&stream_ctx.active_fds);
+    linkedlist_free(&interpreter.gc_objs);
+    arraylist_free(&interpreter.gc_gray_stack);
 
     return interpreter.prev_exit_code;
 }

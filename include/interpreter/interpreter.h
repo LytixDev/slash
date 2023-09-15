@@ -34,7 +34,11 @@ typedef struct {
     Arena arena;
     Scope globals;
     Scope *scope;
+
     LinkedList gc_objs; // objects managed by the garbage collector
+    ArrayList gc_gray_stack;
+    size_t obj_alloced_since_next_gc;
+
     int prev_exit_code;
     StreamCtx *stream_ctx;
 } Interpreter;

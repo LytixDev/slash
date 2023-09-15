@@ -34,7 +34,6 @@ typedef struct {
     SlashValue *values;
 } SlashTuple;
 
-
 void slash_tuple_init(SlashTuple *tuple, size_t size);
 
 /*
