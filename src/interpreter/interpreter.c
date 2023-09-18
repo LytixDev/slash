@@ -741,7 +741,7 @@ static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
     scope_destroy(&loop_scope);
 }
 
-static void exec_andor(Interpreter *interpreter, AndOrStmt *stmt)
+static void exec_andor(Interpreter *interpreter, BinaryStmt *stmt)
 {
     /*
      * L ( "&&" | "||" ) R.
@@ -761,7 +761,48 @@ static void exec_andor(Interpreter *interpreter, AndOrStmt *stmt)
 
     if ((stmt->operator_ == t_anp_anp && predicate) ||
 	(stmt->operator_ == t_pipe_pipe && !predicate))
-	exec(interpreter, stmt->right);
+	exec(interpreter, stmt->right_stmt);
+}
+
+static void exec_redirect(Interpreter *interpreter, BinaryStmt *stmt)
+{
+    // TODO: here we assume the cmd_stmt can NOT mutate the stmt->right_expr, however, this can
+    // not always be guaranteed.
+
+    SlashValue value = eval(interpreter, stmt->right_expr);
+    // TODO: to_str trait
+    if (!(value.type == SLASH_STR || value.type == SLASH_SHIDENT))
+	report_runtime_error("redirect failed: implement to_str trait!");
+
+    STACK_CSTR(value.str);
+    FILE *file = fopen(cstr, "w");
+    if (file == NULL) {
+	report_runtime_error("l456");
+    }
+
+    StreamCtx *stream_ctx = interpreter->stream_ctx;
+    /* store a copy of the final write file descriptor */
+    int final_out_fd = stream_ctx->write_fd;
+    int fd = fileno(file);
+    stream_ctx->write_fd = fd;
+
+    exec_cmd(interpreter, (CmdStmt *)stmt->left);
+
+    /* push fie descriptors onto active_fds list/stack */
+    // arraylist_append(&stream_ctx->active_fds, &fd);
+    // arraylist_rm(&stream_ctx->active_fds, stream_ctx->active_fds.size - 1);
+
+    stream_ctx->write_fd = final_out_fd;
+}
+
+static void exec_binary(Interpreter *interpreter, BinaryStmt *stmt)
+{
+    if (stmt->operator_ == t_anp_anp || stmt->operator_ == t_pipe_pipe)
+	exec_andor(interpreter, stmt);
+    else if (stmt->operator_ == t_greater)
+	exec_redirect(interpreter, stmt);
+    else
+	report_runtime_error("binary statement not implemented");
 }
 
 static SlashValue eval(Interpreter *interpreter, Expr *expr)
@@ -850,8 +891,8 @@ static void exec(Interpreter *interpreter, Stmt *stmt)
 	exec_assert(interpreter, (AssertStmt *)stmt);
 	break;
 
-    case STMT_ANDOR:
-	exec_andor(interpreter, (AndOrStmt *)stmt);
+    case STMT_BINARY:
+	exec_binary(interpreter, (BinaryStmt *)stmt);
 	break;
 
 
