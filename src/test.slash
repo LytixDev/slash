@@ -1,1 +1,1 @@
-ls > output
+cat < Makefile

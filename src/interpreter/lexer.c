@@ -287,9 +287,13 @@ StateFn lex_any(Lexer *lexer)
 	case '!':
 	    emit(lexer, match(lexer, '=') ? t_bang_equal : t_bang);
 	    break;
-	case '>':
-	    emit(lexer, match(lexer, '=') ? t_greater_equal : t_greater);
+	case '>': {
+	    if (match(lexer, '='))
+		emit(lexer, t_greater_equal);
+	    else
+		emit(lexer, match(lexer, '>') ? t_greater_greater : t_greater);
 	    break;
+	}
 	case '<':
 	    emit(lexer, match(lexer, '=') ? t_less_equal : t_less);
 	    break;

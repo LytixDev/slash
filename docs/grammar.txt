@@ -43,7 +43,7 @@ if_stmt         -> "if" expression block ( ( "elif" expression block ) | ( "else
 
 pipeline_stmt   -> cmd_stmt ( "|" pipeline_stmt )* ;
 
-redirect_stmt   -> cmd_stmt ( ">" ) expression ;
+redirect_stmt   -> cmd_stmt ( ">" | ">>" | "<" ) expression ;
 
 cmd_stmt        -> SHIDENT argument* ;
 

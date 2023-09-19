@@ -132,6 +132,7 @@ defer_tokens:
     arraylist_free(&lex_result.tokens);
 defer_input:
     free(input);
+    fclose(fp);
 
     return exit_code;
 }

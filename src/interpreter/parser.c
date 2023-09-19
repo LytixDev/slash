@@ -129,9 +129,9 @@ static bool check_either(Parser *parser, int step, unsigned int n, ...)
 #define check(parser, ...) check_either(parser, 0, VA_NUMBER_OF_ARGS(__VA_ARGS__), __VA_ARGS__)
 #define check_ahead(parser, n, ...) \
     check_either(parser, n, VA_NUMBER_OF_ARGS(__VA_ARGS__), __VA_ARGS__)
-#define check_arg_end(parser)                                                                 \
-    check(parser, t_newline, t_eof, t_pipe, t_pipe_pipe, t_greater, t_less, t_anp, t_anp_anp, \
-	  t_rparen, t_rbrace)
+#define check_arg_end(parser)                                                                  \
+    check(parser, t_newline, t_eof, t_pipe, t_pipe_pipe, t_greater, t_greater_greater, t_less, \
+	  t_anp, t_anp_anp, t_rparen, t_rbrace)
 
 static Token *consume(Parser *parser, TokenType expected, char *err_msg)
 {
@@ -359,7 +359,7 @@ static Stmt *pipeline_stmt(Parser *parser)
 {
     /* came from t_dt_shident */
     Stmt *left = cmd_stmt(parser);
-    if (match(parser, t_greater))
+    if (match(parser, t_greater, t_greater_greater, t_less))
 	return redirect_stmt(parser, left);
 
     if (!match(parser, t_pipe))
