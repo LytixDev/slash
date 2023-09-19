@@ -187,3 +187,9 @@ int str_view_cmp(StrView a, StrView b)
     }
     return *(const unsigned char *)A - *(const unsigned char *)B;
 }
+
+void str_view_to_cstr(StrView view, char *cstr)
+{
+    memcpy(cstr, view.view, view.size);
+    cstr[view.size] = 0;
+}

@@ -37,5 +37,6 @@ double str_view_to_double(StrView s);
 int32_t str_view_to_int(StrView s);
 bool str_view_eq(StrView a, StrView b);
 int str_view_cmp(StrView a, StrView b);
+void str_view_to_cstr(StrView view, char *cstr);
 
 #endif /* STR_VIEW_H */

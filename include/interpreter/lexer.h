@@ -81,6 +81,7 @@
     X(bang_equal)              \
     X(greater)                 \
     X(greater_equal)           \
+    X(greater_greater)         \
     X(less)                    \
     X(less_equal)              \
     X(dot)                     \

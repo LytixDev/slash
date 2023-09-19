@@ -287,9 +287,13 @@ StateFn lex_any(Lexer *lexer)
 	case '!':
 	    emit(lexer, match(lexer, '=') ? t_bang_equal : t_bang);
 	    break;
-	case '>':
-	    emit(lexer, match(lexer, '=') ? t_greater_equal : t_greater);
+	case '>': {
+	    if (match(lexer, '='))
+		emit(lexer, t_greater_equal);
+	    else
+		emit(lexer, match(lexer, '>') ? t_greater_greater : t_greater);
 	    break;
+	}
 	case '<':
 	    emit(lexer, match(lexer, '=') ? t_less_equal : t_less);
 	    break;
@@ -377,12 +381,12 @@ StateFn lex_shell_arg_list(Lexer *lexer)
      *  Here we don't want to parse '-' as t_minus etc.
      *
      * Lexing rules for shell arg list:
-     *  whitespace, tab         -> backup, emit, advance, ignore and continue
-     *  $                       -> backup, emit, advance and lex access
-     *  "                       -> backup, emit, advance and lex string
-     *  (                       -> backup, emit, advance, lex any until rparen and continue
-     *  )                       -> backup, emit, advance, stop and return lex rparen
-     *  \n, }, ;, |, &, EOF     -> backup, emit, and stop
+     *  whitespace, tab           -> backup, emit, advance, ignore and continue
+     *  $                         -> backup, emit, advance and lex access
+     *  "                         -> backup, emit, advance and lex string
+     *  (                         -> backup, emit, advance, lex any until rparen and continue
+     *  )                         -> backup, emit, advance, stop and return lex rparen
+     *  \n, }, ;, |, >, <, &, EOF -> backup, emit, and stop
      *
      *  shell_arg_emit() is a helper function that will backup, emit and advance
      */
@@ -418,6 +422,8 @@ StateFn lex_shell_arg_list(Lexer *lexer)
 	case '}':
 	case ';':
 	case '|':
+	case '>':
+	case '<':
 	case '&':
 	case EOF:
 	    shell_arg_emit(lexer);

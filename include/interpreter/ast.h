@@ -51,7 +51,7 @@ typedef enum {
     STMT_BLOCK,
     STMT_PIPELINE,
     STMT_ASSERT,
-    STMT_ANDOR,
+    STMT_BINARY,
     STMT_ENUM_COUNT
 } StmtType;
 
@@ -211,8 +211,11 @@ typedef struct {
     StmtType type;
     Stmt *left;
     TokenType operator_;
-    Stmt *right;
-} AndOrStmt;
+    union {
+	Stmt *right_stmt;
+	Expr *right_expr;
+    };
+} BinaryStmt;
 
 
 /* functions */

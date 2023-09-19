@@ -741,7 +741,7 @@ static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
     scope_destroy(&loop_scope);
 }
 
-static void exec_andor(Interpreter *interpreter, AndOrStmt *stmt)
+static void exec_andor(Interpreter *interpreter, BinaryStmt *stmt)
 {
     /*
      * L ( "&&" | "||" ) R.
@@ -761,7 +761,58 @@ static void exec_andor(Interpreter *interpreter, AndOrStmt *stmt)
 
     if ((stmt->operator_ == t_anp_anp && predicate) ||
 	(stmt->operator_ == t_pipe_pipe && !predicate))
-	exec(interpreter, stmt->right);
+	exec(interpreter, stmt->right_stmt);
+}
+
+static void exec_redirect(Interpreter *interpreter, BinaryStmt *stmt)
+{
+    // TODO: here we assume the cmd_stmt can NOT mutate the stmt->right_expr, however, this may not
+    //      always be guaranteed ?.
+
+    SlashValue value = eval(interpreter, stmt->right_expr);
+    // TODO: to_str trait
+    if (!(value.type == SLASH_STR || value.type == SLASH_SHIDENT))
+	report_runtime_error("redirect failed: implement to_str trait!");
+    char file_name[value.str.size + 1];
+    str_view_to_cstr(value.str, file_name);
+
+    StreamCtx *stream_ctx = interpreter->stream_ctx;
+    int og_read = stream_ctx->read_fd;
+    int og_write = stream_ctx->write_fd;
+
+    bool new_write_fd = true;
+    FILE *file = NULL;
+    if (stmt->operator_ == t_greater) {
+	file = fopen(file_name, "w");
+    } else if (stmt->operator_ == t_greater_greater) {
+	file = fopen(file_name, "a+");
+    } else if (stmt->operator_ == t_less) {
+	file = fopen(file_name, "r");
+	new_write_fd = false;
+    }
+
+    // TODO: give good errors: "could not open file x: permission denied" or "x not a file"
+    if (file == NULL) {
+	report_runtime_error("could not open file 'PLACEHOLDER (TODO: implement better errors)'");
+	ASSERT_NOT_REACHED;
+    }
+
+    if (new_write_fd)
+	stream_ctx->write_fd = fileno(file);
+    else
+	stream_ctx->read_fd = fileno(file);
+    exec_cmd(interpreter, (CmdStmt *)stmt->left);
+    fclose(file);
+    stream_ctx->read_fd = og_read;
+    stream_ctx->write_fd = og_write;
+}
+
+static void exec_binary(Interpreter *interpreter, BinaryStmt *stmt)
+{
+    if (stmt->operator_ == t_anp_anp || stmt->operator_ == t_pipe_pipe)
+	exec_andor(interpreter, stmt);
+    else
+	exec_redirect(interpreter, stmt);
 }
 
 static SlashValue eval(Interpreter *interpreter, Expr *expr)
@@ -850,8 +901,8 @@ static void exec(Interpreter *interpreter, Stmt *stmt)
 	exec_assert(interpreter, (AssertStmt *)stmt);
 	break;
 
-    case STMT_ANDOR:
-	exec_andor(interpreter, (AndOrStmt *)stmt);
+    case STMT_BINARY:
+	exec_binary(interpreter, (BinaryStmt *)stmt);
 	break;
 
 
