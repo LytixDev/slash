@@ -1,1 +1,8 @@
-cat < Makefile
+var t = '1, 2'
+
+var a = 0
+var b = 0
+
+# $a, $b = $t
+
+var a, b = 2
