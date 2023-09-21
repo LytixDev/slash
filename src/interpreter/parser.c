@@ -117,8 +117,10 @@ static bool check_either(Parser *parser, int step, unsigned int n, ...)
 
     for (unsigned int i = 0; i < n; i++) {
 	type = va_arg(args, TokenType);
-	if (check_single(parser, type, step))
+	if (check_single(parser, type, step)) {
+	    va_end(args);
 	    return true;
+	}
     }
 
     va_end(args);
@@ -165,8 +167,10 @@ static bool match_either(Parser *parser, unsigned int n, ...)
 
     for (unsigned int i = 0; i < n; i++) {
 	type = va_arg(args, TokenType);
-	if (match_single(parser, type))
+	if (match_single(parser, type)) {
+	    va_end(args);
 	    return true;
+	}
     }
 
     va_end(args);

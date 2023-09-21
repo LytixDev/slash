@@ -130,9 +130,10 @@ defer_stms:
     arraylist_free(&stmts.stmts);
 defer_tokens:
     arraylist_free(&lex_result.tokens);
+
+    fclose(fp);
 defer_input:
     free(input);
-    fclose(fp);
 
     return exit_code;
 }

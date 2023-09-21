@@ -1,0 +1,22 @@
+Checks: >
+    performance-*,
+    misc-*,
+    readability-duplicate-include,
+    readability-misleading-indentation,
+    bugprone-assert-side-effect,
+    bugprone-macro-repeated-side-effects,
+    bugprone-infinite-loop,
+    bugprone-macro-parentheses,
+    bugprone-posix-return,
+    bugprone-reserved-identifier,
+    bugprone-signal-handler,
+    bugprone-signed-char-misuse,
+    bugprone-sizeof-expression,
+    bugprone-branch-clone,
+    -clang-analyzer-security.insecureAPI.*,
+    -misc-no-recursion,
+
+# treat all warnings as errors
+WarningsAsErrors: '*'
+
+ExtraArgs: [-std=gnu11,-DDEBUG]

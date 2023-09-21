@@ -48,5 +48,8 @@ bear:
 format:
 	./format.slash # you will need slash installed to do this
 
+tidy:
+	clang-tidy $(SRCS) -- $(CFLAGS)
+
 $(OBJDIR):
 	$(foreach dir, $(DIRS), $(shell mkdir -p $(OBJDIR)/$(dir)))
