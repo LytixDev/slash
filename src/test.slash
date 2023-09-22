@@ -1,8 +1,3 @@
-var t = '1, 2'
-
-var a = 0
-var b = 0
-
-# $a, $b = $t
-
-var a, b = 2
+var t = 10
+var t = 1
+echo $t

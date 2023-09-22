@@ -438,6 +438,11 @@ static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
 
 static void exec_var(Interpreter *interpreter, VarStmt *stmt)
 {
+    /* Make sure variable is not defined already */
+    ScopeAndValue current = var_get(interpreter->scope, &stmt->name);
+    if (current.scope != NULL)
+	report_runtime_error("Variable redefinition");
+
     SlashValue value = eval(interpreter, stmt->initializer);
     var_define(interpreter->scope, &stmt->name, &value);
 }
