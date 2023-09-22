@@ -48,7 +48,6 @@ static Stmt *redirect_stmt(Parser *parser, Stmt *left);
 static Stmt *cmd_stmt(Parser *parser);
 static Stmt *block(Parser *parser);
 static Stmt *assignment_stmt(Parser *parser);
-static Stmt *expr_stmt(Parser *parser);
 /* exprs */
 static Expr *top_level_expr(Parser *parser);
 static Expr *expression(Parser *parser);
@@ -99,12 +98,6 @@ static Token *advance(Parser *parser)
     return token;
 }
 
-static void backup(Parser *parser)
-{
-    assert(parser->token_pos != 0);
-    parser->token_pos--;
-}
-
 static bool check_single(Parser *parser, TokenType type, int step)
 {
     /* arraylist_get returns NULL if index out of bounds */
@@ -139,6 +132,7 @@ static bool check_either(Parser *parser, int step, unsigned int n, ...)
 #define check_arg_end(parser)                                                                  \
     check(parser, t_newline, t_eof, t_pipe, t_pipe_pipe, t_greater, t_greater_greater, t_less, \
 	  t_anp, t_anp_anp, t_rparen, t_rbrace)
+#define check_top_level_seq_end(parser) check(parser, t_newline, t_equal)
 
 static Token *consume(Parser *parser, TokenType expected, char *err_msg)
 {
@@ -304,10 +298,11 @@ static Stmt *statement(Parser *parser)
 	return block(parser);
 
     // TODO: would be better if it was match()
-    if (check(parser, t_access))
-	return assignment_stmt(parser);
+    // if (check(parser, t_access))
+    //     return assignment_stmt(parser);
 
-    return expr_stmt(parser);
+    // return expr_stmt(parser);
+    return assignment_stmt(parser);
 }
 
 static Stmt *loop_stmt(Parser *parser)
@@ -426,29 +421,15 @@ static Stmt *block(Parser *parser)
     return (Stmt *)stmt;
 }
 
-
-static Stmt *expr_stmt(Parser *parser)
-{
-    ExpressionStmt *stmt = (ExpressionStmt *)stmt_alloc(parser->ast_arena, STMT_EXPRESSION);
-    stmt->expression = top_level_expr(parser);
-    expr_promotion(parser);
-    return (Stmt *)stmt;
-}
-
 static Stmt *assignment_stmt(Parser *parser)
 {
-    /* know next is t_access */
-    // TODO: this is a hack
-    size_t pos = parser->token_pos;
-
-    // TODO: throw parse error if not AccessExpr or ItemAccessExpr ?
-    Expr *var = subscript(parser);
+    Expr *expr = top_level_expr(parser);
     if (!match(parser, t_equal, t_plus_equal, t_minus_equal, t_star_equal, t_star_star_equal,
 	       t_slash_equal, t_slash_slash_equal, t_percent_equal)) {
-	/* if next token after access is not an assignment op, then ignore everything we just did */
-	// TODO: can we just return the `var` as an ExpressionStmt ?
-	parser->token_pos = pos;
-	return expr_stmt(parser);
+	ExpressionStmt *stmt = (ExpressionStmt *)stmt_alloc(parser->ast_arena, STMT_EXPRESSION);
+	stmt->expression = expr;
+	expr_promotion(parser);
+	return (Stmt *)stmt;
     }
 
     /* access part of assignment */
@@ -457,7 +438,7 @@ static Stmt *assignment_stmt(Parser *parser)
     expr_promotion(parser);
 
     AssignStmt *stmt = (AssignStmt *)stmt_alloc(parser->ast_arena, STMT_ASSIGN);
-    stmt->var = var;
+    stmt->var = expr;
     stmt->assignment_op = assignment_op->type;
     stmt->value = value;
     return (Stmt *)stmt;
@@ -468,7 +449,6 @@ static Expr *top_level_expr(Parser *parser)
     Expr *expr = expression(parser);
     if (match(parser, t_comma)) {
 	SequenceExpr *seq_expr = sequence(parser, t_newline);
-	backup(parser); // unmatch t_newline (used for expr_promotion)
 	arena_ll_prepend(&seq_expr->seq, expr);
 	return (Expr *)seq_expr;
     }
@@ -480,20 +460,39 @@ static Expr *expression(Parser *parser)
     return logical_or(parser);
 }
 
+/* if terminator is t_newline then we will use all terminators listed in check_top_level_seq_end */
 static SequenceExpr *sequence(Parser *parser, TokenType terminator)
 {
     SequenceExpr *expr = (SequenceExpr *)expr_alloc(parser->ast_arena, EXPR_SEQUENCE);
     arena_ll_init(parser->ast_arena, &expr->seq);
     do {
-	if (match(parser, terminator))
-	    break;
-	ignore(parser, t_newline);
-
+	if (terminator == t_newline) {
+	    if (check_top_level_seq_end(parser))
+		break;
+	} else {
+	    if (match(parser, terminator))
+		break;
+	    ignore(parser, t_newline);
+	}
 	arena_ll_append(&expr->seq, expression(parser));
 
-	if (match(parser, terminator))
-	    break;
-	ignore(parser, t_newline);
+	if (terminator == t_newline) {
+	    if (check_top_level_seq_end(parser))
+		break;
+	} else {
+	    if (match(parser, terminator))
+		break;
+	    ignore(parser, t_newline);
+	}
+
+	if (terminator == t_newline) {
+	    if (check_top_level_seq_end(parser))
+		break;
+	} else {
+	    if (match(parser, terminator))
+		break;
+	}
+
 	if (!match(parser, t_comma))
 	    report_parse_err(parser, "Expected comma in sequence");
     } while (!check(parser, t_eof));
@@ -736,11 +735,8 @@ static Expr *primary(Parser *parser)
 	return list(parser);
     if (match(parser, t_at_lbracket))
 	return map(parser);
-
-    if (match(parser, t_lparen)) {
-	// return (Expr *)sequence(parser, t_rparen);
+    if (match(parser, t_lparen))
 	return grouping(parser);
-    }
 
     if (!match(parser, t_dt_str, t_dt_shident)) {
 	report_err_and_sync(parser, "not a valid primary type");

@@ -49,7 +49,7 @@ cmd_stmt        -> SHIDENT expression* ;
 
 block           -> "{" declaration* "}" ;
 
-assignment_stmt -> subscript ( "=" | "+=" | "-=" | "*=" | "**=" | "%=" | "%=" ) top_level_expr newline_or_block_end ;
+assignment_stmt -> top_level_expr ( "=" | "+=" | "-=" | "*=" | "**=" | "%=" | "%=" ) top_level_expr newline_or_block_end ;
 
 expr_stmt       -> top_level_expr newline_or_block_end ;
 
