@@ -50,15 +50,15 @@ void slash_tuple_print(SlashValue *value)
 
     SlashTuple *tuple = (SlashTuple *)value->obj;
     SlashValue current;
-    printf("'");
+    printf("(");
     for (size_t i = 0; i < tuple->size; i++) {
 	current = tuple->values[i];
 	/* call the print function directly */
 	trait_print[current.type](&current);
-	if (i != tuple->size - 1)
+	if (i != tuple->size - 1 || i == 0) // always print comma after first element
 	    printf(", ");
     }
-    printf("'");
+    printf(")");
 }
 
 SlashValue slash_tuple_item_get(Interpreter *interpreter, SlashValue *self, SlashValue *index)

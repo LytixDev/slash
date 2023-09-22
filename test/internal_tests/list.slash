@@ -35,9 +35,6 @@ assert $sliced == [2, 3]
 # slice append
 $sliced += 0
 assert $sliced == [2, 3, 0]
-# check that underlying list was not modified by change to slice
-var underlying = [1, 2, 3, 4, 5]
-
 
 # list and loops
 {

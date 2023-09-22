@@ -31,7 +31,7 @@ typedef enum {
     EXPR_ACCESS,
     EXPR_SUBSCRIPT,
     EXPR_SUBSHELL,
-    EXPR_LIST, // list or tuple
+    EXPR_LIST,
     EXPR_MAP,
     EXPR_METHOD,
     EXPR_SEQUENCE,
@@ -112,7 +112,6 @@ typedef struct {
 
 typedef struct {
     ExprType type;
-    bool is_list;
     SequenceExpr *exprs; // will be NULL for the empty list
 } ListExpr;
 

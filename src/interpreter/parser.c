@@ -50,9 +50,9 @@ static Stmt *block(Parser *parser);
 static Stmt *assignment_stmt(Parser *parser);
 static Stmt *expr_stmt(Parser *parser);
 /* exprs */
-static SequenceExpr *sequence(Parser *parser);
-static Expr *argument(Parser *parser);
+static Expr *top_level_expr(Parser *parser);
 static Expr *expression(Parser *parser);
+static SequenceExpr *sequence(Parser *parser, TokenType terminator);
 static Expr *logical_or(Parser *parser);
 static Expr *logical_and(Parser *parser);
 static Expr *equality(Parser *parser);
@@ -71,7 +71,6 @@ static Expr *number(Parser *parser);
 static Expr *range(Parser *parser);
 static Expr *list(Parser *parser);
 static Expr *map(Parser *parser);
-static Expr *tuple(Parser *parser);
 static Expr *grouping(Parser *parser);
 
 
@@ -98,6 +97,12 @@ static Token *advance(Parser *parser)
 	parser->token_pos++;
 
     return token;
+}
+
+static void backup(Parser *parser)
+{
+    assert(parser->token_pos != 0);
+    parser->token_pos--;
 }
 
 static bool check_single(Parser *parser, TokenType type, int step)
@@ -256,7 +261,7 @@ static Stmt *var_decl(Parser *parser)
     /* came from 'var' */
     Token *name = consume(parser, t_ident, "Expected variable name");
     consume(parser, t_equal, "Expected variable definition");
-    Expr *initializer = expression(parser);
+    Expr *initializer = top_level_expr(parser);
     expr_promotion(parser);
 
     VarStmt *stmt = (VarStmt *)stmt_alloc(parser->ast_arena, STMT_VAR);
@@ -313,7 +318,7 @@ static Stmt *loop_stmt(Parser *parser)
 	Token *var_name = previous(parser);
 	consume(parser, t_in, "Expected 'in' keyword to continue loop statement");
 	/* A runtime error will be thrown if expression can not be iterated over */
-	Expr *iterable = expression(parser);
+	Expr *iterable = top_level_expr(parser);
 
 	IterLoopStmt *iter_loop = (IterLoopStmt *)stmt_alloc(parser->ast_arena, STMT_ITER_LOOP);
 	iter_loop->var_name = var_name->lexeme;
@@ -334,7 +339,7 @@ static Stmt *assert_stmt(Parser *parser)
 {
     /* came from 'assert' */
     AssertStmt *stmt = (AssertStmt *)stmt_alloc(parser->ast_arena, STMT_ASSERT);
-    stmt->expr = expression(parser);
+    stmt->expr = top_level_expr(parser);
     expr_promotion(parser);
     return (Stmt *)stmt;
 }
@@ -401,7 +406,7 @@ static Stmt *cmd_stmt(Parser *parser)
 
     stmt->arg_exprs = arena_ll_alloc(parser->ast_arena);
     while (!check_arg_end(parser))
-	arena_ll_append(stmt->arg_exprs, argument(parser));
+	arena_ll_append(stmt->arg_exprs, expression(parser));
 
     return (Stmt *)stmt;
 }
@@ -425,7 +430,7 @@ static Stmt *block(Parser *parser)
 static Stmt *expr_stmt(Parser *parser)
 {
     ExpressionStmt *stmt = (ExpressionStmt *)stmt_alloc(parser->ast_arena, STMT_EXPRESSION);
-    stmt->expression = expression(parser);
+    stmt->expression = top_level_expr(parser);
     expr_promotion(parser);
     return (Stmt *)stmt;
 }
@@ -448,7 +453,7 @@ static Stmt *assignment_stmt(Parser *parser)
 
     /* access part of assignment */
     Token *assignment_op = previous(parser);
-    Expr *value = expression(parser);
+    Expr *value = top_level_expr(parser);
     expr_promotion(parser);
 
     AssignStmt *stmt = (AssignStmt *)stmt_alloc(parser->ast_arena, STMT_ASSIGN);
@@ -458,29 +463,42 @@ static Stmt *assignment_stmt(Parser *parser)
     return (Stmt *)stmt;
 }
 
-static SequenceExpr *sequence(Parser *parser)
+static Expr *top_level_expr(Parser *parser)
 {
-    SequenceExpr *expr = (SequenceExpr *)expr_alloc(parser->ast_arena, EXPR_SEQUENCE);
-    arena_ll_init(parser->ast_arena, &expr->seq);
-    do {
-	arena_ll_append(&expr->seq, argument(parser));
-	/* if no comma then we exit */
-	if (!match(parser, t_comma))
-	    break;
-	ignore(parser, t_newline);
-    } while (!check(parser, t_eof));
-
+    Expr *expr = expression(parser);
+    if (match(parser, t_comma)) {
+	SequenceExpr *seq_expr = sequence(parser, t_newline);
+	backup(parser); // unmatch t_newline (used for expr_promotion)
+	arena_ll_prepend(&seq_expr->seq, expr);
+	return (Expr *)seq_expr;
+    }
     return expr;
-}
-
-static Expr *argument(Parser *parser)
-{
-    return expression(parser);
 }
 
 static Expr *expression(Parser *parser)
 {
     return logical_or(parser);
+}
+
+static SequenceExpr *sequence(Parser *parser, TokenType terminator)
+{
+    SequenceExpr *expr = (SequenceExpr *)expr_alloc(parser->ast_arena, EXPR_SEQUENCE);
+    arena_ll_init(parser->ast_arena, &expr->seq);
+    do {
+	if (match(parser, terminator))
+	    break;
+	ignore(parser, t_newline);
+
+	arena_ll_append(&expr->seq, expression(parser));
+
+	if (match(parser, terminator))
+	    break;
+	ignore(parser, t_newline);
+	if (!match(parser, t_comma))
+	    report_parse_err(parser, "Expected comma in sequence");
+    } while (!check(parser, t_eof));
+
+    return expr;
 }
 
 static Expr *logical_or(Parser *parser)
@@ -656,8 +674,7 @@ static Expr *single(Parser *parser)
 	expr->method_name = method_name->lexeme;
 	consume(parser, t_lparen, "expected left paren");
 	if (!match(parser, t_rparen)) {
-	    expr->args = sequence(parser);
-	    consume(parser, t_rparen, "expected right paren");
+	    expr->args = sequence(parser, t_rparen);
 	} else {
 	    expr->args = NULL;
 	}
@@ -719,10 +736,11 @@ static Expr *primary(Parser *parser)
 	return list(parser);
     if (match(parser, t_at_lbracket))
 	return map(parser);
-    if (match(parser, t_qoute))
-	return tuple(parser);
-    if (match(parser, t_lparen))
+
+    if (match(parser, t_lparen)) {
+	// return (Expr *)sequence(parser, t_rparen);
 	return grouping(parser);
+    }
 
     if (!match(parser, t_dt_str, t_dt_shident)) {
 	report_err_and_sync(parser, "not a valid primary type");
@@ -777,12 +795,10 @@ static Expr *list(Parser *parser)
 {
     /* came from '[' */
     ListExpr *expr = (ListExpr *)expr_alloc(parser->ast_arena, EXPR_LIST);
-    expr->is_list = true;
 
     /* if next is not ']', parse list initializer */
     if (!match(parser, t_rbracket)) {
-	expr->exprs = sequence(parser);
-	consume(parser, t_rbracket, "Unterminated list initializer: expected ']'");
+	expr->exprs = sequence(parser, t_rbracket);
     } else {
 	expr->exprs = NULL;
     }
@@ -810,30 +826,19 @@ static Expr *map(Parser *parser)
     return (Expr *)expr;
 }
 
-static Expr *tuple(Parser *parser)
-{
-    /* came from ''' */
-    ListExpr *expr = (ListExpr *)expr_alloc(parser->ast_arena, EXPR_LIST);
-    expr->is_list = false;
-
-    /* if next is not ''', parse list initializer */
-    if (!match(parser, t_qoute)) {
-	expr->exprs = sequence(parser);
-	consume(parser, t_qoute, "Unterminated list initializer: expected ']'");
-    } else {
-	expr->exprs = NULL;
-    }
-
-    return (Expr *)expr;
-}
-
 static Expr *grouping(Parser *parser)
 {
     /* came from '(' */
-    GroupingExpr *expr = (GroupingExpr *)expr_alloc(parser->ast_arena, EXPR_GROUPING);
-    expr->expr = expression(parser);
-    consume(parser, t_rparen, "Expected ')' after expression");
-    return (Expr *)expr;
+    Expr *expr = expression(parser);
+    if (match(parser, t_comma)) {
+	SequenceExpr *seq_expr = sequence(parser, t_rparen);
+	arena_ll_prepend(&seq_expr->seq, expr);
+	return (Expr *)seq_expr;
+    }
+    GroupingExpr *grouping = (GroupingExpr *)expr_alloc(parser->ast_arena, EXPR_GROUPING);
+    grouping->expr = expr;
+    consume(parser, t_rparen, "Expected ')' after grouping expression");
+    return (Expr *)grouping;
 }
 
 StmtsOrErr parse(Arena *ast_arena, ArrayList *tokens, char *input)

@@ -48,9 +48,11 @@ ArenaLL *arena_ll_alloc(Arena *arena);
  */
 void arena_ll_init(Arena *arena, ArenaLL *ll);
 
+void arena_ll_prepend(ArenaLL *ll, void *p);
+
 void arena_ll_append(ArenaLL *ll, void *p);
 
-#define ARENA_LL_FOR_EACH(ll, item) for (item = (ll)->head; item != NULL; item = item->next)
+#define ARENA_LL_FOR_EACH(ll, item) for ((item) = (ll)->head; (item) != NULL; (item) = (item)->next)
 
 
 #endif /* ARENA_LL */

@@ -310,20 +310,20 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
     return (SlashValue){ .type = SLASH_STR, .str = { .view = str_view, .size = size } };
 }
 
-static SlashValue eval_tuple(Interpreter *interpreter, ListExpr *expr)
+static SlashValue eval_tuple(Interpreter *interpreter, SequenceExpr *expr)
 {
     SlashTuple *tuple = (SlashTuple *)gc_alloc(interpreter, SLASH_OBJ_TUPLE);
     SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)tuple };
-    /* empty initializer -> size is 0 */
-    if (expr->exprs == NULL) {
+    // TODO: possible?
+    if (expr->seq.size == 0) {
 	slash_tuple_init(tuple, 0);
 	return value;
     }
 
-    slash_tuple_init(tuple, expr->exprs->seq.size);
+    slash_tuple_init(tuple, expr->seq.size);
     size_t i = 0;
     LLItem *item;
-    ARENA_LL_FOR_EACH(&expr->exprs->seq, item)
+    ARENA_LL_FOR_EACH(&expr->seq, item)
     {
 	SlashValue element_value = eval(interpreter, item->value);
 	tuple->values[i++] = element_value;
@@ -334,9 +334,6 @@ static SlashValue eval_tuple(Interpreter *interpreter, ListExpr *expr)
 
 static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
 {
-    if (!expr->is_list)
-	return eval_tuple(interpreter, expr);
-
     SlashList *list = (SlashList *)gc_alloc(interpreter, SLASH_OBJ_LIST);
     slash_list_init(list);
     SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)list };
@@ -440,7 +437,7 @@ static void exec_var(Interpreter *interpreter, VarStmt *stmt)
 {
     /* Make sure variable is not defined already */
     ScopeAndValue current = var_get(interpreter->scope, &stmt->name);
-    if (current.scope != NULL)
+    if (current.scope == interpreter->scope)
 	report_runtime_error("Variable redefinition");
 
     SlashValue value = eval(interpreter, stmt->initializer);
@@ -849,6 +846,9 @@ static SlashValue eval(Interpreter *interpreter, Expr *expr)
 
     case EXPR_METHOD:
 	return eval_method(interpreter, (MethodExpr *)expr);
+
+    case EXPR_SEQUENCE:
+	return eval_tuple(interpreter, (SequenceExpr *)expr);
 
     case EXPR_GROUPING:
 	return eval_grouping(interpreter, (GroupingExpr *)expr);

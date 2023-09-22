@@ -1,3 +1,0 @@
-ls | wc -l
-var count = (ls -l | grep --color=auto slash | wc -l)
-echo $count
