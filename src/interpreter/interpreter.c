@@ -521,6 +521,9 @@ static void exec_unpack(Interpreter *interpreter, AssignStmt *stmt)
     LLItem *l = left->seq.head;
     LLItem *r = right->seq.head;
     for (size_t i = 0; i < left->seq.size; i++) {
+        Expr *L = l->value;
+        if (L->type != EXPR_ACCESS)
+            report_runtime_error("Can not assign to literal value");
 	AccessExpr *access = (AccessExpr *)l->value;
 	SlashValue R = eval(interpreter, (Expr *)r->value);
 

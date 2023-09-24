@@ -98,6 +98,13 @@ static Token *advance(Parser *parser)
     return token;
 }
 
+static void backup(Parser *parser)
+{
+    if (parser->token_pos == 0)
+        report_parse_err(parser, "internal error: attempted to backup() at pos = 0");
+    parser->token_pos--;
+}
+
 static bool check_single(Parser *parser, TokenType type, int step)
 {
     /* arraylist_get returns NULL if index out of bounds */
@@ -297,11 +304,6 @@ static Stmt *statement(Parser *parser)
     if (match(parser, t_lbrace))
 	return block(parser);
 
-    // TODO: would be better if it was match()
-    // if (check(parser, t_access))
-    //     return assignment_stmt(parser);
-
-    // return expr_stmt(parser);
     return assignment_stmt(parser);
 }
 
@@ -449,6 +451,9 @@ static Expr *top_level_expr(Parser *parser)
     Expr *expr = expression(parser);
     if (match(parser, t_comma)) {
 	SequenceExpr *seq_expr = sequence(parser, t_newline);
+        /* edge case: don't want top level call to sequence() to consume newline */
+        if (previous(parser)->type == t_newline)
+            backup(parser);
 	arena_ll_prepend(&seq_expr->seq, expr);
 	return (Expr *)seq_expr;
     }
@@ -460,42 +465,18 @@ static Expr *expression(Parser *parser)
     return logical_or(parser);
 }
 
-/* if terminator is t_newline then we will use all terminators listed in check_top_level_seq_end */
 static SequenceExpr *sequence(Parser *parser, TokenType terminator)
 {
     SequenceExpr *expr = (SequenceExpr *)expr_alloc(parser->ast_arena, EXPR_SEQUENCE);
     arena_ll_init(parser->ast_arena, &expr->seq);
     do {
-	if (terminator == t_newline) {
-	    if (check_top_level_seq_end(parser))
-		break;
-	} else {
-	    if (match(parser, terminator))
-		break;
-	    ignore(parser, t_newline);
-	}
-	arena_ll_append(&expr->seq, expression(parser));
-
-	if (terminator == t_newline) {
-	    if (check_top_level_seq_end(parser))
-		break;
-	} else {
-	    if (match(parser, terminator))
-		break;
-	    ignore(parser, t_newline);
-	}
-
-	if (terminator == t_newline) {
-	    if (check_top_level_seq_end(parser))
-		break;
-	} else {
-	    if (match(parser, terminator))
-		break;
-	}
-
-	if (!match(parser, t_comma))
-	    report_parse_err(parser, "Expected comma in sequence");
-    } while (!check(parser, t_eof));
+        if (match(parser, terminator))
+            break;
+        ignore(parser, t_newline);
+        arena_ll_append(&expr->seq, expression(parser));
+        if (terminator != t_newline)
+            ignore(parser, t_newline);
+    } while (!match(parser, terminator) && match(parser, t_comma));
 
     return expr;
 }

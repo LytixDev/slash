@@ -18,3 +18,13 @@ loop value in $t {
 # tuple of size 1 
 var a = 1,
 assert $a == (1,)
+
+# tuple unpack
+{
+    var a = 0
+    var b = 0
+
+    $a, $b = 1, 2
+    assert $a == 1
+    assert $b == 2
+}
