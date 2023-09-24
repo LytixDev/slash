@@ -502,33 +502,28 @@ static void exec_subscript_assign(Interpreter *interpreter, AssignStmt *stmt)
     func(self, &access_index, &new_value);
 }
 
-static void exec_unpack(Interpreter *interpreter, AssignStmt *stmt)
+static void exec_assign_unpack(Interpreter *interpreter, AssignStmt *stmt)
 {
     SequenceExpr *left = (SequenceExpr *)stmt->var;
     // TODO: add support for list and maps
     if (stmt->value->type != EXPR_SEQUENCE) {
-	report_runtime_error("unpacking only supported for tuples at the moment");
+	report_runtime_error("Unpacking only supported for tuples");
 	ASSERT_NOT_REACHED;
     }
-
     SequenceExpr *right = (SequenceExpr *)stmt->value;
     if (left->seq.size != right->seq.size) {
-	report_runtime_error("unpacking only supported for tuples of the same size at the moment");
+	report_runtime_error("Unpacking only supported for collections of the same size");
 	ASSERT_NOT_REACHED;
     }
 
-    // TODO: make sure l is always EXPR_ACCESS
     LLItem *l = left->seq.head;
     LLItem *r = right->seq.head;
     for (size_t i = 0; i < left->seq.size; i++) {
-        Expr *L = l->value;
-        if (L->type != EXPR_ACCESS)
-            report_runtime_error("Can not assign to literal value");
 	AccessExpr *access = (AccessExpr *)l->value;
-	SlashValue R = eval(interpreter, (Expr *)r->value);
-
-	var_assign(&access->var_name, interpreter->scope, &R);
-
+	if (access->type != EXPR_ACCESS)
+	    report_runtime_error("Can not assign to literal value");
+	SlashValue value = eval(interpreter, (Expr *)r->value);
+	var_assign(&access->var_name, interpreter->scope, &value);
 	l = l->next;
 	r = r->next;
     }
@@ -542,7 +537,7 @@ static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
     }
 
     if (stmt->var->type == EXPR_SEQUENCE) {
-	exec_unpack(interpreter, stmt);
+	exec_assign_unpack(interpreter, stmt);
 	return;
     }
 

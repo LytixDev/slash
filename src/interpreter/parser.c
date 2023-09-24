@@ -101,7 +101,7 @@ static Token *advance(Parser *parser)
 static void backup(Parser *parser)
 {
     if (parser->token_pos == 0)
-        report_parse_err(parser, "internal error: attempted to backup() at pos = 0");
+	report_parse_err(parser, "internal error: attempted to backup() at pos = 0");
     parser->token_pos--;
 }
 
@@ -451,9 +451,9 @@ static Expr *top_level_expr(Parser *parser)
     Expr *expr = expression(parser);
     if (match(parser, t_comma)) {
 	SequenceExpr *seq_expr = sequence(parser, t_newline);
-        /* edge case: don't want top level call to sequence() to consume newline */
-        if (previous(parser)->type == t_newline)
-            backup(parser);
+	/* edge case: don't want top level call to sequence() to consume newline */
+	if (previous(parser)->type == t_newline)
+	    backup(parser);
 	arena_ll_prepend(&seq_expr->seq, expr);
 	return (Expr *)seq_expr;
     }
@@ -470,12 +470,12 @@ static SequenceExpr *sequence(Parser *parser, TokenType terminator)
     SequenceExpr *expr = (SequenceExpr *)expr_alloc(parser->ast_arena, EXPR_SEQUENCE);
     arena_ll_init(parser->ast_arena, &expr->seq);
     do {
-        if (match(parser, terminator))
-            break;
-        ignore(parser, t_newline);
-        arena_ll_append(&expr->seq, expression(parser));
-        if (terminator != t_newline)
-            ignore(parser, t_newline);
+	if (match(parser, terminator))
+	    break;
+	ignore(parser, t_newline);
+	arena_ll_append(&expr->seq, expression(parser));
+	if (terminator != t_newline)
+	    ignore(parser, t_newline);
     } while (!match(parser, terminator) && match(parser, t_comma));
 
     return expr;

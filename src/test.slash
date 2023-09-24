@@ -1,8 +1,1 @@
-# tuple of size 1 
-var a = 0
-var b = 0
-$a, $b = 1, 2
-1,
-1, 2, 3
-(1,)
-(1, 2, 3)
+var a, b = 1, 2
