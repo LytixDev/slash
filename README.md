@@ -89,7 +89,7 @@ var primes = [2, 3, 5, 7, 11, 13]
 var some_primes = $primes[1..4]
 # map
 var social_credit_score = @[ "brage": 10, "eilor": 300 ]
-# tuple: ' "brage", "eilor" '
+# tuple: ("brage", "eilor")
 var people = $social_credit_score.keys()
 ```
 

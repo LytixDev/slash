@@ -31,7 +31,7 @@ typedef enum {
     EXPR_ACCESS,
     EXPR_SUBSCRIPT,
     EXPR_SUBSHELL,
-    EXPR_LIST, // list or tuple
+    EXPR_LIST,
     EXPR_MAP,
     EXPR_METHOD,
     EXPR_SEQUENCE,
@@ -43,6 +43,7 @@ typedef enum {
 typedef enum {
     STMT_EXPRESSION = 0,
     STMT_VAR,
+    STMT_SEQ_VAR,
     STMT_LOOP,
     STMT_ITER_LOOP,
     STMT_IF,
@@ -112,7 +113,6 @@ typedef struct {
 
 typedef struct {
     ExprType type;
-    bool is_list;
     SequenceExpr *exprs; // will be NULL for the empty list
 } ListExpr;
 
@@ -175,6 +175,12 @@ typedef struct {
     StrView name;
     Expr *initializer;
 } VarStmt;
+
+typedef struct {
+    StmtType type;
+    ArenaLL names; // list of variable names as pointers to StrView's
+    Expr *initializer;
+} SeqVarStmt;
 
 typedef struct {
     StmtType type;

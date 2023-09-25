@@ -1,4 +1,7 @@
-var t = ' 1, 2, 3 '
+var t = 1, 2, 3
+assert $t == (1, 2, 3)
+assert $t != (1, 2, 3, 4)
+assert $t[0] == 1 and $t[1] == 2 and $t[2] == 3
 var idx = 0
 loop value in $t {
     # do something
@@ -6,9 +9,22 @@ loop value in $t {
     $idx += 1
 }
 
-assert $t[0] == 1
-
-# tuple holding tuple
+# nested tuple
 {
-    var t = ' 1, 2, '3, 4' '
+    var a = (1, 2, (3, 4))
+    assert $a == 1, 2, (3, 4)
+}
+
+# tuple of size 1 
+var a = 1,
+assert $a == (1,)
+
+# tuple unpack
+{
+    var a = 0
+    var b = 0
+
+    $a, $b = 1, 2
+    assert $a == 1
+    assert $b == 2
 }

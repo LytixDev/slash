@@ -8,3 +8,8 @@ assert $pi != 3
 $pi = 3.1415
 assert $pi == 3.1415
 assert $pi != 3.14
+
+var x, y, hello = 1, 2, "Hello World!"
+assert $x == 1
+assert $y == 2
+assert $hello == "Hello World!"

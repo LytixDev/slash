@@ -48,11 +48,10 @@ static Stmt *redirect_stmt(Parser *parser, Stmt *left);
 static Stmt *cmd_stmt(Parser *parser);
 static Stmt *block(Parser *parser);
 static Stmt *assignment_stmt(Parser *parser);
-static Stmt *expr_stmt(Parser *parser);
 /* exprs */
-static SequenceExpr *sequence(Parser *parser);
-static Expr *argument(Parser *parser);
+static Expr *top_level_expr(Parser *parser);
 static Expr *expression(Parser *parser);
+static SequenceExpr *sequence(Parser *parser, TokenType terminator);
 static Expr *logical_or(Parser *parser);
 static Expr *logical_and(Parser *parser);
 static Expr *equality(Parser *parser);
@@ -71,7 +70,6 @@ static Expr *number(Parser *parser);
 static Expr *range(Parser *parser);
 static Expr *list(Parser *parser);
 static Expr *map(Parser *parser);
-static Expr *tuple(Parser *parser);
 static Expr *grouping(Parser *parser);
 
 
@@ -98,6 +96,13 @@ static Token *advance(Parser *parser)
 	parser->token_pos++;
 
     return token;
+}
+
+static void backup(Parser *parser)
+{
+    if (parser->token_pos == 0)
+	report_parse_err(parser, "internal error: attempted to backup() at pos = 0");
+    parser->token_pos--;
 }
 
 static bool check_single(Parser *parser, TokenType type, int step)
@@ -220,7 +225,6 @@ static void report_err_and_sync(Parser *parser, char *err_msg)
     synchronize(parser);
 }
 
-
 /* grammar functions */
 static void newline(Parser *parser)
 {
@@ -253,11 +257,27 @@ static Stmt *declaration(Parser *parser)
 
 static Stmt *var_decl(Parser *parser)
 {
+    SeqVarStmt *seq_var = NULL;
     /* came from 'var' */
     Token *name = consume(parser, t_ident, "Expected variable name");
+    /* SeqVarStmt */
+    if (match(parser, t_comma)) {
+	seq_var = (SeqVarStmt *)stmt_alloc(parser->ast_arena, STMT_SEQ_VAR);
+	arena_ll_init(parser->ast_arena, &seq_var->names);
+	arena_ll_append(&seq_var->names, &name->lexeme);
+	do {
+	    name = consume(parser, t_ident, "Expected variable name");
+	    arena_ll_append(&seq_var->names, &name->lexeme);
+	} while (match(parser, t_comma));
+    }
+
     consume(parser, t_equal, "Expected variable definition");
-    Expr *initializer = expression(parser);
+    Expr *initializer = top_level_expr(parser);
     expr_promotion(parser);
+    if (seq_var != NULL) {
+	seq_var->initializer = initializer;
+	return (Stmt *)seq_var;
+    }
 
     VarStmt *stmt = (VarStmt *)stmt_alloc(parser->ast_arena, STMT_VAR);
     stmt->name = name->lexeme;
@@ -298,11 +318,7 @@ static Stmt *statement(Parser *parser)
     if (match(parser, t_lbrace))
 	return block(parser);
 
-    // TODO: would be better if it was match()
-    if (check(parser, t_access))
-	return assignment_stmt(parser);
-
-    return expr_stmt(parser);
+    return assignment_stmt(parser);
 }
 
 static Stmt *loop_stmt(Parser *parser)
@@ -313,7 +329,7 @@ static Stmt *loop_stmt(Parser *parser)
 	Token *var_name = previous(parser);
 	consume(parser, t_in, "Expected 'in' keyword to continue loop statement");
 	/* A runtime error will be thrown if expression can not be iterated over */
-	Expr *iterable = expression(parser);
+	Expr *iterable = top_level_expr(parser);
 
 	IterLoopStmt *iter_loop = (IterLoopStmt *)stmt_alloc(parser->ast_arena, STMT_ITER_LOOP);
 	iter_loop->var_name = var_name->lexeme;
@@ -334,7 +350,7 @@ static Stmt *assert_stmt(Parser *parser)
 {
     /* came from 'assert' */
     AssertStmt *stmt = (AssertStmt *)stmt_alloc(parser->ast_arena, STMT_ASSERT);
-    stmt->expr = expression(parser);
+    stmt->expr = top_level_expr(parser);
     expr_promotion(parser);
     return (Stmt *)stmt;
 }
@@ -401,7 +417,7 @@ static Stmt *cmd_stmt(Parser *parser)
 
     stmt->arg_exprs = arena_ll_alloc(parser->ast_arena);
     while (!check_arg_end(parser))
-	arena_ll_append(stmt->arg_exprs, argument(parser));
+	arena_ll_append(stmt->arg_exprs, expression(parser));
 
     return (Stmt *)stmt;
 }
@@ -421,66 +437,62 @@ static Stmt *block(Parser *parser)
     return (Stmt *)stmt;
 }
 
-
-static Stmt *expr_stmt(Parser *parser)
-{
-    ExpressionStmt *stmt = (ExpressionStmt *)stmt_alloc(parser->ast_arena, STMT_EXPRESSION);
-    stmt->expression = expression(parser);
-    expr_promotion(parser);
-    return (Stmt *)stmt;
-}
-
 static Stmt *assignment_stmt(Parser *parser)
 {
-    /* know next is t_access */
-    // TODO: this is a hack
-    size_t pos = parser->token_pos;
-
-    // TODO: throw parse error if not AccessExpr or ItemAccessExpr ?
-    Expr *var = subscript(parser);
+    Expr *expr = top_level_expr(parser);
     if (!match(parser, t_equal, t_plus_equal, t_minus_equal, t_star_equal, t_star_star_equal,
 	       t_slash_equal, t_slash_slash_equal, t_percent_equal)) {
-	/* if next token after access is not an assignment op, then ignore everything we just did */
-	// TODO: can we just return the `var` as an ExpressionStmt ?
-	parser->token_pos = pos;
-	return expr_stmt(parser);
+	ExpressionStmt *stmt = (ExpressionStmt *)stmt_alloc(parser->ast_arena, STMT_EXPRESSION);
+	stmt->expression = expr;
+	expr_promotion(parser);
+	return (Stmt *)stmt;
     }
 
     /* access part of assignment */
     Token *assignment_op = previous(parser);
-    Expr *value = expression(parser);
+    Expr *value = top_level_expr(parser);
     expr_promotion(parser);
 
     AssignStmt *stmt = (AssignStmt *)stmt_alloc(parser->ast_arena, STMT_ASSIGN);
-    stmt->var = var;
+    stmt->var = expr;
     stmt->assignment_op = assignment_op->type;
     stmt->value = value;
     return (Stmt *)stmt;
 }
 
-static SequenceExpr *sequence(Parser *parser)
+static Expr *top_level_expr(Parser *parser)
 {
-    SequenceExpr *expr = (SequenceExpr *)expr_alloc(parser->ast_arena, EXPR_SEQUENCE);
-    arena_ll_init(parser->ast_arena, &expr->seq);
-    do {
-	arena_ll_append(&expr->seq, argument(parser));
-	/* if no comma then we exit */
-	if (!match(parser, t_comma))
-	    break;
-	ignore(parser, t_newline);
-    } while (!check(parser, t_eof));
-
+    Expr *expr = expression(parser);
+    if (match(parser, t_comma)) {
+	SequenceExpr *seq_expr = sequence(parser, t_newline);
+	/* edge case: don't want top level call to sequence() to consume newline */
+	if (previous(parser)->type == t_newline)
+	    backup(parser);
+	arena_ll_prepend(&seq_expr->seq, expr);
+	return (Expr *)seq_expr;
+    }
     return expr;
-}
-
-static Expr *argument(Parser *parser)
-{
-    return expression(parser);
 }
 
 static Expr *expression(Parser *parser)
 {
     return logical_or(parser);
+}
+
+static SequenceExpr *sequence(Parser *parser, TokenType terminator)
+{
+    SequenceExpr *expr = (SequenceExpr *)expr_alloc(parser->ast_arena, EXPR_SEQUENCE);
+    arena_ll_init(parser->ast_arena, &expr->seq);
+    do {
+	if (match(parser, terminator))
+	    break;
+	ignore(parser, t_newline);
+	arena_ll_append(&expr->seq, expression(parser));
+	if (terminator != t_newline)
+	    ignore(parser, t_newline);
+    } while (!match(parser, terminator) && match(parser, t_comma));
+
+    return expr;
 }
 
 static Expr *logical_or(Parser *parser)
@@ -656,8 +668,7 @@ static Expr *single(Parser *parser)
 	expr->method_name = method_name->lexeme;
 	consume(parser, t_lparen, "expected left paren");
 	if (!match(parser, t_rparen)) {
-	    expr->args = sequence(parser);
-	    consume(parser, t_rparen, "expected right paren");
+	    expr->args = sequence(parser, t_rparen);
 	} else {
 	    expr->args = NULL;
 	}
@@ -719,8 +730,6 @@ static Expr *primary(Parser *parser)
 	return list(parser);
     if (match(parser, t_at_lbracket))
 	return map(parser);
-    if (match(parser, t_qoute))
-	return tuple(parser);
     if (match(parser, t_lparen))
 	return grouping(parser);
 
@@ -777,12 +786,10 @@ static Expr *list(Parser *parser)
 {
     /* came from '[' */
     ListExpr *expr = (ListExpr *)expr_alloc(parser->ast_arena, EXPR_LIST);
-    expr->is_list = true;
 
     /* if next is not ']', parse list initializer */
     if (!match(parser, t_rbracket)) {
-	expr->exprs = sequence(parser);
-	consume(parser, t_rbracket, "Unterminated list initializer: expected ']'");
+	expr->exprs = sequence(parser, t_rbracket);
     } else {
 	expr->exprs = NULL;
     }
@@ -810,30 +817,19 @@ static Expr *map(Parser *parser)
     return (Expr *)expr;
 }
 
-static Expr *tuple(Parser *parser)
-{
-    /* came from ''' */
-    ListExpr *expr = (ListExpr *)expr_alloc(parser->ast_arena, EXPR_LIST);
-    expr->is_list = false;
-
-    /* if next is not ''', parse list initializer */
-    if (!match(parser, t_qoute)) {
-	expr->exprs = sequence(parser);
-	consume(parser, t_qoute, "Unterminated list initializer: expected ']'");
-    } else {
-	expr->exprs = NULL;
-    }
-
-    return (Expr *)expr;
-}
-
 static Expr *grouping(Parser *parser)
 {
     /* came from '(' */
-    GroupingExpr *expr = (GroupingExpr *)expr_alloc(parser->ast_arena, EXPR_GROUPING);
-    expr->expr = expression(parser);
-    consume(parser, t_rparen, "Expected ')' after expression");
-    return (Expr *)expr;
+    Expr *expr = expression(parser);
+    if (match(parser, t_comma)) {
+	SequenceExpr *seq_expr = sequence(parser, t_rparen);
+	arena_ll_prepend(&seq_expr->seq, expr);
+	return (Expr *)seq_expr;
+    }
+    GroupingExpr *grouping = (GroupingExpr *)expr_alloc(parser->ast_arena, EXPR_GROUPING);
+    grouping->expr = expr;
+    consume(parser, t_rparen, "Expected ')' after grouping expression");
+    return (Expr *)grouping;
 }
 
 StmtsOrErr parse(Arena *ast_arena, ArrayList *tokens, char *input)

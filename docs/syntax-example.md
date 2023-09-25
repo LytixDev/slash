@@ -31,7 +31,7 @@ var popped = l.pop()  # every type also has builtin methods
 $popped = l.pop(0)  # method overloading
 
 # tuples
-var t  = '1, 2, 3'
+var t  = (1, 2, 3) # 1, 2, 3 without the parentheses is also valid
 
 # map
 var m = @["key": "value"]
@@ -110,40 +110,6 @@ var sum2 = $sum - 0xff	# subtracting to numbers
 var concat_str = "Hello " + "World!"
 var concat_list = [1, 2, 3] + [4, 5, 6]
 ```
-
-
-# unfinished: Redirection
-"<" and ">" are out of the picture as they are used for comparison. Instead, SLASH introduces the `rd` builtin command which replaces all redirections.
-
-```
-curl https://lytix.dev/ | rd index.html
-```
-
-is equivalent to the classic
-```
-curl https://lytix.dev/ > index.html
-```
-
-the common idiom
-```
-... > /dev/null
-```
-
-becomes
-```
-... | rd /dev/null
-```
-
-
-# unfinished: Mathematical Evaluation
-Where SLASH shines (hopefully).
-I want doing more "complex" math to feel super comfy and be really easy to do. I often open a python repl just to do basic maths. I want to be able to do math directly in the shell.
-so far I think syntax should be:
-```
-(( math_expressions ))
-```
-The parsing rules inside a math expression will be somewhat different than the regular parsing rules. This will hopefully give flexibility to make the math expression as comfy as possible while also interfacing with the rest of the language.
-
 
 # Subshell / Command Substitution
 Statements inside parentheses are immediately evaluated. Pretty much identical to POSIX sh `$(...)`.

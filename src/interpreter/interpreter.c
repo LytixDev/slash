@@ -310,20 +310,20 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
     return (SlashValue){ .type = SLASH_STR, .str = { .view = str_view, .size = size } };
 }
 
-static SlashValue eval_tuple(Interpreter *interpreter, ListExpr *expr)
+static SlashValue eval_tuple(Interpreter *interpreter, SequenceExpr *expr)
 {
     SlashTuple *tuple = (SlashTuple *)gc_alloc(interpreter, SLASH_OBJ_TUPLE);
     SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)tuple };
-    /* empty initializer -> size is 0 */
-    if (expr->exprs == NULL) {
+    // TODO: possible?
+    if (expr->seq.size == 0) {
 	slash_tuple_init(tuple, 0);
 	return value;
     }
 
-    slash_tuple_init(tuple, expr->exprs->seq.size);
+    slash_tuple_init(tuple, expr->seq.size);
     size_t i = 0;
     LLItem *item;
-    ARENA_LL_FOR_EACH(&expr->exprs->seq, item)
+    ARENA_LL_FOR_EACH(&expr->seq, item)
     {
 	SlashValue element_value = eval(interpreter, item->value);
 	tuple->values[i++] = element_value;
@@ -334,9 +334,6 @@ static SlashValue eval_tuple(Interpreter *interpreter, ListExpr *expr)
 
 static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
 {
-    if (!expr->is_list)
-	return eval_tuple(interpreter, expr);
-
     SlashList *list = (SlashList *)gc_alloc(interpreter, SLASH_OBJ_LIST);
     slash_list_init(list);
     SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)list };
@@ -438,8 +435,36 @@ static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
 
 static void exec_var(Interpreter *interpreter, VarStmt *stmt)
 {
+    /* Make sure variable is not defined already */
+    ScopeAndValue current = var_get(interpreter->scope, &stmt->name);
+    if (current.scope == interpreter->scope)
+	report_runtime_error("Variable redefinition");
+
     SlashValue value = eval(interpreter, stmt->initializer);
     var_define(interpreter->scope, &stmt->name, &value);
+}
+
+static void exec_seq_var(Interpreter *interpreter, SeqVarStmt *stmt)
+{
+    SequenceExpr *initializer = (SequenceExpr *)stmt->initializer;
+    if (initializer->type != EXPR_SEQUENCE)
+	report_runtime_error("Multiple variable declaration only supported for tuples");
+
+    if (stmt->names.size != initializer->seq.size)
+	report_runtime_error("Unpacking only supported for collections of the same size");
+
+    LLItem *l = stmt->names.head;
+    LLItem *r = initializer->seq.head;
+    for (size_t i = 0; i < stmt->names.size; i++) {
+	StrView *name = l->value;
+	ScopeAndValue current = var_get(interpreter->scope, name);
+	if (current.scope == interpreter->scope)
+	    report_runtime_error("Variable redefinition");
+	SlashValue value = eval(interpreter, (Expr *)r->value);
+	var_define(interpreter->scope, name, &value);
+	l = l->next;
+	r = r->next;
+    }
 }
 
 static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
@@ -500,10 +525,42 @@ static void exec_subscript_assign(Interpreter *interpreter, AssignStmt *stmt)
     func(self, &access_index, &new_value);
 }
 
+static void exec_assign_unpack(Interpreter *interpreter, AssignStmt *stmt)
+{
+    SequenceExpr *left = (SequenceExpr *)stmt->var;
+    // TODO: add support for list and maps
+    if (stmt->value->type != EXPR_SEQUENCE) {
+	report_runtime_error("Unpacking only supported for tuples");
+	ASSERT_NOT_REACHED;
+    }
+    SequenceExpr *right = (SequenceExpr *)stmt->value;
+    if (left->seq.size != right->seq.size) {
+	report_runtime_error("Unpacking only supported for collections of the same size");
+	ASSERT_NOT_REACHED;
+    }
+
+    LLItem *l = left->seq.head;
+    LLItem *r = right->seq.head;
+    for (size_t i = 0; i < left->seq.size; i++) {
+	AccessExpr *access = (AccessExpr *)l->value;
+	if (access->type != EXPR_ACCESS)
+	    report_runtime_error("Can not assign to literal value");
+	SlashValue value = eval(interpreter, (Expr *)r->value);
+	var_assign(&access->var_name, interpreter->scope, &value);
+	l = l->next;
+	r = r->next;
+    }
+}
+
 static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
 {
     if (stmt->var->type == EXPR_SUBSCRIPT) {
 	exec_subscript_assign(interpreter, stmt);
+	return;
+    }
+
+    if (stmt->var->type == EXPR_SEQUENCE) {
+	exec_assign_unpack(interpreter, stmt);
 	return;
     }
 
@@ -845,6 +902,9 @@ static SlashValue eval(Interpreter *interpreter, Expr *expr)
     case EXPR_METHOD:
 	return eval_method(interpreter, (MethodExpr *)expr);
 
+    case EXPR_SEQUENCE:
+	return eval_tuple(interpreter, (SequenceExpr *)expr);
+
     case EXPR_GROUPING:
 	return eval_grouping(interpreter, (GroupingExpr *)expr);
 
@@ -863,6 +923,10 @@ static void exec(Interpreter *interpreter, Stmt *stmt)
     switch (stmt->type) {
     case STMT_VAR:
 	exec_var(interpreter, (VarStmt *)stmt);
+	break;
+
+    case STMT_SEQ_VAR:
+	exec_seq_var(interpreter, (SeqVarStmt *)stmt);
 	break;
 
     case STMT_EXPRESSION:

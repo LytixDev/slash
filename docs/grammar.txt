@@ -20,7 +20,8 @@ expr_promotion  -> newline | "}" | "&&" | "||" ;
 declaration     -> var_declaration
                 |  and_or ;
 
-var_declaration -> "var" IDENTIFIER "=" expression newline ;
+var_declaration -> "var" IDENTIFIER "=" top_level_expr newline
+                |  "var" IDENTIFIER ( "," IDENTIFIER )* "=" top_level_expr newline ;
 
 and_or          -> statement ( ( "&&" | "||" ) statement )* ;
 
@@ -35,9 +36,9 @@ statement       -> loop_stmt
                 |  assignment_stmt
                 |  expr_stmt ;
 
-loop_stmt       -> "loop" ( IDENTIFIER "in" )? expression block ;
+loop_stmt       -> "loop" ( IDENTIFIER "in" )? top_level_expr block ;
 
-assert_stmt     -> "assert" expression newline_or_block_end ;
+assert_stmt     -> "assert" top_level_expr newline_or_block_end ;
 
 if_stmt         -> "if" expression block ( ( "elif" expression block ) | ( "else" block ) )? ;
 
@@ -45,21 +46,22 @@ pipeline_stmt   -> cmd_stmt ( "|" pipeline_stmt )* ;
 
 redirect_stmt   -> cmd_stmt ( ">" | ">>" | "<" ) expression ;
 
-cmd_stmt        -> SHIDENT argument* ;
+cmd_stmt        -> SHIDENT expression* ;
 
 block           -> "{" declaration* "}" ;
 
-assignment_stmt -> subscript ( "=" | "+=" | "-=" | "*=" | "**=" | "%=" | "%=" ) expression newline_or_block_end ;
+assignment_stmt -> top_level_expr ( "=" | "+=" | "-=" | "*=" | "**=" | "%=" | "%=" ) top_level_expr newline_or_block_end ;
 
-expr_stmt       -> expression newline_or_block_end ;
+expr_stmt       -> top_level_expr newline_or_block_end ;
 
 
 
 /* expressions */
 
-sequence_expr   -> ( argument ( "," argument )* )? ;
+top_level_expr  -> expression
+                |  sequence_expr ;
 
-argument        -> expression ;
+sequence_expr   -> ( expression ( "," expression NEWLINE? )* )? ;
 
 expression      -> logical_or ;
 
@@ -117,6 +119,7 @@ list            -> "[" sequence_expr "]" ;
 
 map             -> "@[" ( expression ":" expression "," )* "]"
 
-tuple           -> "'" sequence_expr "'" ;
+tuple           -> sequence_expr
+                |  "(" sequence_expr ")" ;
 
 grouping        -> "(" expression ")" ;

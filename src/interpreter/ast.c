@@ -31,9 +31,9 @@ const size_t expr_size_table[] = {
 };
 
 const size_t stmt_size_table[] = {
-    sizeof(ExpressionStmt), sizeof(VarStmt),	sizeof(LoopStmt),   sizeof(IterLoopStmt),
-    sizeof(IfStmt),	    sizeof(CmdStmt),	sizeof(AssignStmt), sizeof(BlockStmt),
-    sizeof(PipelineStmt),   sizeof(AssignStmt), sizeof(BinaryStmt),
+    sizeof(ExpressionStmt), sizeof(VarStmt),	  sizeof(SeqVarStmt), sizeof(LoopStmt),
+    sizeof(IterLoopStmt),   sizeof(IfStmt),	  sizeof(CmdStmt),    sizeof(AssignStmt),
+    sizeof(BlockStmt),	    sizeof(PipelineStmt), sizeof(AssignStmt), sizeof(BinaryStmt),
 };
 
 char *expr_type_str_map[EXPR_ENUM_COUNT] = {
@@ -43,8 +43,9 @@ char *expr_type_str_map[EXPR_ENUM_COUNT] = {
 };
 
 char *stmt_type_str_map[STMT_ENUM_COUNT] = {
-    "STMT_EXPRESSION", "STMT_VAR",   "STMT_LOOP",     "STMT_ITER_LOOP", "STMT_IF",     "STMT_CMD",
-    "STMT_ASSIGN",     "STMT_BLOCK", "STMT_PIPELINE", "STMT_ASSERT",	"STMT_BINARY",
+    "STMT_EXPRESSION", "STMT_VAR",	"STMT_SEQ_VAR", "STMT_LOOP",
+    "STMT_ITER_LOOP",  "STMT_IF",	"STMT_CMD",	"STMT_ASSIGN",
+    "STMT_BLOCK",      "STMT_PIPELINE", "STMT_ASSERT",	"STMT_BINARY",
 };
 
 
@@ -206,6 +207,18 @@ static void ast_print_var(VarStmt *stmt)
     ast_print_expr(stmt->initializer);
 }
 
+static void ast_print_seq_var(SeqVarStmt *stmt)
+{
+    LLItem *item;
+    ARENA_LL_FOR_EACH(&stmt->names, item)
+    {
+	str_view_print(*(StrView *)item->value);
+	printf(", ");
+    }
+    printf(" = ");
+    ast_print_expr(stmt->initializer);
+}
+
 static void ast_print_cmd(CmdStmt *stmt)
 {
     str_view_print(stmt->cmd_name);
@@ -360,6 +373,10 @@ static void ast_print_stmt(Stmt *stmt)
 
     case STMT_VAR:
 	ast_print_var((VarStmt *)stmt);
+	break;
+
+    case STMT_SEQ_VAR:
+	ast_print_seq_var((SeqVarStmt *)stmt);
 	break;
 
     case STMT_CMD:
