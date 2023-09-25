@@ -139,7 +139,6 @@ static bool check_either(Parser *parser, int step, unsigned int n, ...)
 #define check_arg_end(parser)                                                                  \
     check(parser, t_newline, t_eof, t_pipe, t_pipe_pipe, t_greater, t_greater_greater, t_less, \
 	  t_anp, t_anp_anp, t_rparen, t_rbrace)
-#define check_top_level_seq_end(parser) check(parser, t_newline, t_equal)
 
 static Token *consume(Parser *parser, TokenType expected, char *err_msg)
 {
@@ -226,7 +225,6 @@ static void report_err_and_sync(Parser *parser, char *err_msg)
     synchronize(parser);
 }
 
-
 /* grammar functions */
 static void newline(Parser *parser)
 {
@@ -259,11 +257,27 @@ static Stmt *declaration(Parser *parser)
 
 static Stmt *var_decl(Parser *parser)
 {
+    SeqVarStmt *seq_var = NULL;
     /* came from 'var' */
     Token *name = consume(parser, t_ident, "Expected variable name");
+    /* SeqVarStmt */
+    if (match(parser, t_comma)) {
+	seq_var = (SeqVarStmt *)stmt_alloc(parser->ast_arena, STMT_SEQ_VAR);
+	arena_ll_init(parser->ast_arena, &seq_var->names);
+	arena_ll_append(&seq_var->names, &name->lexeme);
+	do {
+	    name = consume(parser, t_ident, "Expected variable name");
+	    arena_ll_append(&seq_var->names, &name->lexeme);
+	} while (match(parser, t_comma));
+    }
+
     consume(parser, t_equal, "Expected variable definition");
     Expr *initializer = top_level_expr(parser);
     expr_promotion(parser);
+    if (seq_var != NULL) {
+	seq_var->initializer = initializer;
+	return (Stmt *)seq_var;
+    }
 
     VarStmt *stmt = (VarStmt *)stmt_alloc(parser->ast_arena, STMT_VAR);
     stmt->name = name->lexeme;

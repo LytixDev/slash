@@ -20,7 +20,8 @@ expr_promotion  -> newline | "}" | "&&" | "||" ;
 declaration     -> var_declaration
                 |  and_or ;
 
-var_declaration -> "var" IDENTIFIER "=" top_level_expr newline ;
+var_declaration -> "var" IDENTIFIER "=" top_level_expr newline
+                |  "var" IDENTIFIER ( "," IDENTIFIER )* "=" top_level_expr newline ;
 
 and_or          -> statement ( ( "&&" | "||" ) statement )* ;
 

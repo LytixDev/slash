@@ -444,6 +444,29 @@ static void exec_var(Interpreter *interpreter, VarStmt *stmt)
     var_define(interpreter->scope, &stmt->name, &value);
 }
 
+static void exec_seq_var(Interpreter *interpreter, SeqVarStmt *stmt)
+{
+    SequenceExpr *initializer = (SequenceExpr *)stmt->initializer;
+    if (initializer->type != EXPR_SEQUENCE)
+	report_runtime_error("Multiple variable declaration only supported for tuples");
+
+    if (stmt->names.size != initializer->seq.size)
+	report_runtime_error("Unpacking only supported for collections of the same size");
+
+    LLItem *l = stmt->names.head;
+    LLItem *r = initializer->seq.head;
+    for (size_t i = 0; i < stmt->names.size; i++) {
+	StrView *name = l->value;
+	ScopeAndValue current = var_get(interpreter->scope, name);
+	if (current.scope == interpreter->scope)
+	    report_runtime_error("Variable redefinition");
+	SlashValue value = eval(interpreter, (Expr *)r->value);
+	var_define(interpreter->scope, name, &value);
+	l = l->next;
+	r = r->next;
+    }
+}
+
 static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
 {
     exec_program_stub(interpreter, stmt);
@@ -900,6 +923,10 @@ static void exec(Interpreter *interpreter, Stmt *stmt)
     switch (stmt->type) {
     case STMT_VAR:
 	exec_var(interpreter, (VarStmt *)stmt);
+	break;
+
+    case STMT_SEQ_VAR:
+	exec_seq_var(interpreter, (SeqVarStmt *)stmt);
 	break;
 
     case STMT_EXPRESSION:

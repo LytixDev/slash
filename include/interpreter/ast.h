@@ -43,6 +43,7 @@ typedef enum {
 typedef enum {
     STMT_EXPRESSION = 0,
     STMT_VAR,
+    STMT_SEQ_VAR,
     STMT_LOOP,
     STMT_ITER_LOOP,
     STMT_IF,
@@ -174,6 +175,12 @@ typedef struct {
     StrView name;
     Expr *initializer;
 } VarStmt;
+
+typedef struct {
+    StmtType type;
+    ArenaLL names; // list of variable names as pointers to StrView's
+    Expr *initializer;
+} SeqVarStmt;
 
 typedef struct {
     StmtType type;
