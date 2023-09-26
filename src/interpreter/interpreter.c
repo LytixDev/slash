@@ -103,7 +103,7 @@ static char **cmd_args_fmt(Interpreter *interpreter, CmdStmt *stmt)
 static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt)
 {
     char **argv_owning = cmd_args_fmt(interpreter, stmt);
-    int exit_code = exec_program(interpreter->stream_ctx, argv_owning);
+    int exit_code = exec_program(&interpreter->stream_ctx, argv_owning);
     interpreter->prev_exit_code = exit_code;
     free(argv_owning);
 }
@@ -289,7 +289,7 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
     int fd[2];
     pipe(fd);
 
-    StreamCtx *stream_ctx = interpreter->stream_ctx;
+    StreamCtx *stream_ctx = &interpreter->stream_ctx;
     int original_write_fd = stream_ctx->write_fd;
     /* set the write fd to the newly created pipe */
     stream_ctx->write_fd = fd[STREAM_WRITE_END];
@@ -430,7 +430,9 @@ static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
     SlashValue value = eval(interpreter, stmt->expression);
     TraitPrint print_func = trait_print[value.type];
     print_func(&value);
-    // putchar('\n');
+    /* edge case: if last char printed was a newline then we don't bother printing one */
+    if (!(value.type == SLASH_STR && value.str.view[value.str.size - 1] == '\n'))
+	putchar('\n');
 }
 
 static void exec_var(Interpreter *interpreter, VarStmt *stmt)
@@ -624,7 +626,7 @@ static void exec_pipeline(Interpreter *interpreter, PipelineStmt *stmt)
     int fd[2];
     pipe(fd);
 
-    StreamCtx *stream_ctx = interpreter->stream_ctx;
+    StreamCtx *stream_ctx = &interpreter->stream_ctx;
     /* store a copy of the final write file descriptor */
     int final_out_fd = stream_ctx->write_fd;
 
@@ -833,7 +835,7 @@ static void exec_redirect(Interpreter *interpreter, BinaryStmt *stmt)
     char file_name[value.str.size + 1];
     str_view_to_cstr(value.str, file_name);
 
-    StreamCtx *stream_ctx = interpreter->stream_ctx;
+    StreamCtx *stream_ctx = &interpreter->stream_ctx;
     int og_read = stream_ctx->read_fd;
     int og_write = stream_ctx->write_fd;
 
@@ -975,33 +977,46 @@ static void exec(Interpreter *interpreter, Stmt *stmt)
     }
 }
 
-
-int interpret(ArrayList *statements)
+void interpreter_init(Interpreter *interpreter)
 {
-    Interpreter interpreter = { 0 };
-    m_arena_init_dynamic(&interpreter.arena, 1, 16384);
+    m_arena_init_dynamic(&interpreter->arena, 1, 16384);
 
-    scope_init_global(&interpreter.globals, &interpreter.arena);
-    interpreter.scope = &interpreter.globals;
+    scope_init_global(&interpreter->globals, &interpreter->arena);
+    interpreter->scope = &interpreter->globals;
 
-    linkedlist_init(&interpreter.gc_objs, sizeof(SlashObj *));
-    arraylist_init(&interpreter.gc_gray_stack, sizeof(SlashObj *));
-    interpreter.obj_alloced_since_next_gc = 0;
+    linkedlist_init(&interpreter->gc_objs, sizeof(SlashObj *));
+    arraylist_init(&interpreter->gc_gray_stack, sizeof(SlashObj *));
+    interpreter->obj_alloced_since_next_gc = 0;
 
     /* init default StreamCtx */
     StreamCtx stream_ctx = { .read_fd = STDIN_FILENO, .write_fd = STDOUT_FILENO };
     arraylist_init(&stream_ctx.active_fds, sizeof(int));
-    interpreter.stream_ctx = &stream_ctx;
+    interpreter->stream_ctx = stream_ctx;
+}
 
+void interpreter_free(Interpreter *interpreter)
+{
+    gc_collect_all(&interpreter->gc_objs);
+
+    scope_destroy(&interpreter->globals);
+    arraylist_free(&interpreter->stream_ctx.active_fds);
+    linkedlist_free(&interpreter->gc_objs);
+    arraylist_free(&interpreter->gc_gray_stack);
+}
+
+int interpreter_run(Interpreter *interpreter, ArrayList *statements)
+{
     for (size_t i = 0; i < statements->size; i++)
-	exec(&interpreter, *(Stmt **)arraylist_get(statements, i));
+	exec(interpreter, *(Stmt **)arraylist_get(statements, i));
 
-    gc_collect_all(&interpreter.gc_objs);
+    return interpreter->prev_exit_code;
+}
 
-    scope_destroy(&interpreter.globals);
-    arraylist_free(&stream_ctx.active_fds);
-    linkedlist_free(&interpreter.gc_objs);
-    arraylist_free(&interpreter.gc_gray_stack);
-
+int interpret(ArrayList *statements)
+{
+    Interpreter interpreter = { 0 };
+    interpreter_init(&interpreter);
+    interpreter_run(&interpreter, statements);
+    interpreter_free(&interpreter);
     return interpreter.prev_exit_code;
 }

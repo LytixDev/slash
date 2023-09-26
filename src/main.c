@@ -20,6 +20,7 @@
 #include <time.h>
 #endif /* DEBUG_PERF */
 
+#include "interactive/prompt.h"
 #include "interpreter/ast.h"
 #include "interpreter/error.h"
 #include "interpreter/interpreter.h"
@@ -30,15 +31,54 @@
 #define NICC_IMPLEMENTATION
 #include "nicc/nicc.h"
 
-#define MAX_INPUT_SIZE 4096
+
+void interactive(void)
+{
+    Interpreter interpreter = { 0 };
+    interpreter_init(&interpreter);
+    Arena ast_arena;
+    ast_arena_init(&ast_arena);
+    Prompt prompt;
+    prompt_init(&prompt, "-> ");
+
+    while (prompt_run(&prompt)) {
+	Lexer lex_result = lex(prompt.buf, prompt.buf_len);
+	if (lex_result.had_error) {
+	    m_arena_clear(&ast_arena);
+	    arraylist_free(&lex_result.tokens);
+	    continue;
+	}
+
+	StmtsOrErr stmts = parse(&ast_arena, &lex_result.tokens, prompt.buf);
+	if (stmts.had_error) {
+	    m_arena_clear(&ast_arena);
+	    arraylist_free(&lex_result.tokens);
+	    arraylist_free(&stmts.stmts);
+	    continue;
+	}
+
+	interpreter_run(&interpreter, &stmts.stmts);
+
+	m_arena_clear(&ast_arena);
+	arraylist_free(&lex_result.tokens);
+	arraylist_free(&stmts.stmts);
+    }
+
+    ast_arena_release(&ast_arena);
+    interpreter_free(&interpreter);
+    prompt_free(&prompt);
+}
 
 
 int main(int argc, char **argv)
 {
+    if (argc == 1) {
+	interactive();
+	return 0;
+    }
+
     int exit_code;
-    char *file_path = "src/test.slash";
-    if (argc > 1)
-	file_path = argv[1];
+    char *file_path = argv[1];
 
     struct stat st;
     if (stat(file_path, &st) != 0) {
