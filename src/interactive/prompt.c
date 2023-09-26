@@ -16,18 +16,18 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "interactive/prompt.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <termios.h>
 #include <unistd.h>
 
-#include "interactive/prompt.h"
-
-#define cursor_right(n) printf("\033[%zuC", (n))
-#define cursor_left(n) printf("\033[%zuD", (n))
-#define cursor_goto(x) printf("\033[%zu", (x))
+#define cursor_right(n) printf("\033[%zuC", (size_t)(n))
+#define cursor_left(n) printf("\033[%zuD", (size_t)(n))
+#define cursor_goto(x) printf("\033[%zu", (size_t)(x))
 #define flush_line() printf("\33[2K\r")
+
 
 typedef enum {
     KEY_INVALID = -1,
@@ -40,6 +40,7 @@ typedef enum {
 
     KEY_BACKSPACE = 127
 } PromptKey;
+
 
 static void termconf_begin(Prompt *prompt)
 {
@@ -71,11 +72,7 @@ static void prompt_show(Prompt *prompt)
 /* returns the type of arrow consumed from the terminal input buffer */
 static PromptKey get_arrow_type(void)
 {
-    /*
-       Arrow keys takes up three chars in the buffer.
-       Only last char codes for up or down, so consume
-       second char value.
-     */
+    /* in ASCII arrows are determined by three chars were the final determines the arrow type */
     if (getchar() == KEY_ARROW_2)
 	return (PromptKey)getchar();
 
@@ -84,6 +81,74 @@ static PromptKey get_arrow_type(void)
     return KEY_INVALID;
 }
 
+static void prompt_buf_ensure_capacity(Prompt *prompt)
+{
+    /* -1 because we always have to have space for the sentinel null byte */
+    if (prompt->buf_len >= prompt->buf_cap - 1) {
+	prompt->buf_cap *= 2;
+	printf("\nREALLOC\n\n");
+	prompt->buf = realloc(prompt->buf, prompt->buf_cap);
+    }
+}
+
+static void prompt_buf_append(Prompt *prompt, char c)
+{
+    prompt_buf_ensure_capacity(prompt);
+    prompt->buf[prompt->buf_len++] = c;
+    prompt->buf[prompt->buf_len] = 0;
+    prompt->cursor_pos++;
+}
+
+static void prompt_buf_remove_at_cursor(Prompt *prompt)
+{
+    char tmp[prompt->buf_len];
+    strncpy(tmp, prompt->buf, prompt->cursor_pos - 1);
+    strcpy(tmp + prompt->cursor_pos - 1, prompt->buf + prompt->cursor_pos);
+    strcpy(prompt->buf, tmp);
+}
+
+static void prompt_buf_insert_at_cursor(Prompt *prompt, char c)
+{
+    /* ensure enough capacity for 'c' */
+    prompt_buf_ensure_capacity(prompt);
+
+    char tmp[prompt->buf_len];
+    strncpy(tmp, prompt->buf, prompt->cursor_pos);
+    tmp[prompt->cursor_pos] = c;
+    strcpy(tmp + prompt->cursor_pos + 1, prompt->buf + prompt->cursor_pos);
+    strcpy(prompt->buf, tmp);
+
+    prompt->cursor_pos++;
+    prompt->buf_len++;
+    prompt_buf_ensure_capacity(prompt);
+    prompt->buf[prompt->buf_len] = 0;
+}
+
+static void handle_backspace(Prompt *prompt)
+{
+    /* ignore backspace leftmost position */
+    if (prompt->cursor_pos == 0)
+	return;
+
+    prompt_buf_remove_at_cursor(prompt);
+    prompt->cursor_pos--;
+    prompt->buf_len--;
+    prompt->buf[prompt->buf_len] = 0;
+}
+
+static void handle_arrow(Prompt *prompt)
+{
+    PromptKey arrow = get_arrow_type();
+    if (arrow == KEY_ARROW_LEFT && prompt->cursor_pos != 0) {
+	cursor_left(1);
+	prompt->cursor_pos--;
+    } else if (arrow == KEY_ARROW_RIGHT && prompt->cursor_pos != prompt->buf_len) {
+	cursor_right(1);
+	prompt->cursor_pos++;
+    }
+}
+
+
 void prompt_run(Prompt *prompt)
 {
     prompt_reset(prompt);
@@ -91,39 +156,34 @@ void prompt_run(Prompt *prompt)
     char ch;
     while (EOF != (ch = getchar()) && ch != '\n') {
 	switch (ch) {
-	case KEY_BACKSPACE: {
-	    if (prompt->cursor_pos != 0) {
-		prompt->cursor_pos--;
-		prompt->buf_len--;
-	    }
-	} break;
+	case KEY_BACKSPACE:
+	    handle_backspace(prompt);
+	    break;
 
-	case KEY_ARROW_1: {
-	    PromptKey arrow = get_arrow_type();
-	    if (arrow == KEY_ARROW_LEFT) {
-		cursor_left((size_t)1);
-		prompt->cursor_pos--;
-	    } else if (arrow == KEY_ARROW_RIGHT) {
-		cursor_right((size_t)1);
-		prompt->cursor_pos++;
-	    }
-	} break;
+	case KEY_ARROW_1:
+	    handle_arrow(prompt);
+	    break;
+
+	default:
+	    if (prompt->cursor_pos == prompt->buf_len)
+		prompt_buf_append(prompt, ch);
+	    else
+		prompt_buf_insert_at_cursor(prompt, ch);
 	}
 
-	prompt->buf[prompt->buf_len++] = ch;
-	prompt->cursor_pos++;
 	prompt_show(prompt);
     }
 
     putchar('\n');
-    prompt->buf[prompt->buf_len++] = EOF;
+    prompt_buf_append(prompt, '\n');
+    prompt_buf_append(prompt, EOF);
 }
 
 void prompt_reset(Prompt *prompt)
 {
-    memset(prompt->buf, 0, prompt->buf_cap);
     prompt->cursor_pos = 0;
     prompt->buf_len = 0;
+    prompt->buf[0] = 0;
 }
 
 

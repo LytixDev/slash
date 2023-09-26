@@ -21,11 +21,6 @@
 #include <stdio.h>
 #include <termios.h>
 
-/* types */
-// struct termconf_t {
-//     struct termios original;
-//     struct termios new;
-// };
 
 typedef struct {
     char *buf;

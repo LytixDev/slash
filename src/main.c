@@ -40,12 +40,12 @@ void interactive(void)
     Arena ast_arena;
     ast_arena_init(&ast_arena);
     Prompt prompt;
-    prompt_init(&prompt, "->");
+    prompt_init(&prompt, "-> ");
 
 
     do {
 	prompt_run(&prompt);
-	if (prompt.buf[0] == 0)
+	if (prompt.buf[0] == '0')
 	    break;
 
 	Lexer lex_result = lex(prompt.buf, prompt.buf_len);
