@@ -40,9 +40,13 @@ typedef struct {
     size_t obj_alloced_since_next_gc;
 
     int prev_exit_code;
-    StreamCtx *stream_ctx;
+    StreamCtx stream_ctx;
 } Interpreter;
 
+
+void interpreter_init(Interpreter *interpreter);
+void interpreter_free(Interpreter *interpreter);
+int interpreter_run(Interpreter *interpreter, ArrayList *statements);
 
 int interpret(ArrayList *statements);
 

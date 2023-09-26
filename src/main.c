@@ -20,6 +20,7 @@
 #include <time.h>
 #endif /* DEBUG_PERF */
 
+#include "interactive/prompt.h"
 #include "interpreter/ast.h"
 #include "interpreter/error.h"
 #include "interpreter/interpreter.h"
@@ -32,9 +33,42 @@
 
 #define MAX_INPUT_SIZE 4096
 
+void interactive(void)
+{
+    Interpreter interpreter = { 0 };
+    interpreter_init(&interpreter);
+    Arena ast_arena;
+    ast_arena_init(&ast_arena);
+    Prompt prompt;
+    prompt_init(&prompt, "->");
+
+
+    do {
+	prompt_run(&prompt);
+	if (prompt.buf[0] == 0)
+	    break;
+
+	Lexer lex_result = lex(prompt.buf, prompt.buf_len);
+	StmtsOrErr stmts = parse(&ast_arena, &lex_result.tokens, prompt.buf);
+	int exit_code = interpreter_run(&interpreter, &stmts.stmts);
+	m_arena_clear(&ast_arena);
+	arraylist_free(&stmts.stmts);
+	arraylist_free(&lex_result.tokens);
+    } while (1);
+
+    ast_arena_release(&ast_arena);
+    interpreter_free(&interpreter);
+    prompt_free(&prompt);
+}
+
 
 int main(int argc, char **argv)
 {
+    if (argc == 1) {
+	interactive();
+	return 0;
+    }
+
     int exit_code;
     char *file_path = "src/test.slash";
     if (argc > 1)
