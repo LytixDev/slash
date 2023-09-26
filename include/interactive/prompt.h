@@ -18,6 +18,7 @@
 #ifndef PROMPT_H
 #define PROMPT_H
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <termios.h>
 
@@ -36,7 +37,8 @@ typedef struct {
 void prompt_init(Prompt *prompt, char *ps1);
 void prompt_free(Prompt *prompt);
 
-void prompt_run(Prompt *prompt);
+/* returns true if interpreter shall continue else false */
+bool prompt_run(Prompt *prompt);
 void prompt_reset(Prompt *prompt);
 
 

@@ -16,12 +16,14 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "interactive/prompt.h"
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <termios.h>
 #include <unistd.h>
+
+#include "interactive/prompt.h"
 
 #define cursor_right(n) printf("\033[%zuC", (size_t)(n))
 #define cursor_left(n) printf("\033[%zuD", (size_t)(n))
@@ -149,7 +151,7 @@ static void handle_arrow(Prompt *prompt)
 }
 
 
-void prompt_run(Prompt *prompt)
+bool prompt_run(Prompt *prompt)
 {
     prompt_reset(prompt);
     prompt_show(prompt);
@@ -174,9 +176,13 @@ void prompt_run(Prompt *prompt)
 	prompt_show(prompt);
     }
 
+    if (strcmp(prompt->buf, "exit") == 0)
+	return false;
+
     putchar('\n');
     prompt_buf_append(prompt, '\n');
     prompt_buf_append(prompt, EOF);
+    return true;
 }
 
 void prompt_reset(Prompt *prompt)

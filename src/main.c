@@ -31,7 +31,6 @@
 #define NICC_IMPLEMENTATION
 #include "nicc/nicc.h"
 
-#define MAX_INPUT_SIZE 4096
 
 void interactive(void)
 {
@@ -42,19 +41,28 @@ void interactive(void)
     Prompt prompt;
     prompt_init(&prompt, "-> ");
 
-
-    do {
-	prompt_run(&prompt);
-	if (prompt.buf[0] == '0')
-	    break;
-
+    while (prompt_run(&prompt)) {
 	Lexer lex_result = lex(prompt.buf, prompt.buf_len);
+	if (lex_result.had_error) {
+	    m_arena_clear(&ast_arena);
+	    arraylist_free(&lex_result.tokens);
+	    continue;
+	}
+
 	StmtsOrErr stmts = parse(&ast_arena, &lex_result.tokens, prompt.buf);
-	int exit_code = interpreter_run(&interpreter, &stmts.stmts);
+	if (stmts.had_error) {
+	    m_arena_clear(&ast_arena);
+	    arraylist_free(&lex_result.tokens);
+	    arraylist_free(&stmts.stmts);
+	    continue;
+	}
+
+	interpreter_run(&interpreter, &stmts.stmts);
+
 	m_arena_clear(&ast_arena);
-	arraylist_free(&stmts.stmts);
 	arraylist_free(&lex_result.tokens);
-    } while (1);
+	arraylist_free(&stmts.stmts);
+    }
 
     ast_arena_release(&ast_arena);
     interpreter_free(&interpreter);
@@ -70,9 +78,7 @@ int main(int argc, char **argv)
     }
 
     int exit_code;
-    char *file_path = "src/test.slash";
-    if (argc > 1)
-	file_path = argv[1];
+    char *file_path = argv[1];
 
     struct stat st;
     if (stat(file_path, &st) != 0) {
