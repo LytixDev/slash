@@ -34,6 +34,8 @@
 #include "interpreter/types/slash_tuple.h"
 #include "interpreter/types/slash_value.h"
 #include "interpreter/types/trait.h"
+#include "builtin/cd.h"
+#include "builtin/vars.h"
 #include "nicc/nicc.h"
 #include "str_view.h"
 
@@ -103,7 +105,16 @@ static char **cmd_args_fmt(Interpreter *interpreter, CmdStmt *stmt)
 static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt)
 {
     char **argv_owning = cmd_args_fmt(interpreter, stmt);
-    int exit_code = exec_program(&interpreter->stream_ctx, argv_owning);
+    char *program_name = argv_owning[0];
+    int exit_code;
+
+    if (strcmp(program_name, "/bin/cd") == 0) {
+        exit_code = builtin_cd(argv_owning[1]);
+    } else if (strcmp(program_name, "/bin/vars") == 0) {
+        exit_code = builtin_vars(interpreter);
+    } else {
+        exit_code = exec_program(&interpreter->stream_ctx, argv_owning);
+    }
     interpreter->prev_exit_code = exit_code;
     free(argv_owning);
 }
