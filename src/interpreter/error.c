@@ -110,9 +110,3 @@ void report_parse_err(Parser *parser, char *msg)
 
     parser->had_error = true;
 }
-
-void report_runtime_error(char *msg)
-{
-    REPORT_IMPL("Error during runtime: %s\n", msg);
-    exit(1);
-}

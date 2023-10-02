@@ -100,7 +100,7 @@ SlashValue slash_list_item_get(Interpreter *interpreter, SlashValue *self, Slash
 {
     SlashList *list = (SlashList *)self->obj;
     if (!(index->type == SLASH_NUM || index->type == SLASH_RANGE)) {
-	report_runtime_error("List indices must be number or range");
+	REPORT_RUNTIME_ERROR("List indices must be number or range");
 	ASSERT_NOT_REACHED;
     }
 
@@ -118,7 +118,7 @@ void slash_list_item_assign(SlashValue *self, SlashValue *index, SlashValue *new
     SlashList *list = (SlashList *)self->obj;
 
     if (index->type != SLASH_NUM) {
-	report_runtime_error("List indices must be number");
+	REPORT_RUNTIME_ERROR("List indices must be number");
 	ASSERT_NOT_REACHED;
     }
 
@@ -188,7 +188,7 @@ SlashValue slash_list_pop(Interpreter *interpreter, SlashValue *self, size_t arg
     }
 
     if (!match_signature("n", argc, argv)) {
-	report_runtime_error("Bad method args");
+	REPORT_RUNTIME_ERROR("Bad method args");
 	ASSERT_NOT_REACHED;
     }
 
@@ -196,7 +196,7 @@ SlashValue slash_list_pop(Interpreter *interpreter, SlashValue *self, size_t arg
     SlashValue key = argv[0];
     size_t idx = (size_t)key.num;
     if (key.num < 0 || idx > list->underlying.size - 1) {
-	report_runtime_error("Index out of range");
+	REPORT_RUNTIME_ERROR("Index out of range");
 	ASSERT_NOT_REACHED;
     }
     arraylist_get_copy(&list->underlying, idx, &popped_item);
@@ -213,7 +213,7 @@ SlashValue slash_list_len(Interpreter *interpreter, SlashValue *self, size_t arg
     SlashList *list = (SlashList *)self->obj;
 
     if (!match_signature("", argc, argv)) {
-	report_runtime_error("Bad method args");
+	REPORT_RUNTIME_ERROR("Bad method args");
 	ASSERT_NOT_REACHED;
     }
 
@@ -237,7 +237,7 @@ SlashValue slash_list_sort(Interpreter *interpreter, SlashValue *self, size_t ar
 	arraylist_sort(&underlying,
 		       argv[0].boolean ? slash_value_cmp_rev_stub : slash_value_cmp_stub);
     } else {
-	report_runtime_error("Bad method args, expected no args or a single boolean.");
+	REPORT_RUNTIME_ERROR("Bad method args, expected no args or a single boolean.");
 	ASSERT_NOT_REACHED;
     }
 

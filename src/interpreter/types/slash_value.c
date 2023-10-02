@@ -25,6 +25,10 @@
 
 SlashValue slash_glob_none = { .type = SLASH_NONE };
 
+char *slash_type_names[SLASH_TYPE_COUNT] = {
+    "bool", "str", "num", "shident", "range", "obj", "none"
+};
+
 int slash_cmp_precedence[SLASH_TYPE_COUNT] = {
     /* bool */
     0,
@@ -84,7 +88,7 @@ bool slash_value_eq(SlashValue *a, SlashValue *b)
 	return a->obj->traits->equals(a, b);
 
     default:
-	report_runtime_error("Equality not defined for this type. Consider contributing :-).");
+	REPORT_RUNTIME_ERROR("Equality not defined for type '%s'", "x");
 	ASSERT_NOT_REACHED;
     }
 
@@ -114,12 +118,16 @@ int slash_value_cmp(SlashValue *a, SlashValue *b)
     case SLASH_NUM:
 	return a->num - b->num;
     default:
-	report_runtime_error(
-	    "Cannot sort list (yet) that contains this type. Consider contributing :-).");
+	REPORT_RUNTIME_ERROR("Compare not implented for type '%s'", "X");
     }
 
     ASSERT_NOT_REACHED;
     return 0;
+}
+
+char *slash_type_to_name(SlashValue *value)
+{
+    return slash_type_names[value->type];
 }
 
 void slash_bool_print(SlashValue *value)

@@ -63,6 +63,8 @@ int slash_value_cmp_stub(const void *a, const void *b);
 int slash_value_cmp_rev_stub(const void *a, const void *b);
 /* returns positive if a > b */
 int slash_value_cmp(SlashValue *a, SlashValue *b);
+char *slash_type_to_name(SlashValue *value);
+#define SLASH_TYPE_TO_STR(value) slash_type_to_name((value))
 
 /* */
 void slash_bool_print(SlashValue *value);
@@ -73,6 +75,8 @@ void slash_none_print(void);
 
 
 extern int slash_cmp_precedence[SLASH_TYPE_COUNT];
+
+extern char *slash_type_names[SLASH_TYPE_COUNT];
 
 extern SlashValue slash_glob_none;
 
