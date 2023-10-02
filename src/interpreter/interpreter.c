@@ -15,6 +15,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <math.h>
+#include <setjmp.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -91,7 +92,7 @@ static char **cmd_args_fmt(Interpreter *interpreter, CmdStmt *stmt)
 	    str[v.str.size] = 0;
 	    argv[i] = str;
 	} else {
-	    report_runtime_error("Currently only support evaluating number and string arguments");
+	    REPORT_RUNTIME_ERROR("Currently only support evaluating number and string arguments");
 	}
 	i++;
     }
@@ -111,7 +112,9 @@ static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt)
 static void check_num_operands(SlashValue *left, SlashValue *right)
 {
     if (!(left->type == SLASH_NUM && right->type == SLASH_NUM))
-	report_runtime_error("Binary operations only supported on numbers");
+	REPORT_RUNTIME_ERROR(
+	    "Binary operation only supported for two numbers and not '%s' and '%s'",
+	    SLASH_TYPE_TO_STR(left), SLASH_TYPE_TO_STR(right));
 }
 
 
@@ -125,7 +128,8 @@ static SlashValue eval_unary(Interpreter *interpreter, UnaryExpr *expr)
 	return (SlashValue){ .type = SLASH_BOOL, .boolean = !is_truthy(&right) };
     if (expr->operator_ == t_minus) {
 	if (right.type != SLASH_NUM)
-	    report_runtime_error("'-' operator only supported for numbers");
+	    REPORT_RUNTIME_ERROR("'-' operator not defined for type '%s'",
+				 SLASH_TYPE_TO_STR(&right));
 	right.num = -right.num;
 	return right;
     }
@@ -167,13 +171,12 @@ static SlashValue cmp_binary_values(SlashValue left, SlashValue right, TokenType
 		slash_list_append((SlashList *)left.obj, right);
 		return left;
 	    } else {
-		report_runtime_error("list + object not supported");
-		ASSERT_NOT_REACHED;
+		REPORT_RUNTIME_ERROR("'+' operator on '%s' and '%s' not supported",
+				     SLASH_TYPE_TO_STR(&left), SLASH_TYPE_TO_STR(&right));
 	    }
 	} else {
-	    report_runtime_error(
-		"Plus operator only supported for number and number or list and list");
-	    ASSERT_NOT_REACHED;
+	    REPORT_RUNTIME_ERROR("'+' operator on '%s' and '%s' not supported",
+				 SLASH_TYPE_TO_STR(&left), SLASH_TYPE_TO_STR(&right));
 	}
 	break;
     }
@@ -185,14 +188,14 @@ static SlashValue cmp_binary_values(SlashValue left, SlashValue right, TokenType
 
     case t_slash: {
 	if (right.num == 0)
-	    report_runtime_error("Division by zero error");
+	    REPORT_RUNTIME_ERROR("Division by zero error");
 	check_num_operands(&left, &right);
 	result = (SlashValue){ .type = SLASH_NUM, .num = left.num / right.num };
 	break;
     }
     case t_slash_slash: {
 	if (right.num == 0)
-	    report_runtime_error("Division by zero error");
+	    REPORT_RUNTIME_ERROR("Division by zero error");
 	check_num_operands(&left, &right);
 	result = (SlashValue){ .type = SLASH_NUM, .num = (int)(left.num / right.num) };
 	break;
@@ -200,7 +203,7 @@ static SlashValue cmp_binary_values(SlashValue left, SlashValue right, TokenType
 
     case t_percent: {
 	if (right.num == 0)
-	    report_runtime_error("Modulo by zero error");
+	    REPORT_RUNTIME_ERROR("Modulo by zero error");
 	check_num_operands(&left, &right);
 	double m = fmod(left.num, right.num);
 	/* same behaviour as we tend to see in maths */
@@ -227,7 +230,7 @@ static SlashValue cmp_binary_values(SlashValue left, SlashValue right, TokenType
 	break;
 
     default:
-	report_runtime_error("Binary operator not supported");
+	REPORT_RUNTIME_ERROR("Unrecognized binary operator");
 	ASSERT_NOT_REACHED;
 	return (SlashValue){ 0 };
     }
@@ -385,7 +388,8 @@ static SlashValue eval_method(Interpreter *interpreter, MethodExpr *expr)
     /* get method */
     MethodFunc method = get_method(&self, method_name);
     if (method == NULL)
-	report_runtime_error("Method does not exist");
+	REPORT_RUNTIME_ERROR("Method '%s' does not exist on type '%s'", method_name,
+			     SLASH_TYPE_TO_STR(&self));
 
     if (expr->args == NULL)
 	return method(interpreter, &self, 0, NULL);
@@ -440,7 +444,7 @@ static void exec_var(Interpreter *interpreter, VarStmt *stmt)
     /* Make sure variable is not defined already */
     ScopeAndValue current = var_get(interpreter->scope, &stmt->name);
     if (current.scope == interpreter->scope)
-	report_runtime_error("Variable redefinition");
+	REPORT_RUNTIME_ERROR("Redefinition of '%s'", "X");
 
     SlashValue value = eval(interpreter, stmt->initializer);
     var_define(interpreter->scope, &stmt->name, &value);
@@ -450,10 +454,10 @@ static void exec_seq_var(Interpreter *interpreter, SeqVarStmt *stmt)
 {
     SequenceExpr *initializer = (SequenceExpr *)stmt->initializer;
     if (initializer->type != EXPR_SEQUENCE)
-	report_runtime_error("Multiple variable declaration only supported for tuples");
+	REPORT_RUNTIME_ERROR("Multiple variable declaration only supported for tuples");
 
     if (stmt->names.size != initializer->seq.size)
-	report_runtime_error("Unpacking only supported for collections of the same size");
+	REPORT_RUNTIME_ERROR("Unpacking only supported for collections of the same size");
 
     LLItem *l = stmt->names.head;
     LLItem *r = initializer->seq.head;
@@ -461,7 +465,7 @@ static void exec_seq_var(Interpreter *interpreter, SeqVarStmt *stmt)
 	StrView *name = l->value;
 	ScopeAndValue current = var_get(interpreter->scope, name);
 	if (current.scope == interpreter->scope)
-	    report_runtime_error("Variable redefinition");
+	    REPORT_RUNTIME_ERROR("Redefinition of '%s'", "X");
 	SlashValue value = eval(interpreter, (Expr *)r->value);
 	var_define(interpreter->scope, name, &value);
 	l = l->next;
@@ -532,12 +536,12 @@ static void exec_assign_unpack(Interpreter *interpreter, AssignStmt *stmt)
     SequenceExpr *left = (SequenceExpr *)stmt->var;
     // TODO: add support for list and maps
     if (stmt->value->type != EXPR_SEQUENCE) {
-	report_runtime_error("Unpacking only supported for tuples");
+	REPORT_RUNTIME_ERROR("Unpacking only supported for tuples");
 	ASSERT_NOT_REACHED;
     }
     SequenceExpr *right = (SequenceExpr *)stmt->value;
     if (left->seq.size != right->seq.size) {
-	report_runtime_error("Unpacking only supported for collections of the same size");
+	REPORT_RUNTIME_ERROR("Unpacking only supported for collections of the same size");
 	ASSERT_NOT_REACHED;
     }
 
@@ -546,7 +550,7 @@ static void exec_assign_unpack(Interpreter *interpreter, AssignStmt *stmt)
     for (size_t i = 0; i < left->seq.size; i++) {
 	AccessExpr *access = (AccessExpr *)l->value;
 	if (access->type != EXPR_ACCESS)
-	    report_runtime_error("Can not assign to literal value");
+	    REPORT_RUNTIME_ERROR("Can not assign to literal value");
 	SlashValue value = eval(interpreter, (Expr *)r->value);
 	var_assign(&access->var_name, interpreter->scope, &value);
 	l = l->next;
@@ -567,7 +571,7 @@ static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
     }
 
     if (stmt->var->type != EXPR_ACCESS) {
-	report_runtime_error("Internal error: bad expr type");
+	REPORT_RUNTIME_ERROR("Internal error: bad expr type");
 	ASSERT_NOT_REACHED;
     }
 
@@ -575,7 +579,7 @@ static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
     StrView var_name = access->var_name;
     ScopeAndValue variable = var_get(interpreter->scope, &var_name);
     if (variable.value == NULL)
-	report_runtime_error("Cannot modify undefined variable");
+	REPORT_RUNTIME_ERROR("Cannot modify undefined variable '%s'", "X");
 
     SlashValue new_value = eval(interpreter, stmt->value);
 
@@ -609,7 +613,7 @@ static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
 	operator_ = t_percent;
 	break;
     default:
-	report_runtime_error("Assignment operator not supported");
+	REPORT_RUNTIME_ERROR("Unrecognized assignment operator");
 	ASSERT_NOT_REACHED;
     }
     new_value = cmp_binary_values(*variable.value, new_value, operator_);
@@ -651,7 +655,7 @@ static void exec_assert(Interpreter *interpreter, AssertStmt *stmt)
 {
     SlashValue result = eval(interpreter, stmt->expr);
     if (!is_truthy(&result))
-	report_runtime_error("Assertion failed");
+	REPORT_RUNTIME_ERROR("Assertion failed");
 }
 
 static void exec_loop(Interpreter *interpreter, LoopStmt *stmt)
@@ -786,13 +790,14 @@ static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
 	    exec_iter_loop_map(interpreter, stmt, (SlashMap *)underlying.obj);
 	    break;
 	default:
-	    report_runtime_error("Object type can't be iterated over");
+	    REPORT_RUNTIME_ERROR("Object type '%s' cannot be iterated over",
+				 SLASH_TYPE_TO_STR(&underlying));
 	    ASSERT_NOT_REACHED;
 	}
 
     } break;
     default:
-	report_runtime_error("Type can't be iterated over");
+	REPORT_RUNTIME_ERROR("Type '%s' cannot be iterated over", SLASH_TYPE_TO_STR(&underlying));
 	ASSERT_NOT_REACHED;
     }
 
@@ -831,7 +836,7 @@ static void exec_redirect(Interpreter *interpreter, BinaryStmt *stmt)
     SlashValue value = eval(interpreter, stmt->right_expr);
     // TODO: to_str trait
     if (!(value.type == SLASH_STR || value.type == SLASH_SHIDENT))
-	report_runtime_error("redirect failed: implement to_str trait!");
+	REPORT_RUNTIME_ERROR("Redirect failed: implement to_str trait!");
     char file_name[value.str.size + 1];
     str_view_to_cstr(value.str, file_name);
 
@@ -852,7 +857,7 @@ static void exec_redirect(Interpreter *interpreter, BinaryStmt *stmt)
 
     // TODO: give good errors: "could not open file x: permission denied" or "x not a file"
     if (file == NULL) {
-	report_runtime_error("could not open file 'PLACEHOLDER (TODO: implement better errors)'");
+	REPORT_RUNTIME_ERROR("Could not open file '%s'", file_name);
 	ASSERT_NOT_REACHED;
     }
 
@@ -914,7 +919,7 @@ static SlashValue eval(Interpreter *interpreter, Expr *expr)
 	return eval_cast(interpreter, (CastExpr *)expr);
 
     default:
-	report_runtime_error("Expression type not handled");
+	REPORT_RUNTIME_ERROR("Internal error: expression type not recognized");
 	/* will never happen, but lets make the compiler happy */
 	return (SlashValue){ 0 };
     }
@@ -973,7 +978,7 @@ static void exec(Interpreter *interpreter, Stmt *stmt)
 
 
     default:
-	report_runtime_error("Statement type not handled");
+	REPORT_RUNTIME_ERROR("Internal error: Statement type not recognized");
     }
 }
 
@@ -1006,8 +1011,12 @@ void interpreter_free(Interpreter *interpreter)
 
 int interpreter_run(Interpreter *interpreter, ArrayList *statements)
 {
-    for (size_t i = 0; i < statements->size; i++)
-	exec(interpreter, *(Stmt **)arraylist_get(statements, i));
+    if (setjmp(runtime_error_jmp) != RUNTIME_ERROR) {
+	for (size_t i = 0; i < statements->size; i++)
+	    exec(interpreter, *(Stmt **)arraylist_get(statements, i));
+    } else { /* error */
+	interpreter->prev_exit_code = 1;
+    }
 
     return interpreter->prev_exit_code;
 }
