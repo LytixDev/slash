@@ -27,8 +27,6 @@
 #include "str_view.h"
 
 
-static void report_err_and_sync(Parser *parser, char *err_msg);
-
 /*
  * non-terminal grammar rule functions
  */
@@ -101,7 +99,7 @@ static Token *advance(Parser *parser)
 static void backup(Parser *parser)
 {
     if (parser->token_pos == 0)
-	report_parse_err(parser, "internal error: attempted to backup() at pos = 0");
+	report_parse_err(parser, "Internal error: attempted to backup() at pos = 0");
     parser->token_pos--;
 }
 
@@ -142,8 +140,11 @@ static bool check_either(Parser *parser, int step, unsigned int n, ...)
 
 static Token *consume(Parser *parser, TokenType expected, char *err_msg)
 {
-    if (!check_single(parser, expected, 0))
-	report_err_and_sync(parser, err_msg);
+    if (!check_single(parser, expected, 0)) {
+	report_parse_err(parser, err_msg);
+	/* we need to "unconsume" the token */
+	parser->token_pos--;
+    }
 
     return advance(parser);
 }
@@ -201,30 +202,6 @@ static SlashType token_type_to_slash_type(TokenType type)
     return 0;
 }
 
-static void synchronize(Parser *parser)
-{
-    do {
-	advance(parser);
-	switch (peek(parser)->type) {
-	case t_var:
-	case t_loop:
-	case t_if:
-	case t_assert:
-	case t_newline:
-	    return;
-	default:
-	    (void)0;
-	}
-
-    } while (!is_at_end(parser));
-}
-
-static void report_err_and_sync(Parser *parser, char *err_msg)
-{
-    report_parse_err(parser, err_msg);
-    synchronize(parser);
-}
-
 /* grammar functions */
 static void newline(Parser *parser)
 {
@@ -241,17 +218,9 @@ static void expr_promotion(Parser *parser)
 
 static Stmt *declaration(Parser *parser)
 {
-    Stmt *stmt;
-
-    /* ignore all leading newlines in source */
     ignore(parser, t_newline);
-    if (match(parser, t_var))
-	stmt = var_decl(parser);
-    else
-	stmt = and_or(parser);
-    /* ignore any trailing newlines in source */
+    Stmt *stmt = match(parser, t_var) ? var_decl(parser) : and_or(parser);
     ignore(parser, t_newline);
-
     return stmt;
 }
 
@@ -385,7 +354,7 @@ static Stmt *pipeline_stmt(Parser *parser)
     if (!match(parser, t_pipe))
 	return left;
 
-    consume(parser, t_dt_shident, "expected shell command after pipe symbol");
+    consume(parser, t_dt_shident, "Expected shell command after pipe symbol");
     PipelineStmt *stmt = (PipelineStmt *)stmt_alloc(parser->ast_arena, STMT_PIPELINE);
     stmt->left = (CmdStmt *)left;
     stmt->right = pipeline_stmt(parser);
@@ -653,7 +622,9 @@ static Expr *single(Parser *parser)
 	expr->expr = left;
 	// TODO: support more casts later
 	if (!match(parser, t_num, t_str, t_bool)) {
-	    report_err_and_sync(parser, "Expected 'num', 'str' or 'bool' keyword after cast");
+	    report_parse_err(parser, "Expected 'num', 'str' or 'bool' keyword after cast");
+	    /* move past token and continue as normal */
+	    parser->token_pos++;
 	    return NULL;
 	}
 	expr->as = token_type_to_slash_type(previous(parser)->type);
@@ -663,10 +634,10 @@ static Expr *single(Parser *parser)
     /* method call */
     if (match(parser, t_dot)) {
 	MethodExpr *expr = (MethodExpr *)expr_alloc(parser->ast_arena, EXPR_METHOD);
-	Token *method_name = consume(parser, t_ident, "expected method name");
+	Token *method_name = consume(parser, t_ident, "Expected method name");
 	expr->obj = left;
 	expr->method_name = method_name->lexeme;
-	consume(parser, t_lparen, "expected left paren");
+	consume(parser, t_lparen, "Expected left paren");
 	if (!match(parser, t_rparen)) {
 	    expr->args = sequence(parser, t_rparen);
 	} else {
@@ -697,7 +668,7 @@ static Expr *subscript(Parser *parser)
 	    (SubscriptExpr *)expr_alloc(parser->ast_arena, EXPR_SUBSCRIPT);
 	subscript_expr->expr = expr;
 	subscript_expr->access_value = expression(parser);
-	consume(parser, t_rbracket, "expected ']' after variable subscript");
+	consume(parser, t_rbracket, "Expected ']' after variable subscript");
 	expr = (Expr *)subscript_expr;
     }
 
@@ -734,7 +705,7 @@ static Expr *primary(Parser *parser)
 	return grouping(parser);
 
     if (!match(parser, t_dt_str, t_dt_shident)) {
-	report_err_and_sync(parser, "not a valid primary type");
+	report_parse_err(parser, "Not a valid primary type");
 	return NULL;
     }
 
@@ -806,7 +777,7 @@ static Expr *map(Parser *parser)
     do {
 	KeyValuePair *pair = m_arena_alloc_struct(parser->ast_arena, KeyValuePair);
 	pair->key = expression(parser);
-	consume(parser, t_colon, "expected colon ':' to denote value for key in map expression");
+	consume(parser, t_colon, "Expected colon ':' to denote value for key in map expression");
 	pair->value = expression(parser);
 	arena_ll_append(expr->key_value_pairs, pair);
 	if (!match(parser, t_comma))
@@ -839,6 +810,11 @@ StmtsOrErr parse(Arena *ast_arena, ArrayList *tokens, char *input)
     };
     ArrayList statements;
     arraylist_init(&statements, sizeof(Stmt *));
+
+    /* edge case: empty source file */
+    ignore(&parser, t_newline);
+    if (check(&parser, t_eof))
+	return (StmtsOrErr){ .had_error = parser.had_error, .stmts = statements };
 
     while (!check(&parser, t_eof)) {
 	Stmt *stmt = declaration(&parser);

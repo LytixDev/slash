@@ -29,6 +29,6 @@ SlashValue dynamic_cast(Interpreter *interpreter, SlashValue value, SlashType ne
     if (value.type == SLASH_STR && new_type == SLASH_NUM)
 	return (SlashValue){ .type = SLASH_NUM, .num = str_view_to_double(value.str) };
 
-    report_runtime_error("Cast not supported");
+    REPORT_RUNTIME_ERROR("Cast not supported");
     return (SlashValue){ 0 };
 }

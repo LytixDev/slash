@@ -29,48 +29,40 @@ typedef struct {
 } ErrBuf;
 
 
-static char *offending_line(char *src, size_t line)
+static char *offending_line(char *src, size_t line_no)
 {
+    if (line_no == 0)
+	return src;
+
     size_t count = 0;
     while (*src != 0) {
 	if (*src == '\n')
 	    count++;
-	if (count == line)
-	    return src;
+	if (count == line_no)
+	    return src + 1;
 
 	src++;
     }
     return NULL;
 }
 
-static ErrBuf offending_line_from_offset(char *input, size_t offset)
+static ErrBuf offending_line_from_offset(char *line, size_t offset)
 {
-    /* first char after previous newline */
-    char *start;
-    for (start = input + offset; start - input >= 0; start--) {
-	if (*start == '\n') {
-	    start++;
-	    break;
-	}
-    }
-    if (start == input - 1)
-	start++;
+    char *start = line; /* first char in line */
 
-    /* first char before previous newline */
-    char *end;
-    for (end = input + offset; *end != EOF; end++) {
+    char *end = line + offset; /* first char before previous newline */
+    for (end = line + offset; *end != EOF; end++) {
 	if (*end == '\n') {
 	    break;
 	}
     }
-
     // TODO: we can define a max len just for safety
     assert(end > start);
     size_t len = end - start;
     char *buffer = malloc(sizeof(char) * (len + 1));
     memcpy(buffer, start, len);
     buffer[len] = 0;
-    return (ErrBuf){ .alloced_buffer = buffer, .left_offset = (input + offset) - start };
+    return (ErrBuf){ .alloced_buffer = buffer, .left_offset = (line + offset) - start };
 }
 
 void report_lex_err(Lexer *lexer, bool print_offending, char *msg)
@@ -94,10 +86,16 @@ void report_lex_err(Lexer *lexer, bool print_offending, char *msg)
 
 void report_parse_err(Parser *parser, char *msg)
 {
+    parser->had_error = true;
     Token *failed = arraylist_get(parser->tokens, parser->token_pos);
     REPORT_IMPL("[line %zu]: Error during parsing: %s\n", failed->line + 1, msg);
 
     char *line = offending_line(parser->input, failed->line);
+    if (line == NULL) {
+	REPORT_IMPL("Internal error: could not find line where parse error occured");
+	return;
+    }
+
     ErrBuf bf = offending_line_from_offset(line, failed->start);
     REPORT_IMPL(">%s\n ", bf.alloced_buffer);
     free(bf.alloced_buffer);
@@ -107,12 +105,4 @@ void report_parse_err(Parser *parser, char *msg)
     for (size_t i = 0; i < failed->end - failed->start; i++)
 	REPORT_IMPL("^");
     REPORT_IMPL("\n");
-
-    parser->had_error = true;
-}
-
-void report_runtime_error(char *msg)
-{
-    REPORT_IMPL("Error during runtime: %s\n", msg);
-    exit(1);
 }

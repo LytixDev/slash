@@ -69,13 +69,13 @@ SlashValue slash_tuple_item_get(Interpreter *interpreter, SlashValue *self, Slas
 
     SlashTuple *tuple = (SlashTuple *)self->obj;
     if (index->type != SLASH_NUM) {
-	report_runtime_error("List indices must be numbers");
+	REPORT_RUNTIME_ERROR("List indices must be numbers");
 	ASSERT_NOT_REACHED;
     }
 
     size_t idx = (size_t)index->num;
     if (idx > tuple->size) {
-	report_runtime_error("List indices out of range");
+	REPORT_RUNTIME_ERROR("List indices out of range");
 	ASSERT_NOT_REACHED;
     }
 

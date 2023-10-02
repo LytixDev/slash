@@ -29,24 +29,24 @@ void slash_print_not_defined(SlashValue *value)
 
 void slash_item_get_not_defined(void)
 {
-    report_runtime_error("Subscript not defined for this type");
+    REPORT_RUNTIME_ERROR("Subscript not defined for this type");
 }
 
 void slash_item_assign_not_defined(void)
 {
-    report_runtime_error("Item assignment not defined for this type");
+    REPORT_RUNTIME_ERROR("Item assignment not defined for this type");
 }
 
 void slash_item_in_not_defined(void)
 {
-    report_runtime_error("Item in not defined for this type");
+    REPORT_RUNTIME_ERROR("Item in not defined for this type");
 }
 
 void slash_obj_print(SlashValue *value)
 {
     SlashObj *obj = value->obj;
     if (obj->traits->print == NULL)
-	report_runtime_error("Printing not defined for this type");
+	REPORT_RUNTIME_ERROR("Printing not defined for this type");
     obj->traits->print(value);
 }
 
@@ -54,7 +54,7 @@ SlashValue slash_obj_to_str(Interpreter *interpreter, SlashValue *value)
 {
     SlashObj *obj = value->obj;
     if (obj->traits->print == NULL)
-	report_runtime_error("To string not defined for this type");
+	REPORT_RUNTIME_ERROR("To string not defined for this type");
     return obj->traits->to_str(interpreter, value);
 }
 
@@ -62,7 +62,7 @@ SlashValue slash_obj_item_get(Interpreter *interpreter, SlashValue *self, SlashV
 {
     SlashObj *obj = self->obj;
     if (obj->traits->item_get == NULL)
-	report_runtime_error("Get not defined for this type");
+	REPORT_RUNTIME_ERROR("Get not defined for this type");
     return obj->traits->item_get(interpreter, self, idx);
 }
 
@@ -70,7 +70,7 @@ void slash_obj_item_assign(SlashValue *self, SlashValue *a, SlashValue *b)
 {
     SlashObj *obj = self->obj;
     if (obj->traits->item_assign == NULL)
-	report_runtime_error("Assign not defined for this type");
+	REPORT_RUNTIME_ERROR("Assign not defined for this type");
     obj->traits->item_assign(self, a, b);
 }
 
@@ -78,7 +78,7 @@ bool slash_obj_item_in(SlashValue *self, SlashValue *a)
 {
     SlashObj *obj = self->obj;
     if (obj->traits->item_in == NULL)
-	report_runtime_error("In not defined for this type");
+	REPORT_RUNTIME_ERROR("In not defined for this type");
     return obj->traits->item_in(self, a);
 }
 

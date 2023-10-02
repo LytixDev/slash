@@ -43,7 +43,6 @@ typedef struct {
     StreamCtx stream_ctx;
 } Interpreter;
 
-
 void interpreter_init(Interpreter *interpreter);
 void interpreter_free(Interpreter *interpreter);
 int interpreter_run(Interpreter *interpreter, ArrayList *statements);

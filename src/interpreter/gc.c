@@ -49,7 +49,7 @@ static void gc_sweep_obj(SlashObj *obj)
 	break;
     }
     default:
-	report_runtime_error("sweep not implemented for this obj");
+	REPORT_RUNTIME_ERROR("Sweep not implemented for this obj");
     }
     free(obj);
 }
@@ -153,7 +153,7 @@ static void gc_blacken_obj(Interpreter *interpreter, SlashObj *obj)
     }
 
     default:
-	report_runtime_error("gc blacken not implemented for this object type");
+	REPORT_RUNTIME_ERROR("gc blacken not implemented for this object type");
     }
 }
 
@@ -229,7 +229,7 @@ SlashObj *gc_alloc(Interpreter *interpreter, SlashObjType type)
 	size = sizeof(SlashTuple);
 	break;
     default:
-	report_runtime_error("Slash obj not implemented");
+	REPORT_RUNTIME_ERROR("Slash obj not implemented");
 	ASSERT_NOT_REACHED;
     }
 
