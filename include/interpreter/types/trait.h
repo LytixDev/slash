@@ -22,6 +22,7 @@
 #include "interpreter/types/slash_value.h"
 
 typedef void (*TraitPrint)(SlashValue *self);
+typedef SlashValue (*TraitToStr)(Interpreter *interpreter, SlashValue *self);
 typedef SlashValue (*TraitItemGet)(Interpreter *interpreter, SlashValue *self, SlashValue *);
 typedef void (*TraitItemAssign)(SlashValue *self, SlashValue *, SlashValue *);
 typedef bool (*TraitItemIn)(SlashValue *self, SlashValue *);
@@ -34,6 +35,7 @@ typedef void (*ObjFree)(SlashObj *obj);
 
 typedef struct {
     TraitPrint print;
+    TraitToStr to_str;
     TraitItemGet item_get;
     TraitItemAssign item_assign;
     TraitItemIn item_in;

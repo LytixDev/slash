@@ -32,18 +32,18 @@ typedef enum {
 typedef struct {
     WhichType type;
     union {
-        char path[128];
-        BuiltinFunc builtin;
+	char path[128];
+	BuiltinFunc builtin;
     };
 } WhichResult;
 
 
-char *builtin_names[] = {"cd", "vars", "which"};
+WhichResult which(StrView cmd);
 
-
-WhichResult which(StrView *cmd);
-
-int builtin_which(Interpreter, size_t argc, SlashValue *argv);
+/* builtins */
+int builtin_which(Interpreter *interpreter, size_t argc, SlashValue *argv);
+int builtin_cd(Interpreter *interpreter, size_t argc, SlashValue *argv);
+int builtin_vars(Interpreter *interpreter, size_t argc, SlashValue *argv);
 
 
 #endif /* BUILTIN_H */

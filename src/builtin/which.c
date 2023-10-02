@@ -14,3 +14,48 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <string.h>
+
+#include "builtin/builtin.h"
+#include "interpreter/interpreter.h"
+#include "str_view.h"
+
+
+char *builtin_names[] = { "cd", "vars", "which" };
+#define BUILTINS_COUNT (sizeof((builtin_names)) / sizeof((builtin_names[0])))
+
+
+int builtin_which(Interpreter *interpreter, size_t argc, SlashValue *argv)
+{
+    return 0;
+}
+
+WhichResult which(StrView cmd)
+{
+    char command[cmd.size + 1];
+    str_view_to_cstr(cmd, command);
+
+    // TODO: is there a faster solution than a linear search?
+    WhichResult result = { 0 };
+    for (size_t i = 0; i < BUILTINS_COUNT; i++) {
+	char *builtin_name = builtin_names[i];
+	if (strcmp(builtin_name, command) == 0) {
+	    result.type = WHICH_BUILTIN;
+	    // TODO: X macro would work nicely here I think
+	    /* set correct function pointer */
+	    if (strcmp(command, "cd") == 0) {
+		result.builtin = builtin_cd;
+	    } else if (strcmp(command, "which") == 0) {
+		result.builtin = builtin_which;
+	    } else {
+		result.builtin = builtin_vars;
+	    }
+	}
+    }
+
+    if (result.type == WHICH_BUILTIN) {
+	return result;
+    }
+
+    return result;
+}

@@ -50,6 +50,13 @@ void slash_obj_print(SlashValue *value)
     obj->traits->print(value);
 }
 
+SlashValue slash_obj_to_str(Interpreter *interpreter, SlashValue *value)
+{
+    SlashObj *obj = value->obj;
+    if (obj->traits->print == NULL)
+	report_runtime_error("To string not defined for this type");
+    return obj->traits->to_str(interpreter, value);
+}
 
 SlashValue slash_obj_item_get(Interpreter *interpreter, SlashValue *self, SlashValue *idx)
 {
@@ -90,6 +97,23 @@ TraitPrint trait_print[SLASH_TYPE_COUNT] = {
     (TraitPrint)slash_obj_print,
     /* none */
     (TraitPrint)slash_none_print,
+};
+
+TraitPrint trait_to_str[SLASH_TYPE_COUNT] = {
+    /* bool */
+    (TraitToStr)slash_bool_print,
+    /* str */
+    (TraitToStr)slash_str_print,
+    /* num */
+    (TraitToStr)slash_num_print,
+    /* shident */
+    (TraitToStr)slash_print_not_defined,
+    /* range */
+    (TraitToStr)slash_range_print,
+    /* obj */
+    (TraitToStr)slash_obj_to_str,
+    /* none */
+    (TraitToStr)slash_none_print,
 };
 
 TraitItemGet trait_item_get[SLASH_TYPE_COUNT] = {

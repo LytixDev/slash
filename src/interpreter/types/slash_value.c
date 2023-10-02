@@ -122,6 +122,7 @@ int slash_value_cmp(SlashValue *a, SlashValue *b)
     return 0;
 }
 
+/* print funcs*/
 void slash_bool_print(SlashValue *value)
 {
     printf("%s", value->boolean == true ? "true" : "false");
@@ -150,4 +151,13 @@ void slash_range_print(SlashValue *value)
 void slash_none_print(void)
 {
     printf("none");
+}
+
+/* to_str funcs */
+// TODO: the interpreter could store static strs for "true" and "false"
+//       so we don't have to allocate one for every time we want to take to_str of a bool
+SlashValue slash_bool_to_str(Interpreter *interpreter, SlashValue *value)
+{
+    SlashValue to_str = { .type = SLASH_STR };
+    return to_str;
 }

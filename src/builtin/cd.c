@@ -15,15 +15,23 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <unistd.h>
 #include <stdio.h>
+#include <unistd.h>
+
+#include "interpreter/error.h"
+#include "interpreter/interpreter.h"
+#include "interpreter/types/slash_value.h"
 
 
-int builtin_cd(char *dir_name)
+int builtin_cd(Interpreter *interpreter, size_t argc, SlashValue *argv)
 {
-    if (dir_name == NULL) {
-        fprintf(stderr, "cd: no argument provided\n");
-        return 1;
+    (void)interpreter;
+    if (argc == 0) {
     }
-    return chdir(dir_name);
+    // if (dir_name == NULL) {
+    //     fprintf(stderr, "cd: no argument provided\n");
+    //     return 1;
+    // }
+    // return chdir(dir_name);
+    return 0;
 }

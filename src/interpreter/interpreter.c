@@ -20,6 +20,7 @@
 #include <unistd.h>
 
 #include "arena_ll.h"
+#include "builtin/builtin.h"
 #include "interpreter/ast.h"
 #include "interpreter/core/exec.h"
 #include "interpreter/error.h"
@@ -34,8 +35,6 @@
 #include "interpreter/types/slash_tuple.h"
 #include "interpreter/types/slash_value.h"
 #include "interpreter/types/trait.h"
-#include "builtin/cd.h"
-#include "builtin/vars.h"
 #include "nicc/nicc.h"
 #include "str_view.h"
 
@@ -55,68 +54,12 @@ static void exec_block_body(Interpreter *interpreter, BlockStmt *stmt)
     }
 }
 
-// TODO: this is temporary
-static char **cmd_args_fmt(Interpreter *interpreter, CmdStmt *stmt)
-{
-    size_t argc = 1;
-    if (stmt->arg_exprs != NULL)
-	argc += stmt->arg_exprs->size;
-
-    char **argv = malloc(sizeof(char *) * (argc + 1));
-
-    char *cmd_name = scope_alloc(interpreter->scope, stmt->cmd_name.size + 6);
-    // TODO: 'which' builtin or something
-    memcpy(cmd_name, "/bin/", 5);
-    memcpy(cmd_name + 5, stmt->cmd_name.view, stmt->cmd_name.size);
-    cmd_name[stmt->cmd_name.size + 5] = 0;
-    argv[0] = cmd_name;
-
-    if (stmt->arg_exprs == NULL) {
-	argv[argc] = NULL;
-	return argv;
-    }
-
-    size_t i = 1;
-    LLItem *item;
-    ARENA_LL_FOR_EACH(stmt->arg_exprs, item)
-    {
-	SlashValue v = eval(interpreter, item->value);
-
-	// TODO: better num to str
-	if (v.type == SLASH_NUM) {
-	    char *str = scope_alloc(interpreter->scope, 128);
-	    sprintf(str, "%f", v.num);
-	    argv[i] = str;
-	} else if (v.type == SLASH_STR || v.type == SLASH_SHIDENT) {
-	    char *str = scope_alloc(interpreter->scope, v.str.size + 1);
-	    memcpy(str, v.str.view, v.str.size);
-	    str[v.str.size] = 0;
-	    argv[i] = str;
-	} else {
-	    report_runtime_error("Currently only support evaluating number and string arguments");
-	}
-	i++;
-    }
-
-    argv[argc] = NULL;
-    return argv;
-}
-
 static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt)
 {
-    char **argv_owning = cmd_args_fmt(interpreter, stmt);
-    char *program_name = argv_owning[0];
-    int exit_code;
-
-    if (strcmp(program_name, "/bin/cd") == 0) {
-        exit_code = builtin_cd(argv_owning[1]);
-    } else if (strcmp(program_name, "/bin/vars") == 0) {
-        exit_code = builtin_vars(interpreter);
-    } else {
-        exit_code = exec_program(&interpreter->stream_ctx, argv_owning);
-    }
-    interpreter->prev_exit_code = exit_code;
-    free(argv_owning);
+    // char **argv_owning = cmd_args_fmt(interpreter, stmt);
+    // int exit_code = exec_program(&interpreter->stream_ctx, argv_owning);
+    // interpreter->prev_exit_code = exit_code;
+    // free(argv_owning);
 }
 
 static void check_num_operands(SlashValue *left, SlashValue *right)
@@ -482,7 +425,17 @@ static void exec_seq_var(Interpreter *interpreter, SeqVarStmt *stmt)
 
 static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
 {
-    exec_program_stub(interpreter, stmt);
+    WhichResult which_result = which(stmt->cmd_name);
+    size_t argc = stmt->arg_exprs->size + 1;
+    SlashValue argv[argc];
+
+    if (which_result.type == WHICH_EXTERN) {
+	exec_program_stub(interpreter, stmt);
+    } else if (which_result.type == WHICH_BUILTIN) {
+	which_result.builtin(interpreter, 0, NULL);
+    } else {
+	report_runtime_error("program not found :-(");
+    }
 }
 
 static void exec_if(Interpreter *interpreter, IfStmt *stmt)
