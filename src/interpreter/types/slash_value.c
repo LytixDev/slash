@@ -29,6 +29,8 @@ char *slash_type_names[SLASH_TYPE_COUNT] = {
     "bool", "str", "num", "shident", "range", "obj", "none"
 };
 
+char *slash_obj_type_names[] = { "list", "tuple", "map" };
+
 int slash_cmp_precedence[SLASH_TYPE_COUNT] = {
     /* bool */
     0,
@@ -127,6 +129,8 @@ int slash_value_cmp(SlashValue *a, SlashValue *b)
 
 char *slash_type_to_name(SlashValue *value)
 {
+    if (value->type == SLASH_OBJ)
+	return slash_obj_type_names[value->obj->type];
     return slash_type_names[value->type];
 }
 

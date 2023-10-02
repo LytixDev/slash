@@ -77,6 +77,8 @@ void slash_none_print(void);
 extern int slash_cmp_precedence[SLASH_TYPE_COUNT];
 
 extern char *slash_type_names[SLASH_TYPE_COUNT];
+extern char *slash_obj_type_names[];
+
 
 extern SlashValue slash_glob_none;
 
