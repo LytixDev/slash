@@ -15,6 +15,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <math.h>
+#include <setjmp.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -1010,8 +1011,12 @@ void interpreter_free(Interpreter *interpreter)
 
 int interpreter_run(Interpreter *interpreter, ArrayList *statements)
 {
-    for (size_t i = 0; i < statements->size; i++)
-	exec(interpreter, *(Stmt **)arraylist_get(statements, i));
+    if (setjmp(runtime_error_jmp) != RUNTIME_ERROR) {
+	for (size_t i = 0; i < statements->size; i++)
+	    exec(interpreter, *(Stmt **)arraylist_get(statements, i));
+    } else { /* error */
+	interpreter->prev_exit_code = 1;
+    }
 
     return interpreter->prev_exit_code;
 }
