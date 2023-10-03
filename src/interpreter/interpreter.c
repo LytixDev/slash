@@ -973,12 +973,28 @@ void interpreter_free(Interpreter *interpreter)
     arraylist_free(&interpreter->gc_gray_stack);
 }
 
+static void interpreter_reset_from_err(Interpreter *interpreter)
+{
+    /* free any old scopes */
+    Scope *scope = interpreter->scope;
+    while (scope != &interpreter->globals) {
+        Scope *to_destroy = scope;
+        scope = scope->enclosing;
+        scope_destroy(to_destroy);
+    }
+    interpreter->scope = &interpreter->globals;
+
+    /* */
+}
+
 int interpreter_run(Interpreter *interpreter, ArrayList *statements)
 {
     if (setjmp(runtime_error_jmp) != RUNTIME_ERROR) {
 	for (size_t i = 0; i < statements->size; i++)
 	    exec(interpreter, *(Stmt **)arraylist_get(statements, i));
-    } else { /* error */
+    } else {
+        /* execution enters here on a runtime error, therefore we must "reset" the interpreter */
+        interpreter_reset_from_err(interpreter);
 	interpreter->prev_exit_code = 1;
     }
 
