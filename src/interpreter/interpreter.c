@@ -489,14 +489,14 @@ static void exec_if(Interpreter *interpreter, IfStmt *stmt)
 
 static void exec_block(Interpreter *interpreter, BlockStmt *stmt)
 {
-    Scope block_scope;
-    scope_init(&block_scope, interpreter->scope);
-    interpreter->scope = &block_scope;
+    Scope *block_scope = scope_alloc(interpreter->scope, sizeof(Scope));
+    scope_init(block_scope, interpreter->scope);
+    interpreter->scope = block_scope;
 
     exec_block_body(interpreter, stmt);
 
-    interpreter->scope = block_scope.enclosing;
-    scope_destroy(&block_scope);
+    interpreter->scope = block_scope->enclosing;
+    scope_destroy(block_scope);
 }
 
 static void exec_subscript_assign(Interpreter *interpreter, AssignStmt *stmt)
@@ -1009,12 +1009,30 @@ void interpreter_free(Interpreter *interpreter)
     arraylist_free(&interpreter->gc_gray_stack);
 }
 
+static void interpreter_reset_from_err(Interpreter *interpreter)
+{
+    /* free any old scopes */
+    while (interpreter->scope != &interpreter->globals) {
+	Scope *to_destroy = interpreter->scope;
+	interpreter->scope = interpreter->scope->enclosing;
+	scope_destroy(to_destroy);
+    }
+
+    /* reset stream_ctx */
+    arraylist_free(&interpreter->stream_ctx.active_fds);
+    StreamCtx stream_ctx = { .read_fd = STDIN_FILENO, .write_fd = STDOUT_FILENO };
+    arraylist_init(&stream_ctx.active_fds, sizeof(int));
+    interpreter->stream_ctx = stream_ctx;
+}
+
 int interpreter_run(Interpreter *interpreter, ArrayList *statements)
 {
     if (setjmp(runtime_error_jmp) != RUNTIME_ERROR) {
 	for (size_t i = 0; i < statements->size; i++)
 	    exec(interpreter, *(Stmt **)arraylist_get(statements, i));
-    } else { /* error */
+    } else {
+	/* execution enters here on a runtime error, therefore we must "reset" the interpreter */
+	interpreter_reset_from_err(interpreter);
 	interpreter->prev_exit_code = 1;
     }
 
