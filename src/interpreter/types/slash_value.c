@@ -20,8 +20,8 @@
 #include "interpreter/error.h"
 #include "interpreter/types/slash_obj.h"
 #include "interpreter/types/slash_value.h"
+#include "lib/str_view.h"
 #include "sac/sac.h"
-#include "str_view.h"
 
 SlashValue slash_glob_none = { .type = SLASH_NONE };
 

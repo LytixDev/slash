@@ -16,10 +16,10 @@
  */
 #include <math.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <string.h>
-#include <unistd.h>
 
-#include "str_view.h"
+#include "lib/str_view.h"
 
 
 #define HEX_UNDERSCORE_IGNORE 16
@@ -140,7 +140,10 @@ strtod_done:
 
 void str_view_print(StrView s)
 {
-    write(STDOUT_FILENO, s.view, s.size);
+    char str[s.size + 1];
+    memcpy(str, s.view, s.size);
+    str[s.size] = 0;
+    printf("%s", str);
 }
 
 int32_t str_view_to_int(StrView s)

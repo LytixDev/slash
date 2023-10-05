@@ -18,9 +18,9 @@
 
 #include "interpreter/scope.h"
 #include "interpreter/types/slash_value.h"
+#include "lib/str_view.h"
 #include "nicc/nicc.h"
 #include "sac/sac.h"
-#include "str_view.h"
 
 extern char **environ;
 

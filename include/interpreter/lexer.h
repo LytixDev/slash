@@ -19,8 +19,8 @@
 
 #include <stdint.h>
 
+#include "lib/str_view.h"
 #include "nicc/nicc.h"
-#include "str_view.h"
 
 #define STATE_FN(___state_fn) \
     (StateFn)                 \

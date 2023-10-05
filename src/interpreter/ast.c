@@ -16,12 +16,12 @@
  */
 #include <stdio.h>
 
-#include "arena_ll.h"
 #include "interpreter/ast.h"
 #include "interpreter/lexer.h"
 #include "interpreter/types/slash_value.h"
+#include "lib/arena_ll.h"
+#include "lib/str_view.h"
 #include "sac/sac.h"
-#include "str_view.h"
 
 
 const size_t expr_size_table[] = {

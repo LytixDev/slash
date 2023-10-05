@@ -17,9 +17,9 @@
 #ifndef SCOPE_H
 #define SCOPE_H
 
+#include "lib/str_view.h"
 #include "nicc/nicc.h"
 #include "sac/sac.h"
-#include "str_view.h"
 
 typedef struct slash_value_t SlashValue; // Forward declaration of SlashValue
 

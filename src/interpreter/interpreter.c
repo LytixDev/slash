@@ -20,10 +20,9 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "arena_ll.h"
 #include "interpreter/ast.h"
-#include "interpreter/core/exec.h"
 #include "interpreter/error.h"
+#include "interpreter/exec.h"
 #include "interpreter/gc.h"
 #include "interpreter/interpreter.h"
 #include "interpreter/lexer.h"
@@ -35,8 +34,9 @@
 #include "interpreter/types/slash_tuple.h"
 #include "interpreter/types/slash_value.h"
 #include "interpreter/types/trait.h"
+#include "lib/arena_ll.h"
+#include "lib/str_view.h"
 #include "nicc/nicc.h"
-#include "str_view.h"
 
 
 static SlashValue eval(Interpreter *interpreter, Expr *expr);
