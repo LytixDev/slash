@@ -32,7 +32,6 @@ typedef struct {
 
 
 void str_view_print(StrView s);
-void str_view_println(StrView s);
 double str_view_to_double(StrView s);
 int32_t str_view_to_int(StrView s);
 bool str_view_eq(StrView a, StrView b);

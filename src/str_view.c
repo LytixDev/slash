@@ -16,8 +16,8 @@
  */
 #include <math.h>
 #include <stdbool.h>
-#include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "str_view.h"
 
@@ -140,18 +140,7 @@ strtod_done:
 
 void str_view_print(StrView s)
 {
-    char str[s.size + 1];
-    memcpy(str, s.view, s.size);
-    str[s.size] = 0;
-    printf("%s", str);
-}
-
-void str_view_println(StrView s)
-{
-    char str[s.size + 1];
-    memcpy(str, s.view, s.size);
-    str[s.size] = 0;
-    printf("%s\n", str);
+    write(STDOUT_FILENO, s.view, s.size);
 }
 
 int32_t str_view_to_int(StrView s)
