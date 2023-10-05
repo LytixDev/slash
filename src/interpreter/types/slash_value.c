@@ -147,12 +147,12 @@ void slash_num_print(SlashValue *value)
 	printf("%f", value->num);
 }
 
-void slash_str_print(SlashValue *value)
-{
-    // putchar('"');
-    str_view_print(value->str);
-    // putchar('"');
-}
+// void slash_str_print(SlashValue *value)
+//{
+//     // putchar('"');
+//     str_view_print(value->str);
+//     // putchar('"');
+// }
 
 void slash_range_print(SlashValue *value)
 {

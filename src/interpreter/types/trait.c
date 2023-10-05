@@ -79,7 +79,7 @@ TraitPrint trait_print[SLASH_TYPE_COUNT] = {
     /* bool */
     (TraitPrint)slash_bool_print,
     /* str */
-    (TraitPrint)slash_str_print,
+    NULL,
     /* num */
     (TraitPrint)slash_num_print,
     /* shident */

@@ -21,6 +21,7 @@
 #include "interpreter/types/slash_list.h"
 #include "interpreter/types/slash_map.h"
 #include "interpreter/types/slash_obj.h"
+#include "interpreter/types/slash_str.h"
 #include "interpreter/types/slash_tuple.h"
 #include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
@@ -46,6 +47,11 @@ static void gc_sweep_obj(SlashObj *obj)
     case SLASH_OBJ_TUPLE: {
 	SlashTuple *tuple = (SlashTuple *)obj;
 	free(tuple->values);
+	break;
+    }
+    case SLASH_OBJ_STR: {
+	SlashStr *str = (SlashStr *)obj;
+	free(str->p);
 	break;
     }
     default:
@@ -151,6 +157,8 @@ static void gc_blacken_obj(Interpreter *interpreter, SlashObj *obj)
 	}
 	break;
     }
+    case SLASH_OBJ_STR:
+	break;
 
     default:
 	REPORT_RUNTIME_ERROR("gc blacken not implemented for this object type");
@@ -227,6 +235,9 @@ SlashObj *gc_alloc(Interpreter *interpreter, SlashObjType type)
 	break;
     case SLASH_OBJ_TUPLE:
 	size = sizeof(SlashTuple);
+	break;
+    case SLASH_OBJ_STR:
+	size = sizeof(SlashStr);
 	break;
     default:
 	REPORT_RUNTIME_ERROR("Slash obj not implemented");

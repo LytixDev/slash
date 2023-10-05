@@ -31,6 +31,7 @@
 #include "interpreter/types/method.h"
 #include "interpreter/types/slash_list.h"
 #include "interpreter/types/slash_map.h"
+#include "interpreter/types/slash_str.h"
 #include "interpreter/types/slash_tuple.h"
 #include "interpreter/types/slash_value.h"
 #include "interpreter/types/trait.h"
@@ -333,6 +334,13 @@ static SlashValue eval_tuple(Interpreter *interpreter, SequenceExpr *expr)
     }
 
     return value;
+}
+
+static SlashValue eval_str(Interpreter *interpreter, StrExpr *expr)
+{
+    SlashStr *str = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
+    slash_str_init_from_view(str, &expr->view);
+    return (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)str };
 }
 
 static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
@@ -899,6 +907,9 @@ static SlashValue eval(Interpreter *interpreter, Expr *expr)
 
     case EXPR_SUBSHELL:
 	return eval_subshell(interpreter, (SubshellExpr *)expr);
+
+    case EXPR_STR:
+	return eval_str(interpreter, (StrExpr *)expr);
 
     case EXPR_LIST:
 	return eval_list(interpreter, (ListExpr *)expr);

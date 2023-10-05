@@ -709,11 +709,17 @@ static Expr *primary(Parser *parser)
 	return NULL;
     }
 
-    /* str or shident */
     Token *token = previous(parser);
-    LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
-    expr->value = (SlashValue){ .type = token->type == t_dt_str ? SLASH_STR : SLASH_SHIDENT,
-				.str = token->lexeme };
+    /* shident */
+    if (token->type == SLASH_SHIDENT) {
+	LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
+	expr->value = (SlashValue){ .type = SLASH_SHIDENT, .str = token->lexeme };
+	return (Expr *)expr;
+    }
+
+    /* str */
+    StrExpr *expr = (StrExpr *)expr_alloc(parser->ast_arena, EXPR_STR);
+    expr->view = token->lexeme;
     return (Expr *)expr;
 }
 

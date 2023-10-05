@@ -26,8 +26,9 @@
 
 const size_t expr_size_table[] = {
     sizeof(UnaryExpr),	   sizeof(BinaryExpr),	 sizeof(LiteralExpr),  sizeof(AccessExpr),
-    sizeof(SubscriptExpr), sizeof(SubshellExpr), sizeof(ListExpr),     sizeof(MapExpr),
-    sizeof(MethodExpr),	   sizeof(SequenceExpr), sizeof(GroupingExpr), sizeof(CastExpr),
+    sizeof(SubscriptExpr), sizeof(SubshellExpr), sizeof(StrExpr),      sizeof(ListExpr),
+    sizeof(MapExpr),	   sizeof(MethodExpr),	 sizeof(SequenceExpr), sizeof(GroupingExpr),
+    sizeof(CastExpr),
 };
 
 const size_t stmt_size_table[] = {
@@ -37,9 +38,9 @@ const size_t stmt_size_table[] = {
 };
 
 char *expr_type_str_map[EXPR_ENUM_COUNT] = {
-    "EXPR_UNARY",	"EXPR_BINARY",	 "EXPR_LITERAL",  "EXPR_ACCESS",
-    "EXPR_ITEM_ACCESS", "EXPR_SUBSHELL", "EXPR_LIST",	  "EXPR_MAP",
-    "EXPR_METHOD",	"EXPR_SEQUENCE", "EXPR_GROUPING", "EXPR_CAST",
+    "EXPR_UNARY",    "EXPR_BINARY",   "EXPR_LITERAL", "EXPR_ACCESS", "EXPR_ITEM_ACCESS",
+    "EXPR_SUBSHELL", "EXPR_STR",      "EXPR_LIST",    "EXPR_MAP",    "EXPR_METHOD",
+    "EXPR_SEQUENCE", "EXPR_GROUPING", "EXPR_CAST",
 };
 
 char *stmt_type_str_map[STMT_ENUM_COUNT] = {

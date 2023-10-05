@@ -36,7 +36,7 @@ typedef enum {
     SLASH_TYPE_COUNT,
 } SlashType;
 
-#define IS_OBJ(slash_type) (slash_type == SLASH_OBJ)
+#define IS_OBJ(slash_type) ((slash_type) == SLASH_OBJ)
 
 typedef struct {
     int32_t start;
@@ -69,7 +69,7 @@ char *slash_type_to_name(SlashValue *value);
 /* */
 void slash_bool_print(SlashValue *value);
 void slash_num_print(SlashValue *value);
-void slash_str_print(SlashValue *value);
+// void slash_str_print(SlashValue *value);
 void slash_range_print(SlashValue *value);
 void slash_none_print(void);
 

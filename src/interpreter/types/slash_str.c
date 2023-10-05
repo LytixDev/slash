@@ -14,26 +14,42 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef SLASH_OBJ_H
-#define SLASH_OBJ_H
 
-#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-#include "interpreter/scope.h"
+#include "interpreter/types/slash_obj.h"
+#include "interpreter/types/slash_str.h"
 #include "interpreter/types/trait.h"
+#include "lib/str_view.h"
 
-typedef enum {
-    SLASH_OBJ_LIST,
-    SLASH_OBJ_TUPLE,
-    SLASH_OBJ_MAP,
-    SLASH_OBJ_STR,
-    SLASH_OBJ_TYPE_COUNT,
-} SlashObjType;
 
-struct slash_obj_t {
-    SlashObjType type;
-    bool gc_marked;
-    ObjTraits *traits;
-};
+ObjTraits str_traits = { .print = slash_str_print,
+			 .item_get = NULL,
+			 .item_assign = NULL,
+			 .item_in = NULL,
+			 .truthy = NULL,
+			 .equals = NULL,
+			 .cmp = NULL };
 
-#endif /* SLASH_OBJ_H */
+
+void slash_str_init_from_view(SlashStr *str, StrView *view)
+{
+    // TODO: dynamic
+    str->cap = view->size + 1;
+    str->len = str->cap;
+    str->p = malloc(str->cap);
+    memcpy(str->p, view->view, str->cap - 1);
+    str->p[str->cap] = 0;
+
+    str->obj.traits = &str_traits;
+}
+
+/*
+ * traits
+ */
+void slash_str_print(SlashValue *value)
+{
+    SlashStr *str = (SlashStr *)value->obj;
+    printf("%s", str->p);
+}
