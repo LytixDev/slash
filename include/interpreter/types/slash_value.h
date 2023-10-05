@@ -27,7 +27,6 @@ typedef struct slash_obj_t SlashObj; // Forward decl
 
 typedef enum {
     SLASH_BOOL = 0,
-    SLASH_STR,
     SLASH_NUM,
     SLASH_SHIDENT,
     SLASH_RANGE,
@@ -46,12 +45,10 @@ typedef struct {
 typedef struct slash_value_t {
     SlashType type;
     union {
-	/* stored in place */
-	StrView str;
 	bool boolean;
 	double num;
+	StrView shident;
 	SlashRange range;
-	/* pointers to heap allocated data */
 	SlashObj *obj;
     };
 } SlashValue;
@@ -69,7 +66,6 @@ char *slash_type_to_name(SlashValue *value);
 /* */
 void slash_bool_print(SlashValue *value);
 void slash_num_print(SlashValue *value);
-// void slash_str_print(SlashValue *value);
 void slash_range_print(SlashValue *value);
 void slash_none_print(void);
 

@@ -87,10 +87,10 @@ static char **cmd_args_fmt(Interpreter *interpreter, CmdStmt *stmt)
 	    char *str = scope_alloc(interpreter->scope, 128);
 	    sprintf(str, "%f", v.num);
 	    argv[i] = str;
-	} else if (v.type == SLASH_STR || v.type == SLASH_SHIDENT) {
-	    char *str = scope_alloc(interpreter->scope, v.str.size + 1);
-	    memcpy(str, v.str.view, v.str.size);
-	    str[v.str.size] = 0;
+	} else if (v.type == SLASH_SHIDENT) {
+	    char *str = scope_alloc(interpreter->scope, v.shident.size + 1);
+	    memcpy(str, v.shident.view, v.shident.size);
+	    str[v.shident.size] = 0;
 	    argv[i] = str;
 	} else {
 	    REPORT_RUNTIME_ERROR("Currently only support evaluating number and string arguments");
@@ -303,15 +303,16 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
     /* restore original write fd */
     stream_ctx->write_fd = original_write_fd;
 
-    // TODO: dynamic buffer
+    // TODO: dynamic buffer coupled with SlashStr
     char buffer[4096] = { 0 };
     read(fd[0], buffer, 4096);
     close(fd[0]);
-
     size_t size = strlen(buffer);
-    char *str_view = scope_alloc(interpreter->scope, size);
-    strncpy(str_view, buffer, size);
-    return (SlashValue){ .type = SLASH_STR, .str = { .view = str_view, .size = size } };
+    char *cstr = scope_alloc(interpreter->scope, size);
+    strncpy(cstr, buffer, size);
+    SlashStr *str = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
+    slash_str_init_from_alloced_cstr(str, cstr);
+    return (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)str };
 }
 
 static SlashValue eval_tuple(Interpreter *interpreter, SequenceExpr *expr)
@@ -443,8 +444,12 @@ static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
     TraitPrint print_func = trait_print[value.type];
     print_func(&value);
     /* edge case: if last char printed was a newline then we don't bother printing one */
-    if (!(value.type == SLASH_STR && value.str.view[value.str.size - 1] == '\n'))
-	putchar('\n');
+    if (!(value.type == SLASH_OBJ && value.obj->type == SLASH_OBJ_STR)) {
+	SlashStr *str = (SlashStr *)value.obj;
+	if (str->p[str->len - 1] == '\n')
+	    return;
+    }
+    putchar('\n');
 }
 
 static void exec_var(Interpreter *interpreter, VarStmt *stmt)
@@ -729,29 +734,29 @@ static void exec_iter_loop_map(Interpreter *interpreter, IterLoopStmt *stmt, Sla
 static void exec_iter_loop_str(Interpreter *interpreter, IterLoopStmt *stmt, StrView iterable)
 {
     StrView str = { .view = iterable.view, .size = 0 };
-    SlashValue iterator_value = { .type = SLASH_STR, .str = str };
+    // SlashValue iterator_value = { .type = SLASH_STR, .str = str };
 
-    // TODO: fix this I am writing under the influence
-    char underlying[iterable.size + 1];
-    memcpy(underlying, iterable.view, iterable.size);
-    underlying[iterable.size] = 0;
+    //// TODO: fix this I am writing under the influence
+    // char underlying[iterable.size + 1];
+    // memcpy(underlying, iterable.view, iterable.size);
+    // underlying[iterable.size] = 0;
 
-    ScopeAndValue lol = var_get(interpreter->scope, &(StrView){ .view = "IFS", .size = 3 });
-    StrView ifs = lol.value->str;
+    // ScopeAndValue lol = var_get(interpreter->scope, &(StrView){ .view = "IFS", .size = 3 });
+    // StrView ifs = lol.value->shident;
 
-    char ifs_char[ifs.size + 1];
-    memcpy(ifs_char, ifs.view, ifs.size);
-    ifs_char[ifs.size] = 0;
+    // char ifs_char[ifs.size + 1];
+    // memcpy(ifs_char, ifs.view, ifs.size);
+    // ifs_char[ifs.size] = 0;
 
-    var_define(interpreter->scope, &stmt->var_name, &iterator_value);
-    char *t = strtok(underlying, ifs_char);
-    while (t != NULL) {
-	str = (StrView){ .view = t, .size = strlen(t) };
-	iterator_value.str = str;
-	var_assign(&stmt->var_name, interpreter->scope, &iterator_value);
-	exec_block_body(interpreter, stmt->body_block);
-	t = strtok(NULL, ifs_char);
-    }
+    // var_define(interpreter->scope, &stmt->var_name, &iterator_value);
+    // char *t = strtok(underlying, ifs_char);
+    // while (t != NULL) {
+    //     str = (StrView){ .view = t, .size = strlen(t) };
+    //     iterator_value.shident = str;
+    //     var_assign(&stmt->var_name, interpreter->scope, &iterator_value);
+    //     exec_block_body(interpreter, stmt->body_block);
+    //     t = strtok(NULL, ifs_char);
+    // }
 
     /* don't need to undefine the iterator value as the scope will be destroyed imminently */
 }
@@ -780,9 +785,9 @@ static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
 
     SlashValue underlying = eval(interpreter, stmt->underlying_iterable);
     switch (underlying.type) {
-    case SLASH_STR:
-	exec_iter_loop_str(interpreter, stmt, underlying.str);
-	break;
+	//    case SLASH_STR:
+	//	exec_iter_loop_str(interpreter, stmt, underlying.shident);
+	//	break;
     case SLASH_RANGE:
 	exec_iter_loop_range(interpreter, stmt, underlying.range);
 	break;
@@ -843,10 +848,10 @@ static void exec_redirect(Interpreter *interpreter, BinaryStmt *stmt)
 
     SlashValue value = eval(interpreter, stmt->right_expr);
     // TODO: to_str trait
-    if (!(value.type == SLASH_STR || value.type == SLASH_SHIDENT))
+    if (value.type != SLASH_SHIDENT)
 	REPORT_RUNTIME_ERROR("Redirect failed: implement to_str trait!");
-    char file_name[value.str.size + 1];
-    str_view_to_cstr(value.str, file_name);
+    char file_name[value.shident.size + 1];
+    str_view_to_cstr(value.shident, file_name);
 
     StreamCtx *stream_ctx = &interpreter->stream_ctx;
     int og_read = stream_ctx->read_fd;

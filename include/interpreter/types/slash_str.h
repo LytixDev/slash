@@ -17,6 +17,7 @@
 #ifndef SLASH_STR_H
 #define SLASH_STR_H
 
+#include <stdbool.h>
 #include <stdlib.h>
 
 #include "interpreter/interpreter.h"
@@ -25,12 +26,15 @@
 
 typedef struct {
     SlashObj obj;
+    bool gc_managed;
     char *p;
-    size_t len;
+    size_t len; // length of string: includes null terminator. So "hi" has length 3
     size_t cap;
 } SlashStr;
 
+
 void slash_str_init_from_view(SlashStr *str, StrView *view);
+void slash_str_init_from_alloced_cstr(SlashStr *str, char *cstr);
 // void slash_list_init(SlashList *list);
 // bool slash_list_append(SlashList *list, SlashValue val);
 // void slash_list_append_list(SlashList *list, SlashList *to_append);

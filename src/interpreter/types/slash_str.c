@@ -36,13 +36,24 @@ ObjTraits str_traits = { .print = slash_str_print,
 void slash_str_init_from_view(SlashStr *str, StrView *view)
 {
     // TODO: dynamic
-    str->cap = view->size + 1;
-    str->len = str->cap;
+    str->len = view->size + 1;
+    str->cap = str->len;
     str->p = malloc(str->cap);
     memcpy(str->p, view->view, str->cap - 1);
     str->p[str->cap] = 0;
 
     str->obj.traits = &str_traits;
+    str->gc_managed = true;
+}
+
+void slash_str_init_from_alloced_cstr(SlashStr *str, char *cstr)
+{
+    str->len = strlen(cstr) + 1;
+    str->cap = str->len;
+    str->p = cstr;
+
+    str->obj.traits = &str_traits;
+    str->gc_managed = false;
 }
 
 /*

@@ -51,7 +51,8 @@ static void gc_sweep_obj(SlashObj *obj)
     }
     case SLASH_OBJ_STR: {
 	SlashStr *str = (SlashStr *)obj;
-	free(str->p);
+	if (str->gc_managed)
+	    free(str->p);
 	break;
     }
     default:

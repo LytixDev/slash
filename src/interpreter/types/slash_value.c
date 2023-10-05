@@ -25,17 +25,13 @@
 
 SlashValue slash_glob_none = { .type = SLASH_NONE };
 
-char *slash_type_names[SLASH_TYPE_COUNT] = {
-    "bool", "str", "num", "shident", "range", "obj", "none"
-};
+char *slash_type_names[SLASH_TYPE_COUNT] = { "bool", "num", "shident", "range", "obj", "none" };
 
 char *slash_obj_type_names[] = { "list", "tuple", "map" };
 
 int slash_cmp_precedence[SLASH_TYPE_COUNT] = {
     /* bool */
     0,
-    /* str */
-    2,
     /* num */
     1,
     /* shident */
@@ -52,9 +48,8 @@ int slash_cmp_precedence[SLASH_TYPE_COUNT] = {
 bool is_truthy(SlashValue *value)
 {
     switch (value->type) {
-    case SLASH_STR:
     case SLASH_SHIDENT:
-	return value->str.size != 0;
+	return value->shident.size != 0;
     case SLASH_NUM:
 	return value->num != 0;
     case SLASH_BOOL:
@@ -77,9 +72,6 @@ bool slash_value_eq(SlashValue *a, SlashValue *b)
 	return false;
 
     switch (a->type) {
-    case SLASH_STR:
-    case SLASH_SHIDENT:
-	return str_view_eq(a->str, b->str);
     case SLASH_NUM:
 	return a->num == b->num;
     case SLASH_BOOL:
@@ -113,8 +105,6 @@ int slash_value_cmp(SlashValue *a, SlashValue *b)
 	return slash_cmp_precedence[a->type] - slash_cmp_precedence[b->type];
 
     switch (a->type) {
-    case SLASH_STR:
-	return str_view_cmp(a->str, b->str);
     case SLASH_BOOL:
 	return a->boolean - b->boolean;
     case SLASH_NUM:
@@ -146,13 +136,6 @@ void slash_num_print(SlashValue *value)
     else
 	printf("%f", value->num);
 }
-
-// void slash_str_print(SlashValue *value)
-//{
-//     // putchar('"');
-//     str_view_print(value->str);
-//     // putchar('"');
-// }
 
 void slash_range_print(SlashValue *value)
 {

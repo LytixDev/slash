@@ -78,8 +78,6 @@ bool slash_obj_item_in(SlashValue *self, SlashValue *a)
 TraitPrint trait_print[SLASH_TYPE_COUNT] = {
     /* bool */
     (TraitPrint)slash_bool_print,
-    /* str */
-    NULL,
     /* num */
     (TraitPrint)slash_num_print,
     /* shident */
@@ -94,8 +92,6 @@ TraitPrint trait_print[SLASH_TYPE_COUNT] = {
 
 TraitItemGet trait_item_get[SLASH_TYPE_COUNT] = {
     /* bool */
-    (TraitItemGet)slash_item_get_not_defined,
-    /* str */
     (TraitItemGet)slash_item_get_not_defined,
     /* num */
     (TraitItemGet)slash_item_get_not_defined,
@@ -112,8 +108,6 @@ TraitItemGet trait_item_get[SLASH_TYPE_COUNT] = {
 TraitItemAssign trait_item_assign[SLASH_TYPE_COUNT] = {
     /* bool */
     (TraitItemAssign)slash_item_assign_not_defined,
-    /* str */
-    (TraitItemAssign)slash_item_assign_not_defined,
     /* num */
     (TraitItemAssign)slash_item_assign_not_defined,
     /* shident */
@@ -128,8 +122,6 @@ TraitItemAssign trait_item_assign[SLASH_TYPE_COUNT] = {
 
 TraitItemIn trait_item_in[SLASH_TYPE_COUNT] = {
     /* bool */
-    (TraitItemIn)slash_item_in_not_defined,
-    /* str */
     (TraitItemIn)slash_item_in_not_defined,
     /* num */
     (TraitItemIn)slash_item_in_not_defined,

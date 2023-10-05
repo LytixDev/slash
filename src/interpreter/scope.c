@@ -17,6 +17,7 @@
 #include <assert.h>
 
 #include "interpreter/scope.h"
+#include "interpreter/types/slash_str.h"
 #include "interpreter/types/slash_value.h"
 #include "lib/str_view.h"
 #include "nicc/nicc.h"
@@ -41,9 +42,9 @@ static void set_env_as_var(Scope *scope, char *env_entry)
 {
     int pos = get_char_pos(env_entry, '=');
     StrView key = { .view = env_entry, .size = pos };
-    SlashValue value = { .type = SLASH_STR,
-			 .str = (StrView){ .view = env_entry + pos + 1,
-					   .size = strlen(env_entry) - pos } };
+    SlashStr *str = scope_alloc(scope, sizeof(SlashStr));
+    slash_str_init_from_alloced_cstr(str, env_entry);
+    SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)str };
     var_define(scope, &key, &value);
 }
 
@@ -56,9 +57,13 @@ static void set_globals(Scope *scope)
     for (item = *environ_cpy; item != NULL; item = *(++environ_cpy))
 	set_env_as_var(scope, item);
 
-    StrView ifs = { .view = "IFS", .size = 3 };
-    SlashValue ifs_value = { .type = SLASH_STR, .str = (StrView){ .view = "\n\t ", .size = 3 } };
-    var_define(scope, &ifs, &ifs_value);
+    StrView ifs_key = { .view = "IFS", .size = 3 };
+    char *ifs_cstr = scope_alloc(scope, 3);
+    memcpy(ifs_cstr, "\n\t ", 3);
+    SlashStr *str = scope_alloc(scope, sizeof(SlashStr));
+    slash_str_init_from_alloced_cstr(str, ifs_cstr);
+    SlashValue ifs = { .type = SLASH_OBJ, .obj = (SlashObj *)str };
+    var_define(scope, &ifs_key, &ifs);
 }
 
 void scope_init_global(Scope *scope, Arena *arena)

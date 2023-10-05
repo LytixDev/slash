@@ -190,8 +190,6 @@ static SlashType token_type_to_slash_type(TokenType type)
     switch (type) {
     case t_num:
 	return SLASH_NUM;
-    case t_str:
-	return SLASH_STR;
     case t_bool:
 	return SLASH_BOOL;
     default:
@@ -622,7 +620,7 @@ static Expr *single(Parser *parser)
 	expr->expr = left;
 	// TODO: support more casts later
 	if (!match(parser, t_num, t_str, t_bool)) {
-	    report_parse_err(parser, "Expected 'num', 'str' or 'bool' keyword after cast");
+	    report_parse_err(parser, "Expected 'num' or 'bool' keyword after cast");
 	    /* move past token and continue as normal */
 	    parser->token_pos++;
 	    return NULL;
@@ -713,7 +711,7 @@ static Expr *primary(Parser *parser)
     /* shident */
     if (token->type == SLASH_SHIDENT) {
 	LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
-	expr->value = (SlashValue){ .type = SLASH_SHIDENT, .str = token->lexeme };
+	expr->value = (SlashValue){ .type = SLASH_SHIDENT, .shident = token->lexeme };
 	return (Expr *)expr;
     }
 
