@@ -28,11 +28,11 @@
 
 
 ObjTraits str_traits = { .print = slash_str_print,
-			 .item_get = NULL,
-			 .item_assign = NULL,
+			 .item_get = slash_str_item_get,
+			 .item_assign = slash_str_item_assign,
 			 .item_in = NULL,
-			 .truthy = NULL,
-			 .equals = NULL,
+			 .truthy = slash_str_truthy,
+			 .equals = slash_str_eq,
 			 .cmp = NULL };
 
 
@@ -177,6 +177,71 @@ void slash_str_print(SlashValue *value)
     SlashStr *str = (SlashStr *)value->obj;
     printf("%s", str->p);
 }
+
+SlashValue slash_str_item_get(Interpreter *interpreter, SlashValue *self, SlashValue *index)
+{
+    SlashStr *str = (SlashStr *)self->obj;
+    if (!(index->type == SLASH_NUM || index->type == SLASH_RANGE)) {
+	REPORT_RUNTIME_ERROR("List indices must be number or range");
+	ASSERT_NOT_REACHED;
+    }
+
+    size_t offset = (size_t)index->num;
+    size_t size = 1;
+    if (index->type == SLASH_RANGE) {
+	offset = index->range.start;
+	size = index->range.end;
+    }
+    SlashStr *new_str = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
+    slash_str_init_from_slice(new_str, str->p + offset, size);
+    return (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)new_str };
+}
+
+void slash_str_item_assign(SlashValue *self, SlashValue *index, SlashValue *new_value)
+{
+    SlashStr *str = (SlashStr *)self->obj;
+
+    if (index->type != SLASH_NUM) {
+	REPORT_RUNTIME_ERROR("List indices must be number");
+	ASSERT_NOT_REACHED;
+    }
+    if (!(new_value->type == SLASH_OBJ && new_value->obj->type == SLASH_OBJ_STR)) {
+	REPORT_RUNTIME_ERROR("Can not assign value of type '%s' to a string",
+			     SLASH_TYPE_TO_STR(new_value));
+	ASSERT_NOT_REACHED;
+    }
+    SlashStr *ch = (SlashStr *)new_value->obj;
+    if (ch->len - 1 != 1) {
+	REPORT_RUNTIME_ERROR("Can only instert string of len 1, not len '%zu'", ch->len - 1);
+	ASSERT_NOT_REACHED;
+    }
+
+    size_t idx = (size_t)index->num;
+    if (idx >= str->len - 1) {
+	REPORT_RUNTIME_ERROR("Index %zu out of range. String has len %zu", idx, str->len - 1);
+	ASSERT_NOT_REACHED;
+    }
+
+    str->p[idx] = ch->p[0];
+}
+
+bool slash_str_truthy(SlashValue *self)
+{
+    SlashStr *str = (SlashStr *)self->obj;
+    return str->len > 1;
+}
+
+bool slash_str_eq(SlashValue *a, SlashValue *b)
+{
+    SlashStr *A = (SlashStr *)a->obj;
+    SlashStr *B = (SlashStr *)b->obj;
+
+    if (A->len != B->len)
+	return false;
+
+    return strcmp(A->p, B->p) == 0;
+}
+
 
 /*
  * methods

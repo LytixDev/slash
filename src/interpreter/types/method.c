@@ -25,7 +25,6 @@
 
 char slash_value_to_char[] = {
     'b', // bool
-    's', // str
     'n', // num
     '-', // shident
     'r', // range

@@ -92,6 +92,9 @@ static char **cmd_args_fmt(Interpreter *interpreter, CmdStmt *stmt)
 	    memcpy(str, v.shident.view, v.shident.size);
 	    str[v.shident.size] = 0;
 	    argv[i] = str;
+	} else if (v.type == SLASH_OBJ && v.obj->type == SLASH_OBJ_STR) {
+	    SlashStr *str = (SlashStr *)v.obj;
+	    argv[i] = str->p;
 	} else {
 	    REPORT_RUNTIME_ERROR("Currently only support evaluating number and string arguments");
 	}

@@ -52,11 +52,10 @@ SlashList *slash_str_internal_split_any_char(Interpreter *interpreter, SlashStr 
  * traits
  */
 void slash_str_print(SlashValue *value);
-// SlashValue slash_list_item_get(Interpreter *interpreter, SlashValue *self, SlashValue *index);
-// void slash_list_item_assign(SlashValue *self, SlashValue *index, SlashValue *new_value);
-// bool slash_list_item_in(SlashValue *self, SlashValue *item);
-// bool slash_list_truthy(SlashValue *self);
-// bool slash_list_eq(SlashValue *a, SlashValue *b);
+SlashValue slash_str_item_get(Interpreter *interpreter, SlashValue *self, SlashValue *index);
+void slash_str_item_assign(SlashValue *self, SlashValue *index, SlashValue *new_value);
+bool slash_str_truthy(SlashValue *self);
+bool slash_str_eq(SlashValue *a, SlashValue *b);
 
 
 /*
