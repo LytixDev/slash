@@ -444,9 +444,9 @@ static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
     TraitPrint print_func = trait_print[value.type];
     print_func(&value);
     /* edge case: if last char printed was a newline then we don't bother printing one */
-    if (!(value.type == SLASH_OBJ && value.obj->type == SLASH_OBJ_STR)) {
+    if (value.type == SLASH_OBJ && value.obj->type == SLASH_OBJ_STR) {
 	SlashStr *str = (SlashStr *)value.obj;
-	if (str->p[str->len - 1] == '\n')
+	if (slash_str_last_char(str) == '\n')
 	    return;
     }
     putchar('\n');
@@ -731,34 +731,20 @@ static void exec_iter_loop_map(Interpreter *interpreter, IterLoopStmt *stmt, Sla
     }
 }
 
-static void exec_iter_loop_str(Interpreter *interpreter, IterLoopStmt *stmt, StrView iterable)
+static void exec_iter_loop_str(Interpreter *interpreter, IterLoopStmt *stmt, SlashStr *iterable)
 {
-    StrView str = { .view = iterable.view, .size = 0 };
-    // SlashValue iterator_value = { .type = SLASH_STR, .str = str };
+    ScopeAndValue ifs_res = var_get(interpreter->scope, &(StrView){ .view = "IFS", .size = 3 });
+    if (ifs_res.value == NULL) {
+	REPORT_RUNTIME_ERROR("No IFS variable found");
+    }
+    if (!(ifs_res.value->type == SLASH_OBJ && ifs_res.value->obj->type == SLASH_OBJ_STR)) {
+	REPORT_RUNTIME_ERROR("Expeted IFS to be of type 'str' but got '%s'",
+			     SLASH_TYPE_TO_STR(ifs_res.value));
+    }
 
-    //// TODO: fix this I am writing under the influence
-    // char underlying[iterable.size + 1];
-    // memcpy(underlying, iterable.view, iterable.size);
-    // underlying[iterable.size] = 0;
-
-    // ScopeAndValue lol = var_get(interpreter->scope, &(StrView){ .view = "IFS", .size = 3 });
-    // StrView ifs = lol.value->shident;
-
-    // char ifs_char[ifs.size + 1];
-    // memcpy(ifs_char, ifs.view, ifs.size);
-    // ifs_char[ifs.size] = 0;
-
-    // var_define(interpreter->scope, &stmt->var_name, &iterator_value);
-    // char *t = strtok(underlying, ifs_char);
-    // while (t != NULL) {
-    //     str = (StrView){ .view = t, .size = strlen(t) };
-    //     iterator_value.shident = str;
-    //     var_assign(&stmt->var_name, interpreter->scope, &iterator_value);
-    //     exec_block_body(interpreter, stmt->body_block);
-    //     t = strtok(NULL, ifs_char);
-    // }
-
-    /* don't need to undefine the iterator value as the scope will be destroyed imminently */
+    SlashStr *ifs = (SlashStr *)ifs_res.value->obj;
+    SlashList *substrings = slash_str_internal_split_any_char(interpreter, iterable, ifs->p);
+    exec_iter_loop_list(interpreter, stmt, substrings);
 }
 
 static void exec_iter_loop_range(Interpreter *interpreter, IterLoopStmt *stmt, SlashRange iterable)
@@ -785,9 +771,6 @@ static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
 
     SlashValue underlying = eval(interpreter, stmt->underlying_iterable);
     switch (underlying.type) {
-	//    case SLASH_STR:
-	//	exec_iter_loop_str(interpreter, stmt, underlying.shident);
-	//	break;
     case SLASH_RANGE:
 	exec_iter_loop_range(interpreter, stmt, underlying.range);
 	break;
@@ -801,6 +784,9 @@ static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
 	    break;
 	case SLASH_OBJ_MAP:
 	    exec_iter_loop_map(interpreter, stmt, (SlashMap *)underlying.obj);
+	    break;
+	case SLASH_OBJ_STR:
+	    exec_iter_loop_str(interpreter, stmt, (SlashStr *)underlying.obj);
 	    break;
 	default:
 	    REPORT_RUNTIME_ERROR("Object type '%s' cannot be iterated over",

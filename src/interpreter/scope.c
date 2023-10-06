@@ -61,6 +61,7 @@ static void set_globals(Scope *scope)
     char *ifs_cstr = scope_alloc(scope, 3);
     memcpy(ifs_cstr, "\n\t ", 3);
     SlashStr *str = scope_alloc(scope, sizeof(SlashStr));
+    str->obj.type = SLASH_OBJ_STR;
     slash_str_init_from_alloced_cstr(str, ifs_cstr);
     SlashValue ifs = { .type = SLASH_OBJ, .obj = (SlashObj *)str };
     var_define(scope, &ifs_key, &ifs);

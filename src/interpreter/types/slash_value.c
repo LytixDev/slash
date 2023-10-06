@@ -27,7 +27,7 @@ SlashValue slash_glob_none = { .type = SLASH_NONE };
 
 char *slash_type_names[SLASH_TYPE_COUNT] = { "bool", "num", "shident", "range", "obj", "none" };
 
-char *slash_obj_type_names[] = { "list", "tuple", "map" };
+char *slash_obj_type_names[] = { "list", "tuple", "map", "str" };
 
 int slash_cmp_precedence[SLASH_TYPE_COUNT] = {
     /* bool */

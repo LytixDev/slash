@@ -19,6 +19,7 @@
 #include "interpreter/types/method.h"
 #include "interpreter/types/slash_list.h"
 #include "interpreter/types/slash_map.h"
+#include "interpreter/types/slash_str.h"
 #include "interpreter/types/slash_value.h"
 
 
@@ -43,6 +44,8 @@ static char value_to_char_type(SlashValue *value)
 	    return 't';
 	case SLASH_OBJ_MAP:
 	    return 'm';
+	case SLASH_OBJ_STR:
+	    return 's';
 	default:
 	    return 'o';
 	}
@@ -65,6 +68,10 @@ MethodFunc get_method(SlashValue *self, char *method_name)
 	case SLASH_OBJ_MAP:
 	    methods_count = SLASH_MAP_METHODS_COUNT;
 	    methods = slash_map_methods;
+	    break;
+	case SLASH_OBJ_STR:
+	    methods_count = SLASH_STR_METHODS_COUNT;
+	    methods = slash_str_methods;
 	    break;
 	default:
 	    return NULL;

@@ -21,6 +21,7 @@
 #include <stdlib.h>
 
 #include "interpreter/interpreter.h"
+#include "interpreter/types/slash_list.h"
 #include "interpreter/types/slash_obj.h"
 #include "lib/str_view.h"
 
@@ -35,6 +36,11 @@ typedef struct {
 
 void slash_str_init_from_view(SlashStr *str, StrView *view);
 void slash_str_init_from_alloced_cstr(SlashStr *str, char *cstr);
+void slash_str_init_from_slice(SlashStr *str, char *cstr, size_t size);
+
+char slash_str_last_char(SlashStr *str);
+SlashList *slash_str_internal_split(Interpreter *interpreter, SlashStr *str, char *splitter);
+SlashList *slash_str_internal_split_any_char(Interpreter *interpreter, SlashStr *str, char *chars);
 // void slash_list_init(SlashList *list);
 // bool slash_list_append(SlashList *list, SlashValue val);
 // void slash_list_append_list(SlashList *list, SlashList *to_append);
@@ -56,6 +62,11 @@ void slash_str_print(SlashValue *value);
 /*
  * methods
  */
+#define SLASH_STR_METHODS_COUNT 1
+extern SlashMethod slash_str_methods[SLASH_STR_METHODS_COUNT];
+
+SlashValue slash_str_split(Interpreter *interpreter, SlashValue *self, size_t argc,
+			   SlashValue *argv);
 
 
 #endif /* SLASH_STR_H */
