@@ -318,6 +318,7 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
 static SlashValue eval_tuple(Interpreter *interpreter, SequenceExpr *expr)
 {
     SlashTuple *tuple = (SlashTuple *)gc_alloc(interpreter, SLASH_OBJ_TUPLE);
+    GC_PAUSE_OBJ(tuple->obj);
     SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)tuple };
     // TODO: possible?
     if (expr->seq.size == 0) {
@@ -334,6 +335,7 @@ static SlashValue eval_tuple(Interpreter *interpreter, SequenceExpr *expr)
 	tuple->values[i++] = element_value;
     }
 
+    GC_UNPAUSE_OBJ(tuple->obj);
     return value;
 }
 
@@ -347,6 +349,7 @@ static SlashValue eval_str(Interpreter *interpreter, StrExpr *expr)
 static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
 {
     SlashList *list = (SlashList *)gc_alloc(interpreter, SLASH_OBJ_LIST);
+    GC_PAUSE_OBJ(list->obj);
     slash_list_init(list);
     SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)list };
 
@@ -360,12 +363,14 @@ static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
 	slash_list_append(list, element_value);
     }
 
+    GC_UNPAUSE_OBJ(list->obj);
     return value;
 }
 
 static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
 {
     SlashMap *map = (SlashMap *)gc_alloc(interpreter, SLASH_OBJ_MAP);
+    GC_PAUSE_OBJ(map->obj);
     slash_map_init(map);
     SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)map };
 
@@ -382,6 +387,7 @@ static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
 	value.obj->traits->item_assign(&value, &k, &v);
     }
 
+    GC_UNPAUSE_OBJ(map->obj);
     return value;
 }
 
@@ -743,7 +749,7 @@ static void exec_iter_loop_str(Interpreter *interpreter, IterLoopStmt *stmt, Sla
     }
 
     SlashStr *ifs = (SlashStr *)ifs_res.value->obj;
-    SlashList *substrings = slash_str_internal_split_any_char(interpreter, iterable, ifs->p);
+    SlashList *substrings = slash_str_internal_split(interpreter, iterable, ifs->p, true);
     exec_iter_loop_list(interpreter, stmt, substrings);
 }
 

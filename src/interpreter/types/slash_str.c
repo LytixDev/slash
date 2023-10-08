@@ -69,37 +69,14 @@ char slash_str_last_char(SlashStr *str)
     return str->p[str->len - 2];
 }
 
-static char *split(char *str, char *separator, size_t separator_len)
-{
-    size_t offset = 0;
-split_continue:
-    while (str[offset] != 0) {
-	for (size_t i = 0; i < separator_len; i++) {
-	    if (str[i] == 0)
-		goto split_end;
-	    if (str[offset] != separator[i]) {
-		offset++;
-		goto split_continue;
-	    }
-	    // offset++;
-	}
-
-	/* if execution enters here then we just matched the separator */
-	return str + offset - separator_len;
-    }
-
-split_end:
-    return NULL;
-}
-
-static char *split_single_char(char *str, char *chars)
+static char *split_single(char *str, char *chars)
 {
     size_t offset = 0;
     size_t split_chars = strlen(chars);
     while (str[offset] != 0) {
 	for (size_t i = 0; i < split_chars; i++) {
 	    if (str[offset] == chars[i])
-		return str + offset - 1;
+		return str + offset;
 	}
 	offset++;
     }
@@ -107,30 +84,32 @@ static char *split_single_char(char *str, char *chars)
     return NULL;
 }
 
-SlashList *slash_str_internal_split(Interpreter *interpreter, SlashStr *str, char *separator)
+SlashList *slash_str_internal_split(Interpreter *interpreter, SlashStr *str, char *separator,
+				    bool split_any)
 {
     SlashList *list = (SlashList *)gc_alloc(interpreter, SLASH_OBJ_LIST);
     slash_list_init(list);
 
     size_t separator_len = strlen(separator);
     char *start_ptr = str->p;
-    char *end_ptr = split(start_ptr, separator, separator_len);
+    char *end_ptr = split_any ? split_single(start_ptr, separator) : strstr(start_ptr, separator);
     while (end_ptr != NULL) {
 	/* save substr */
 	SlashStr *substr = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
-	slash_str_init_from_slice(substr, start_ptr, end_ptr - start_ptr + 1);
+	slash_str_init_from_slice(substr, start_ptr, end_ptr - start_ptr);
 	slash_list_append(list, (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)substr });
-
 	/* continue */
-	start_ptr = end_ptr + separator_len + 1;
-	end_ptr = split(start_ptr, separator, separator_len);
+	start_ptr = end_ptr + (split_any ? 1 : separator_len);
+	end_ptr = split_any ? split_single(start_ptr, separator) : strstr(start_ptr, separator);
     }
 
     /* final substr */
-    SlashStr *substr = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
     size_t final_size = (str->p + str->len - 1) - start_ptr;
-    slash_str_init_from_slice(substr, start_ptr, final_size);
-    slash_list_append(list, (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)substr });
+    if (final_size != 0) {
+	SlashStr *substr = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
+	slash_str_init_from_slice(substr, start_ptr, final_size);
+	slash_list_append(list, (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)substr });
+    }
     return list;
 }
 
@@ -140,23 +119,25 @@ SlashList *slash_str_internal_split_any_char(Interpreter *interpreter, SlashStr 
     slash_list_init(list);
 
     char *start_ptr = str->p;
-    char *end_ptr = split_single_char(start_ptr, chars);
+    char *end_ptr = split_single(start_ptr, chars);
     while (end_ptr != NULL) {
 	/* save substr */
 	SlashStr *substr = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
-	slash_str_init_from_slice(substr, start_ptr, end_ptr - start_ptr + 1);
+	slash_str_init_from_slice(substr, start_ptr, end_ptr - start_ptr);
 	slash_list_append(list, (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)substr });
 
 	/* continue */
-	start_ptr = end_ptr + 2;
-	end_ptr = split_single_char(start_ptr, chars);
+	start_ptr = end_ptr + 1;
+	end_ptr = split_single(start_ptr, chars);
     }
 
     /* final substr */
-    SlashStr *substr = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
     size_t final_size = (str->p + str->len - 1) - start_ptr;
-    slash_str_init_from_slice(substr, start_ptr, final_size);
-    slash_list_append(list, (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)substr });
+    if (final_size != 0) {
+	SlashStr *substr = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
+	slash_str_init_from_slice(substr, start_ptr, final_size);
+	slash_list_append(list, (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)substr });
+    }
     return list;
 }
 
@@ -262,6 +243,6 @@ SlashValue slash_str_split(Interpreter *interpreter, SlashValue *self, size_t ar
     }
 
     SlashStr *separator = (SlashStr *)argv[0].obj;
-    SlashList *substrings = slash_str_internal_split(interpreter, str, separator->p);
+    SlashList *substrings = slash_str_internal_split(interpreter, str, separator->p, false);
     return (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)substrings };
 }

@@ -50,8 +50,9 @@ void slash_str_init_from_slice(SlashStr *str, char *cstr, size_t size);
  * Returns the last char of the string.
  */
 char slash_str_last_char(SlashStr *str);
-SlashList *slash_str_internal_split(Interpreter *interpreter, SlashStr *str, char *splitter);
-SlashList *slash_str_internal_split_any_char(Interpreter *interpreter, SlashStr *str, char *chars);
+
+SlashList *slash_str_internal_split(Interpreter *interpreter, SlashStr *str, char *separator,
+				    bool split_any);
 
 /*
  * traits

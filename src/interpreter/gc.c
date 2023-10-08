@@ -67,7 +67,7 @@ static void gc_sweep(LinkedList *gc_objs)
 
     while (current != NULL) {
 	SlashObj *obj = current->data;
-	if (!obj->gc_marked) {
+	if (!obj->gc_marked && obj->gc_managed) {
 #ifdef DEBUG_LOG_GC
 	    printf("%p sweep ", (void *)obj);
 	    TraitPrint print_func = trait_print[SLASH_OBJ];
@@ -249,16 +249,14 @@ SlashObj *gc_alloc(Interpreter *interpreter, SlashObjType type)
     obj->gc_marked = false;
     obj->gc_managed = true;
     obj->traits = NULL;
-    gc_register(&interpreter->gc_objs, obj);
 
     // TODO: this is a lousy strategy
     //       a proper solution should track how many bytes has been allocated since the last
     //       time the gc ran.
     interpreter->obj_alloced_since_next_gc++;
-    if (interpreter->obj_alloced_since_next_gc > 10) {
-	obj->gc_marked = true;
+    if (interpreter->obj_alloced_since_next_gc > 10)
 	gc_run(interpreter);
-    }
 
+    gc_register(&interpreter->gc_objs, obj);
     return obj;
 }

@@ -28,6 +28,21 @@
  */
 SlashObj *gc_alloc(Interpreter *interpreter, SlashObjType type);
 
+
+/*
+ * Pausing an object means will treat it as not GC managed.
+ * This is useful when allocating a collection that can not be marked until every element of the
+ * initializtion is allocated.
+ */
+#define GC_PAUSE_OBJ(obj)         \
+    do {                          \
+	(obj).gc_managed = false; \
+    } while (0)
+#define GC_UNPAUSE_OBJ(obj)      \
+    do {                         \
+	(obj).gc_managed = true; \
+    } while (0)
+
 /*
  * Runs the garbage collector.
  * Finds all unreachable objects and frees them.
