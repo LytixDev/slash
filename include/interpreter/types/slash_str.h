@@ -27,26 +27,31 @@
 
 typedef struct {
     SlashObj obj;
-    bool gc_managed;
-    char *p;
-    size_t len; // length of string: includes null terminator. So "hi" has length 3
+    char *p; // Null terminated
+    size_t len; // Length of string: includes null terminator. So "hi" has length 3
     size_t cap;
 } SlashStr;
 
 
+/*
+ * Init and GC allocate based on a view
+ */
 void slash_str_init_from_view(SlashStr *str, StrView *view);
+/*
+ * Does not GC allocate the cstr
+ */
 void slash_str_init_from_alloced_cstr(SlashStr *str, char *cstr);
+/*
+ * Init and GC allocate `size` bytes
+ */
 void slash_str_init_from_slice(SlashStr *str, char *cstr, size_t size);
 
+/*
+ * Returns the last char of the string.
+ */
 char slash_str_last_char(SlashStr *str);
 SlashList *slash_str_internal_split(Interpreter *interpreter, SlashStr *str, char *splitter);
 SlashList *slash_str_internal_split_any_char(Interpreter *interpreter, SlashStr *str, char *chars);
-// void slash_list_init(SlashList *list);
-// bool slash_list_append(SlashList *list, SlashValue val);
-// void slash_list_append_list(SlashList *list, SlashList *to_append);
-// SlashValue *slash_list_get(SlashList *list, size_t idx);
-// bool slash_list_set(SlashList *list, SlashValue *val, size_t idx);
-
 
 /*
  * traits
@@ -54,6 +59,7 @@ SlashList *slash_str_internal_split_any_char(Interpreter *interpreter, SlashStr 
 void slash_str_print(SlashValue *value);
 SlashValue slash_str_item_get(Interpreter *interpreter, SlashValue *self, SlashValue *index);
 void slash_str_item_assign(SlashValue *self, SlashValue *index, SlashValue *new_value);
+bool slash_str_item_in(SlashValue *self, SlashValue *item);
 bool slash_str_truthy(SlashValue *self);
 bool slash_str_eq(SlashValue *a, SlashValue *b);
 

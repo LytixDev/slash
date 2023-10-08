@@ -51,8 +51,7 @@ static void gc_sweep_obj(SlashObj *obj)
     }
     case SLASH_OBJ_STR: {
 	SlashStr *str = (SlashStr *)obj;
-	if (str->gc_managed)
-	    free(str->p);
+	free(str->p);
 	break;
     }
     default:
@@ -117,7 +116,7 @@ static void gc_visit_obj(Interpreter *interpreter, SlashObj *obj)
 
 static void gc_visit_value(Interpreter *interpreter, SlashValue *value)
 {
-    if (IS_OBJ(value->type))
+    if (IS_OBJ(value->type) && value->obj->gc_managed)
 	gc_visit_obj(interpreter, value->obj);
 }
 
@@ -248,6 +247,7 @@ SlashObj *gc_alloc(Interpreter *interpreter, SlashObjType type)
     obj = malloc(size);
     obj->type = type;
     obj->gc_marked = false;
+    obj->gc_managed = true;
     obj->traits = NULL;
     gc_register(&interpreter->gc_objs, obj);
 
@@ -255,7 +255,7 @@ SlashObj *gc_alloc(Interpreter *interpreter, SlashObjType type)
     //       a proper solution should track how many bytes has been allocated since the last
     //       time the gc ran.
     interpreter->obj_alloced_since_next_gc++;
-    if (interpreter->obj_alloced_since_next_gc > 15) {
+    if (interpreter->obj_alloced_since_next_gc > 10) {
 	obj->gc_marked = true;
 	gc_run(interpreter);
     }

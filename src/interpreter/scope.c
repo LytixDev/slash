@@ -43,6 +43,7 @@ static void set_env_as_var(Scope *scope, char *env_entry)
     int pos = get_char_pos(env_entry, '=');
     StrView key = { .view = env_entry, .size = pos };
     SlashStr *str = scope_alloc(scope, sizeof(SlashStr));
+    str->obj.gc_managed = false;
     slash_str_init_from_alloced_cstr(str, env_entry);
     SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)str };
     var_define(scope, &key, &value);
@@ -61,6 +62,7 @@ static void set_globals(Scope *scope)
     char *ifs_cstr = scope_alloc(scope, 3);
     memcpy(ifs_cstr, "\n\t ", 3);
     SlashStr *str = scope_alloc(scope, sizeof(SlashStr));
+    str->obj.gc_managed = false;
     str->obj.type = SLASH_OBJ_STR;
     slash_str_init_from_alloced_cstr(str, ifs_cstr);
     SlashValue ifs = { .type = SLASH_OBJ, .obj = (SlashObj *)str };

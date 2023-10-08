@@ -308,13 +308,10 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
 
     // TODO: dynamic buffer coupled with SlashStr
     char buffer[4096] = { 0 };
-    read(fd[0], buffer, 4096);
+    size_t size = read(fd[0], buffer, 4096);
     close(fd[0]);
-    size_t size = strlen(buffer);
-    char *cstr = scope_alloc(interpreter->scope, size);
-    strncpy(cstr, buffer, size);
     SlashStr *str = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
-    slash_str_init_from_alloced_cstr(str, cstr);
+    slash_str_init_from_slice(str, buffer, size);
     return (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)str };
 }
 

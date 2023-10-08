@@ -30,7 +30,7 @@
 ObjTraits str_traits = { .print = slash_str_print,
 			 .item_get = slash_str_item_get,
 			 .item_assign = slash_str_item_assign,
-			 .item_in = NULL,
+			 .item_in = slash_str_item_in,
 			 .truthy = slash_str_truthy,
 			 .equals = slash_str_eq,
 			 .cmp = NULL };
@@ -38,7 +38,7 @@ ObjTraits str_traits = { .print = slash_str_print,
 
 void slash_str_init_from_view(SlashStr *str, StrView *view)
 {
-    // TODO: dynamic
+    // TODO: make string buffer dynamic similar to list
     str->len = view->size + 1;
     str->cap = str->len;
     str->p = malloc(str->cap);
@@ -46,7 +46,6 @@ void slash_str_init_from_view(SlashStr *str, StrView *view)
     str->p[str->len - 1] = 0;
 
     str->obj.traits = &str_traits;
-    str->gc_managed = true;
 }
 
 void slash_str_init_from_alloced_cstr(SlashStr *str, char *cstr)
@@ -54,26 +53,18 @@ void slash_str_init_from_alloced_cstr(SlashStr *str, char *cstr)
     str->len = strlen(cstr) + 1;
     str->cap = str->len;
     str->p = cstr;
-
     str->obj.traits = &str_traits;
-    str->gc_managed = false;
 }
 
 void slash_str_init_from_slice(SlashStr *str, char *cstr, size_t size)
 {
-    str->len = size + 1;
-    str->cap = str->len;
-    str->p = malloc(str->cap);
-    memcpy(str->p, cstr, str->len - 1);
-    str->p[str->len - 1] = 0;
-
-    str->obj.traits = &str_traits;
-    str->gc_managed = true;
+    slash_str_init_from_view(str, &(StrView){ .view = cstr, .size = size });
 }
 
 char slash_str_last_char(SlashStr *str)
 {
-    if (str->len < 2)
+    /* empty str: "" */
+    if (str->len <= 1)
 	return EOF;
     return str->p[str->len - 2];
 }
@@ -225,6 +216,18 @@ void slash_str_item_assign(SlashValue *self, SlashValue *index, SlashValue *new_
     str->p[idx] = ch->p[0];
 }
 
+bool slash_str_item_in(SlashValue *self, SlashValue *item)
+{
+    if (!(item->type == SLASH_OBJ && item->obj->type == SLASH_OBJ_STR)) {
+	REPORT_RUNTIME_ERROR("Can not check if a string contains a '%s'.", SLASH_TYPE_TO_STR(item));
+	ASSERT_NOT_REACHED;
+    }
+    char *str = ((SlashStr *)self->obj)->p;
+    char *substr = ((SlashStr *)item->obj)->p;
+
+    return strstr(str, substr) != NULL;
+}
+
 bool slash_str_truthy(SlashValue *self)
 {
     SlashStr *str = (SlashStr *)self->obj;
@@ -259,7 +262,6 @@ SlashValue slash_str_split(Interpreter *interpreter, SlashValue *self, size_t ar
     }
 
     SlashStr *separator = (SlashStr *)argv[0].obj;
-
     SlashList *substrings = slash_str_internal_split(interpreter, str, separator->p);
     return (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)substrings };
 }

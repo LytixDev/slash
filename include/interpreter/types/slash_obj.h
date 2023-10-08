@@ -32,6 +32,7 @@ typedef enum {
 
 struct slash_obj_t {
     SlashObjType type;
+    bool gc_managed;
     bool gc_marked;
     ObjTraits *traits;
 };
