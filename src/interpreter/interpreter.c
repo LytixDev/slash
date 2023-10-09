@@ -77,12 +77,12 @@ static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt, char *pro
 	}
     }
 
+    for (size_t n = 0; n < argc - 1; n++)
+	gc_shadow_pop(&interpreter->gc_shadow_stack);
+
     argv[i] = NULL;
     int exit_code = exec_program(&interpreter->stream_ctx, argv);
     interpreter->prev_exit_code = exit_code;
-
-    for (size_t n = 0; n < argc - 1; n++)
-	gc_shadow_pop(&interpreter->gc_shadow_stack);
 }
 
 static void check_num_operands(SlashValue *left, SlashValue *right)
@@ -472,13 +472,27 @@ static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
 			     SLASH_TYPE_TO_STR(path.value));
 
     WhichResult which_result = which(stmt->cmd_name, ((SlashStr *)path.value->obj)->p);
+    if (which_result.type == WHICH_NOT_FOUND)
+	REPORT_RUNTIME_ERROR("Command not found");
 
     if (which_result.type == WHICH_EXTERN) {
 	exec_program_stub(interpreter, stmt, which_result.path);
-    } else if (which_result.type == WHICH_BUILTIN) {
-	which_result.builtin(interpreter, 0, NULL);
     } else {
-	REPORT_RUNTIME_ERROR("program not found :-(");
+	/* builtin */
+	if (stmt->arg_exprs == NULL) {
+	    which_result.builtin(interpreter, 0, NULL);
+	    return;
+	}
+
+	size_t argc = stmt->arg_exprs->size;
+	SlashValue argv[argc];
+	LLItem *item = stmt->arg_exprs->head;
+	for (size_t i = 0; i < argc; i++) {
+	    SlashValue value = eval(interpreter, (Expr *)item->value);
+	    argv[i] = value;
+	    item = item->next;
+	}
+	which_result.builtin(interpreter, argc, argv);
     }
 }
 

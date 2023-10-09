@@ -15,23 +15,24 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <stdio.h>
 #include <unistd.h>
 
 #include "interpreter/error.h"
 #include "interpreter/interpreter.h"
+#include "interpreter/types/slash_str.h"
 #include "interpreter/types/slash_value.h"
+#include "interpreter/types/trait.h"
 
 
 int builtin_cd(Interpreter *interpreter, size_t argc, SlashValue *argv)
 {
-    (void)interpreter;
-    (void)argc;
-    (void)argv;
-    // if (dir_name == NULL) {
-    //     fprintf(stderr, "cd: no argument provided\n");
-    //     return 1;
-    // }
-    // return chdir(dir_name);
-    return 0;
+    if (argc == 0) {
+	fprintf(stderr, "cd: no argument received");
+	return 1;
+    }
+
+    SlashValue param = argv[0];
+    TraitToStr to_str = trait_to_str[param.type];
+    SlashStr *param_str = (SlashStr *)to_str(interpreter, &param).obj;
+    return chdir(param_str->p);
 }

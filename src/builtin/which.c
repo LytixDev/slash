@@ -21,6 +21,8 @@
 
 #include "builtin/builtin.h"
 #include "interpreter/interpreter.h"
+#include "interpreter/types/slash_str.h"
+#include "interpreter/types/trait.h"
 #include "lib/str_view.h"
 
 
@@ -70,9 +72,35 @@ builtin_internal_next:
 
 int builtin_which(Interpreter *interpreter, size_t argc, SlashValue *argv)
 {
-    (void)interpreter;
-    (void)argc;
-    (void)argv;
+    if (argc == 0) {
+	fprintf(stderr, "which: no argument received");
+	return 1;
+    }
+
+    SlashValue param = argv[0];
+    TraitToStr to_str = trait_to_str[param.type];
+    SlashStr *param_str = (SlashStr *)to_str(interpreter, &param).obj;
+    ScopeAndValue path = var_get(interpreter->scope, &(StrView){ .view = "PATH", .size = 4 });
+    if (!(path.value->type == SLASH_OBJ && path.value->obj->type == SLASH_OBJ_STR)) {
+	fprintf(stderr, "PATH variable should be type 'str' not '%s'",
+		SLASH_TYPE_TO_STR(path.value));
+	return 1;
+    }
+
+    WhichResult which_result =
+	which((StrView){ .view = param_str->p, .size = strlen(param_str->p) },
+	      ((SlashStr *)path.value->obj)->p);
+    switch (which_result.type) {
+    case WHICH_BUILTIN:
+	printf("%s: slash builtin\n", param_str->p);
+	break;
+    case WHICH_EXTERN:
+	printf("%s\n", which_result.path);
+	break;
+    case WHICH_NOT_FOUND:
+	printf("%s not found\n", param_str->p);
+	return 1;
+    }
     return 0;
 }
 
