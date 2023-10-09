@@ -24,6 +24,7 @@
 
 
 ObjTraits tuple_traits = { .print = slash_tuple_print,
+			   .to_str = NULL,
 			   .item_get = slash_tuple_item_get,
 			   .item_assign = NULL,
 			   .item_in = slash_tuple_item_in,

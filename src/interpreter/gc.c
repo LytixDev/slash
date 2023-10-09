@@ -21,6 +21,7 @@
 #include "interpreter/types/slash_list.h"
 #include "interpreter/types/slash_map.h"
 #include "interpreter/types/slash_obj.h"
+#include "interpreter/types/slash_str.h"
 #include "interpreter/types/slash_tuple.h"
 #include "interpreter/types/slash_value.h"
 #include "nicc/nicc.h"
@@ -48,6 +49,11 @@ static void gc_sweep_obj(SlashObj *obj)
 	free(tuple->values);
 	break;
     }
+    case SLASH_OBJ_STR: {
+	SlashStr *str = (SlashStr *)obj;
+	free(str->p);
+	break;
+    }
     default:
 	REPORT_RUNTIME_ERROR("Sweep not implemented for this obj");
     }
@@ -61,7 +67,7 @@ static void gc_sweep(LinkedList *gc_objs)
 
     while (current != NULL) {
 	SlashObj *obj = current->data;
-	if (!obj->gc_marked) {
+	if (!obj->gc_marked && obj->gc_managed) {
 #ifdef DEBUG_LOG_GC
 	    printf("%p sweep ", (void *)obj);
 	    TraitPrint print_func = trait_print[SLASH_OBJ];
@@ -110,7 +116,7 @@ static void gc_visit_obj(Interpreter *interpreter, SlashObj *obj)
 
 static void gc_visit_value(Interpreter *interpreter, SlashValue *value)
 {
-    if (IS_OBJ(value->type))
+    if (IS_OBJ(value->type) && value->obj->gc_managed)
 	gc_visit_obj(interpreter, value->obj);
 }
 
@@ -151,6 +157,8 @@ static void gc_blacken_obj(Interpreter *interpreter, SlashObj *obj)
 	}
 	break;
     }
+    case SLASH_OBJ_STR:
+	break;
 
     default:
 	REPORT_RUNTIME_ERROR("gc blacken not implemented for this object type");
@@ -160,6 +168,10 @@ static void gc_blacken_obj(Interpreter *interpreter, SlashObj *obj)
 
 static void gc_mark_roots(Interpreter *interpreter)
 {
+    for (size_t i = 0; i < interpreter->gc_shadow_stack.size; i++) {
+	gc_visit_obj(interpreter, (SlashObj *)arraylist_get(&interpreter->gc_shadow_stack, i));
+    }
+
     /* mark all reachable objects */
     for (Scope *scope = interpreter->scope; scope != NULL; scope = scope->enclosing) {
 	/* loop over all values */
@@ -228,6 +240,9 @@ SlashObj *gc_alloc(Interpreter *interpreter, SlashObjType type)
     case SLASH_OBJ_TUPLE:
 	size = sizeof(SlashTuple);
 	break;
+    case SLASH_OBJ_STR:
+	size = sizeof(SlashStr);
+	break;
     default:
 	REPORT_RUNTIME_ERROR("Slash obj not implemented");
 	ASSERT_NOT_REACHED;
@@ -236,17 +251,26 @@ SlashObj *gc_alloc(Interpreter *interpreter, SlashObjType type)
     obj = malloc(size);
     obj->type = type;
     obj->gc_marked = false;
+    obj->gc_managed = true;
     obj->traits = NULL;
-    gc_register(&interpreter->gc_objs, obj);
 
     // TODO: this is a lousy strategy
     //       a proper solution should track how many bytes has been allocated since the last
     //       time the gc ran.
     interpreter->obj_alloced_since_next_gc++;
-    if (interpreter->obj_alloced_since_next_gc > 15) {
-	obj->gc_marked = true;
+    if (interpreter->obj_alloced_since_next_gc > 10)
 	gc_run(interpreter);
-    }
 
+    gc_register(&interpreter->gc_objs, obj);
     return obj;
+}
+
+void gc_shadow_push(ArrayList *gc_shadow_stack, SlashObj *obj)
+{
+    arraylist_append(gc_shadow_stack, obj);
+}
+
+void gc_shadow_pop(ArrayList *gc_shadow_stack)
+{
+    arraylist_rm(gc_shadow_stack, gc_shadow_stack->size - 1);
 }

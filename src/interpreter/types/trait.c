@@ -24,7 +24,12 @@
 
 void slash_print_not_defined(SlashValue *value)
 {
-    printf("Print not defined for %d", value->type);
+    printf("Print not defined for '%s'", SLASH_TYPE_TO_STR(value));
+}
+
+void slash_to_str_not_defined(SlashValue *value)
+{
+    printf("To string not defined for '%s'", SLASH_TYPE_TO_STR(value));
 }
 
 void slash_item_get_not_defined(void)
@@ -48,6 +53,14 @@ void slash_obj_print(SlashValue *value)
     if (obj->traits->print == NULL)
 	REPORT_RUNTIME_ERROR("Printing not defined for this type");
     obj->traits->print(value);
+}
+
+SlashValue slash_obj_to_str(Interpreter *interpreter, SlashValue *value)
+{
+    SlashObj *obj = value->obj;
+    if (obj->traits->to_str == NULL)
+	REPORT_RUNTIME_ERROR("To string not defined for type '%s'", SLASH_TYPE_TO_STR(value));
+    return obj->traits->to_str(interpreter, value);
 }
 
 
@@ -78,8 +91,6 @@ bool slash_obj_item_in(SlashValue *self, SlashValue *a)
 TraitPrint trait_print[SLASH_TYPE_COUNT] = {
     /* bool */
     (TraitPrint)slash_bool_print,
-    /* str */
-    (TraitPrint)slash_str_print,
     /* num */
     (TraitPrint)slash_num_print,
     /* shident */
@@ -92,10 +103,23 @@ TraitPrint trait_print[SLASH_TYPE_COUNT] = {
     (TraitPrint)slash_none_print,
 };
 
+TraitToStr trait_to_str[SLASH_TYPE_COUNT] = {
+    /* bool */
+    (TraitToStr)slash_bool_to_str,
+    /* num */
+    (TraitToStr)slash_num_to_str,
+    /* shident */
+    (TraitToStr)slash_to_str_not_defined,
+    /* range */
+    (TraitToStr)slash_to_str_not_defined,
+    /* obj */
+    (TraitToStr)slash_obj_to_str,
+    /* none */
+    (TraitToStr)slash_none_to_str,
+};
+
 TraitItemGet trait_item_get[SLASH_TYPE_COUNT] = {
     /* bool */
-    (TraitItemGet)slash_item_get_not_defined,
-    /* str */
     (TraitItemGet)slash_item_get_not_defined,
     /* num */
     (TraitItemGet)slash_item_get_not_defined,
@@ -112,8 +136,6 @@ TraitItemGet trait_item_get[SLASH_TYPE_COUNT] = {
 TraitItemAssign trait_item_assign[SLASH_TYPE_COUNT] = {
     /* bool */
     (TraitItemAssign)slash_item_assign_not_defined,
-    /* str */
-    (TraitItemAssign)slash_item_assign_not_defined,
     /* num */
     (TraitItemAssign)slash_item_assign_not_defined,
     /* shident */
@@ -128,8 +150,6 @@ TraitItemAssign trait_item_assign[SLASH_TYPE_COUNT] = {
 
 TraitItemIn trait_item_in[SLASH_TYPE_COUNT] = {
     /* bool */
-    (TraitItemIn)slash_item_in_not_defined,
-    /* str */
     (TraitItemIn)slash_item_in_not_defined,
     /* num */
     (TraitItemIn)slash_item_in_not_defined,

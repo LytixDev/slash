@@ -26,16 +26,15 @@ typedef enum {
     SLASH_OBJ_LIST,
     SLASH_OBJ_TUPLE,
     SLASH_OBJ_MAP,
+    SLASH_OBJ_STR,
     SLASH_OBJ_TYPE_COUNT,
 } SlashObjType;
 
 struct slash_obj_t {
     SlashObjType type;
+    bool gc_managed;
     bool gc_marked;
-    // TODO: can use type as index into a static table of pointers to these functions
     ObjTraits *traits;
 };
-
-// extern ObjTraits obj_traits[SLASH_OBJ_TYPE_COUNT];
 
 #endif /* SLASH_OBJ_H */

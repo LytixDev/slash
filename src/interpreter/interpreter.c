@@ -20,10 +20,9 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "arena_ll.h"
 #include "interpreter/ast.h"
-#include "interpreter/core/exec.h"
 #include "interpreter/error.h"
+#include "interpreter/exec.h"
 #include "interpreter/gc.h"
 #include "interpreter/interpreter.h"
 #include "interpreter/lexer.h"
@@ -32,11 +31,13 @@
 #include "interpreter/types/method.h"
 #include "interpreter/types/slash_list.h"
 #include "interpreter/types/slash_map.h"
+#include "interpreter/types/slash_str.h"
 #include "interpreter/types/slash_tuple.h"
 #include "interpreter/types/slash_value.h"
 #include "interpreter/types/trait.h"
+#include "lib/arena_ll.h"
+#include "lib/str_view.h"
 #include "nicc/nicc.h"
-#include "str_view.h"
 
 
 static SlashValue eval(Interpreter *interpreter, Expr *expr);
@@ -86,11 +87,14 @@ static char **cmd_args_fmt(Interpreter *interpreter, CmdStmt *stmt)
 	    char *str = scope_alloc(interpreter->scope, 128);
 	    sprintf(str, "%f", v.num);
 	    argv[i] = str;
-	} else if (v.type == SLASH_STR || v.type == SLASH_SHIDENT) {
-	    char *str = scope_alloc(interpreter->scope, v.str.size + 1);
-	    memcpy(str, v.str.view, v.str.size);
-	    str[v.str.size] = 0;
+	} else if (v.type == SLASH_SHIDENT) {
+	    char *str = scope_alloc(interpreter->scope, v.shident.size + 1);
+	    memcpy(str, v.shident.view, v.shident.size);
+	    str[v.shident.size] = 0;
 	    argv[i] = str;
+	} else if (v.type == SLASH_OBJ && v.obj->type == SLASH_OBJ_STR) {
+	    SlashStr *str = (SlashStr *)v.obj;
+	    argv[i] = str->p;
 	} else {
 	    REPORT_RUNTIME_ERROR("Currently only support evaluating number and string arguments");
 	}
@@ -302,20 +306,19 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
     /* restore original write fd */
     stream_ctx->write_fd = original_write_fd;
 
-    // TODO: dynamic buffer
+    // TODO: dynamic buffer coupled with SlashStr
     char buffer[4096] = { 0 };
-    read(fd[0], buffer, 4096);
+    size_t size = read(fd[0], buffer, 4096);
     close(fd[0]);
-
-    size_t size = strlen(buffer);
-    char *str_view = scope_alloc(interpreter->scope, size);
-    strncpy(str_view, buffer, size);
-    return (SlashValue){ .type = SLASH_STR, .str = { .view = str_view, .size = size } };
+    SlashStr *str = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
+    slash_str_init_from_slice(str, buffer, size);
+    return (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)str };
 }
 
 static SlashValue eval_tuple(Interpreter *interpreter, SequenceExpr *expr)
 {
     SlashTuple *tuple = (SlashTuple *)gc_alloc(interpreter, SLASH_OBJ_TUPLE);
+    gc_shadow_push(&interpreter->gc_shadow_stack, &tuple->obj);
     SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)tuple };
     // TODO: possible?
     if (expr->seq.size == 0) {
@@ -332,12 +335,21 @@ static SlashValue eval_tuple(Interpreter *interpreter, SequenceExpr *expr)
 	tuple->values[i++] = element_value;
     }
 
+    gc_shadow_pop(&interpreter->gc_shadow_stack);
     return value;
+}
+
+static SlashValue eval_str(Interpreter *interpreter, StrExpr *expr)
+{
+    SlashStr *str = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
+    slash_str_init_from_view(str, &expr->view);
+    return (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)str };
 }
 
 static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
 {
     SlashList *list = (SlashList *)gc_alloc(interpreter, SLASH_OBJ_LIST);
+    gc_shadow_push(&interpreter->gc_shadow_stack, &list->obj);
     slash_list_init(list);
     SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)list };
 
@@ -351,12 +363,14 @@ static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
 	slash_list_append(list, element_value);
     }
 
+    gc_shadow_pop(&interpreter->gc_shadow_stack);
     return value;
 }
 
 static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
 {
     SlashMap *map = (SlashMap *)gc_alloc(interpreter, SLASH_OBJ_MAP);
+    gc_shadow_push(&interpreter->gc_shadow_stack, &map->obj);
     slash_map_init(map);
     SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)map };
 
@@ -373,6 +387,7 @@ static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
 	value.obj->traits->item_assign(&value, &k, &v);
     }
 
+    gc_shadow_pop(&interpreter->gc_shadow_stack);
     return value;
 }
 
@@ -435,8 +450,12 @@ static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
     TraitPrint print_func = trait_print[value.type];
     print_func(&value);
     /* edge case: if last char printed was a newline then we don't bother printing one */
-    if (!(value.type == SLASH_STR && value.str.view[value.str.size - 1] == '\n'))
-	putchar('\n');
+    if (value.type == SLASH_OBJ && value.obj->type == SLASH_OBJ_STR) {
+	SlashStr *str = (SlashStr *)value.obj;
+	if (slash_str_last_char(str) == '\n')
+	    return;
+    }
+    putchar('\n');
 }
 
 static void exec_var(Interpreter *interpreter, VarStmt *stmt)
@@ -718,34 +737,22 @@ static void exec_iter_loop_map(Interpreter *interpreter, IterLoopStmt *stmt, Sla
     }
 }
 
-static void exec_iter_loop_str(Interpreter *interpreter, IterLoopStmt *stmt, StrView iterable)
+static void exec_iter_loop_str(Interpreter *interpreter, IterLoopStmt *stmt, SlashStr *iterable)
 {
-    StrView str = { .view = iterable.view, .size = 0 };
-    SlashValue iterator_value = { .type = SLASH_STR, .str = str };
-
-    // TODO: fix this I am writing under the influence
-    char underlying[iterable.size + 1];
-    memcpy(underlying, iterable.view, iterable.size);
-    underlying[iterable.size] = 0;
-
-    ScopeAndValue lol = var_get(interpreter->scope, &(StrView){ .view = "IFS", .size = 3 });
-    StrView ifs = lol.value->str;
-
-    char ifs_char[ifs.size + 1];
-    memcpy(ifs_char, ifs.view, ifs.size);
-    ifs_char[ifs.size] = 0;
-
-    var_define(interpreter->scope, &stmt->var_name, &iterator_value);
-    char *t = strtok(underlying, ifs_char);
-    while (t != NULL) {
-	str = (StrView){ .view = t, .size = strlen(t) };
-	iterator_value.str = str;
-	var_assign(&stmt->var_name, interpreter->scope, &iterator_value);
-	exec_block_body(interpreter, stmt->body_block);
-	t = strtok(NULL, ifs_char);
+    ScopeAndValue ifs_res = var_get(interpreter->scope, &(StrView){ .view = "IFS", .size = 3 });
+    if (ifs_res.value == NULL) {
+	REPORT_RUNTIME_ERROR("No IFS variable found");
+    }
+    if (!(ifs_res.value->type == SLASH_OBJ && ifs_res.value->obj->type == SLASH_OBJ_STR)) {
+	REPORT_RUNTIME_ERROR("Expeted IFS to be of type 'str' but got '%s'",
+			     SLASH_TYPE_TO_STR(ifs_res.value));
     }
 
-    /* don't need to undefine the iterator value as the scope will be destroyed imminently */
+    SlashStr *ifs = (SlashStr *)ifs_res.value->obj;
+    SlashList *substrings = slash_str_internal_split(interpreter, iterable, ifs->p, true);
+    gc_shadow_push(&interpreter->gc_shadow_stack, &substrings->obj);
+    exec_iter_loop_list(interpreter, stmt, substrings);
+    gc_shadow_pop(&interpreter->gc_shadow_stack);
 }
 
 static void exec_iter_loop_range(Interpreter *interpreter, IterLoopStmt *stmt, SlashRange iterable)
@@ -771,14 +778,15 @@ static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
     interpreter->scope = &loop_scope;
 
     SlashValue underlying = eval(interpreter, stmt->underlying_iterable);
+    bool paused_underlying = false;
+
     switch (underlying.type) {
-    case SLASH_STR:
-	exec_iter_loop_str(interpreter, stmt, underlying.str);
-	break;
     case SLASH_RANGE:
 	exec_iter_loop_range(interpreter, stmt, underlying.range);
 	break;
     case SLASH_OBJ: {
+	paused_underlying = true;
+	gc_shadow_push(&interpreter->gc_shadow_stack, underlying.obj);
 	switch (underlying.obj->type) {
 	case SLASH_OBJ_LIST:
 	    exec_iter_loop_list(interpreter, stmt, (SlashList *)underlying.obj);
@@ -788,6 +796,9 @@ static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
 	    break;
 	case SLASH_OBJ_MAP:
 	    exec_iter_loop_map(interpreter, stmt, (SlashMap *)underlying.obj);
+	    break;
+	case SLASH_OBJ_STR:
+	    exec_iter_loop_str(interpreter, stmt, (SlashStr *)underlying.obj);
 	    break;
 	default:
 	    REPORT_RUNTIME_ERROR("Object type '%s' cannot be iterated over",
@@ -801,6 +812,8 @@ static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
 	ASSERT_NOT_REACHED;
     }
 
+    if (paused_underlying)
+	gc_shadow_pop(&interpreter->gc_shadow_stack);
     interpreter->scope = loop_scope.enclosing;
     scope_destroy(&loop_scope);
 }
@@ -835,10 +848,10 @@ static void exec_redirect(Interpreter *interpreter, BinaryStmt *stmt)
 
     SlashValue value = eval(interpreter, stmt->right_expr);
     // TODO: to_str trait
-    if (!(value.type == SLASH_STR || value.type == SLASH_SHIDENT))
+    if (value.type != SLASH_SHIDENT)
 	REPORT_RUNTIME_ERROR("Redirect failed: implement to_str trait!");
-    char file_name[value.str.size + 1];
-    str_view_to_cstr(value.str, file_name);
+    char file_name[value.shident.size + 1];
+    str_view_to_cstr(value.shident, file_name);
 
     StreamCtx *stream_ctx = &interpreter->stream_ctx;
     int og_read = stream_ctx->read_fd;
@@ -899,6 +912,9 @@ static SlashValue eval(Interpreter *interpreter, Expr *expr)
 
     case EXPR_SUBSHELL:
 	return eval_subshell(interpreter, (SubshellExpr *)expr);
+
+    case EXPR_STR:
+	return eval_str(interpreter, (StrExpr *)expr);
 
     case EXPR_LIST:
 	return eval_list(interpreter, (ListExpr *)expr);
@@ -992,6 +1008,7 @@ void interpreter_init(Interpreter *interpreter)
     linkedlist_init(&interpreter->gc_objs, sizeof(SlashObj *));
     arraylist_init(&interpreter->gc_gray_stack, sizeof(SlashObj *));
     interpreter->obj_alloced_since_next_gc = 0;
+    arraylist_init(&interpreter->gc_shadow_stack, sizeof(SlashObj *));
 
     /* init default StreamCtx */
     StreamCtx stream_ctx = { .read_fd = STDIN_FILENO, .write_fd = STDOUT_FILENO };
@@ -1006,6 +1023,7 @@ void interpreter_free(Interpreter *interpreter)
     scope_destroy(&interpreter->globals);
     arraylist_free(&interpreter->stream_ctx.active_fds);
     linkedlist_free(&interpreter->gc_objs);
+    arraylist_free(&interpreter->gc_shadow_stack);
     arraylist_free(&interpreter->gc_gray_stack);
 }
 

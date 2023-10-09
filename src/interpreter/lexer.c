@@ -19,8 +19,8 @@
 
 #include "interpreter/error.h"
 #include "interpreter/lexer.h"
+#include "lib/str_view.h"
 #include "nicc/nicc.h"
-#include "str_view.h"
 
 /* forward declarations */
 static void run_until(Lexer *lexer, StateFn start_state, StateFn end_state);

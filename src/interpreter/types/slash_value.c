@@ -18,24 +18,22 @@
 #include <stdio.h>
 
 #include "interpreter/error.h"
+#include "interpreter/gc.h"
 #include "interpreter/types/slash_obj.h"
+#include "interpreter/types/slash_str.h"
 #include "interpreter/types/slash_value.h"
+#include "lib/str_view.h"
 #include "sac/sac.h"
-#include "str_view.h"
 
 SlashValue slash_glob_none = { .type = SLASH_NONE };
 
-char *slash_type_names[SLASH_TYPE_COUNT] = {
-    "bool", "str", "num", "shident", "range", "obj", "none"
-};
+char *slash_type_names[SLASH_TYPE_COUNT] = { "bool", "num", "shident", "range", "obj", "none" };
 
-char *slash_obj_type_names[] = { "list", "tuple", "map" };
+char *slash_obj_type_names[] = { "list", "tuple", "map", "str" };
 
 int slash_cmp_precedence[SLASH_TYPE_COUNT] = {
     /* bool */
     0,
-    /* str */
-    2,
     /* num */
     1,
     /* shident */
@@ -52,9 +50,8 @@ int slash_cmp_precedence[SLASH_TYPE_COUNT] = {
 bool is_truthy(SlashValue *value)
 {
     switch (value->type) {
-    case SLASH_STR:
     case SLASH_SHIDENT:
-	return value->str.size != 0;
+	return value->shident.size != 0;
     case SLASH_NUM:
 	return value->num != 0;
     case SLASH_BOOL:
@@ -77,9 +74,6 @@ bool slash_value_eq(SlashValue *a, SlashValue *b)
 	return false;
 
     switch (a->type) {
-    case SLASH_STR:
-    case SLASH_SHIDENT:
-	return str_view_eq(a->str, b->str);
     case SLASH_NUM:
 	return a->num == b->num;
     case SLASH_BOOL:
@@ -113,8 +107,6 @@ int slash_value_cmp(SlashValue *a, SlashValue *b)
 	return slash_cmp_precedence[a->type] - slash_cmp_precedence[b->type];
 
     switch (a->type) {
-    case SLASH_STR:
-	return str_view_cmp(a->str, b->str);
     case SLASH_BOOL:
 	return a->boolean - b->boolean;
     case SLASH_NUM:
@@ -134,32 +126,59 @@ char *slash_type_to_name(SlashValue *value)
     return slash_type_names[value->type];
 }
 
-void slash_bool_print(SlashValue *value)
+/*
+ * print
+ */
+void slash_bool_print(SlashValue *self)
 {
-    printf("%s", value->boolean == true ? "true" : "false");
+    printf("%s", self->boolean == true ? "true" : "false");
 }
 
-void slash_num_print(SlashValue *value)
+void slash_num_print(SlashValue *self)
 {
-    if (value->num == (int)value->num)
-	printf("%d", (int)value->num);
+    if (self->num == (int)self->num)
+	printf("%d", (int)self->num);
     else
-	printf("%f", value->num);
+	printf("%f", self->num);
 }
 
-void slash_str_print(SlashValue *value)
+void slash_range_print(SlashValue *self)
 {
-    // putchar('"');
-    str_view_print(value->str);
-    // putchar('"');
-}
-
-void slash_range_print(SlashValue *value)
-{
-    printf("%d..%d", value->range.start, value->range.end);
+    printf("%d..%d", self->range.start, self->range.end);
 }
 
 void slash_none_print(void)
 {
     printf("none");
+}
+
+/*
+ * to strings
+ */
+SlashValue slash_bool_to_str(Interpreter *interpreter, SlashValue *self)
+{
+    SlashStr *str = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
+    if (self->boolean)
+	slash_str_init_from_slice(str, "true", 4);
+    else
+	slash_str_init_from_slice(str, "false", 5);
+
+    return (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)str };
+}
+
+SlashValue slash_num_to_str(Interpreter *interpreter, SlashValue *self)
+{
+    SlashStr *str = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
+    char buffer[256];
+    sprintf(buffer, "%f", self->num);
+    slash_str_init_from_slice(str, buffer, strlen(buffer));
+    return (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)str };
+}
+
+SlashValue slash_none_to_str(Interpreter *interpreter, SlashValue *self)
+{
+    (void)self;
+    SlashStr *str = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
+    slash_str_init_from_slice(str, "none", strlen("none"));
+    return (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)str };
 }

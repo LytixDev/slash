@@ -26,6 +26,7 @@
 
 
 ObjTraits map_traits = { .print = slash_map_print,
+			 .to_str = NULL,
 			 .item_get = slash_map_item_get,
 			 .item_assign = slash_map_item_assign,
 			 .item_in = slash_map_item_in,

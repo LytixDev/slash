@@ -19,6 +19,7 @@
 
 #include <stdbool.h>
 
+#include "interpreter/interpreter.h"
 #include "interpreter/lexer.h"
 #include "sac/sac.h"
 
@@ -27,7 +28,6 @@ typedef struct slash_obj_t SlashObj; // Forward decl
 
 typedef enum {
     SLASH_BOOL = 0,
-    SLASH_STR,
     SLASH_NUM,
     SLASH_SHIDENT,
     SLASH_RANGE,
@@ -36,7 +36,7 @@ typedef enum {
     SLASH_TYPE_COUNT,
 } SlashType;
 
-#define IS_OBJ(slash_type) (slash_type == SLASH_OBJ)
+#define IS_OBJ(slash_type) ((slash_type) == SLASH_OBJ)
 
 typedef struct {
     int32_t start;
@@ -46,12 +46,10 @@ typedef struct {
 typedef struct slash_value_t {
     SlashType type;
     union {
-	/* stored in place */
-	StrView str;
 	bool boolean;
 	double num;
+	StrView shident;
 	SlashRange range;
-	/* pointers to heap allocated data */
 	SlashObj *obj;
     };
 } SlashValue;
@@ -66,19 +64,25 @@ int slash_value_cmp(SlashValue *a, SlashValue *b);
 char *slash_type_to_name(SlashValue *value);
 #define SLASH_TYPE_TO_STR(value) slash_type_to_name((value))
 
-/* */
+/*
+ * print
+ */
 void slash_bool_print(SlashValue *value);
 void slash_num_print(SlashValue *value);
-void slash_str_print(SlashValue *value);
 void slash_range_print(SlashValue *value);
 void slash_none_print(void);
 
+/*
+ * to strings
+ */
+SlashValue slash_bool_to_str(Interpreter *interpreter, SlashValue *self);
+SlashValue slash_num_to_str(Interpreter *interpreter, SlashValue *self);
+SlashValue slash_none_to_str(Interpreter *interpreter, SlashValue *self);
 
 extern int slash_cmp_precedence[SLASH_TYPE_COUNT];
 
 extern char *slash_type_names[SLASH_TYPE_COUNT];
 extern char *slash_obj_type_names[];
-
 
 extern SlashValue slash_glob_none;
 

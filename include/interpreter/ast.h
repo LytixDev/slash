@@ -17,9 +17,9 @@
 #ifndef AST_H
 #define AST_H
 
-#include "arena_ll.h"
 #include "interpreter/lexer.h"
 #include "interpreter/types/slash_value.h"
+#include "lib/arena_ll.h"
 #include "sac/sac.h"
 
 
@@ -31,6 +31,7 @@ typedef enum {
     EXPR_ACCESS,
     EXPR_SUBSCRIPT,
     EXPR_SUBSHELL,
+    EXPR_STR,
     EXPR_LIST,
     EXPR_MAP,
     EXPR_METHOD,
@@ -110,6 +111,11 @@ typedef struct {
     ExprType type;
     Stmt *stmt;
 } SubshellExpr;
+
+typedef struct {
+    ExprType type;
+    StrView view;
+} StrExpr;
 
 typedef struct {
     ExprType type;

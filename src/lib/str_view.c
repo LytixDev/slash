@@ -19,7 +19,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "str_view.h"
+#include "lib/str_view.h"
 
 
 #define HEX_UNDERSCORE_IGNORE 16
@@ -144,14 +144,6 @@ void str_view_print(StrView s)
     memcpy(str, s.view, s.size);
     str[s.size] = 0;
     printf("%s", str);
-}
-
-void str_view_println(StrView s)
-{
-    char str[s.size + 1];
-    memcpy(str, s.view, s.size);
-    str[s.size] = 0;
-    printf("%s\n", str);
 }
 
 int32_t str_view_to_int(StrView s)

@@ -7,7 +7,7 @@ sudo cp slash-fuzz /bin/slash-fuzz
 var successes = 0
 var tests = 0
 
-loop file in (find "test/internal_tests" -name "*.slash") {
+loop file in (find "test/" -name "*.slash") {
     $tests += 1
     if (slash-fuzz $file) as bool {
         $successes += 1

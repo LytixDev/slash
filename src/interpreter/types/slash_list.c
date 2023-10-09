@@ -147,6 +147,9 @@ bool slash_list_truthy(SlashValue *self)
 
 bool slash_list_eq(SlashValue *a, SlashValue *b)
 {
+    if (!(b->type == SLASH_OBJ && b->obj->type == SLASH_OBJ_LIST))
+	return false;
+
     SlashList *list_a = (SlashList *)a->obj;
     SlashList *list_b = (SlashList *)b->obj;
     if (list_a->underlying.size != list_b->underlying.size)
