@@ -28,7 +28,7 @@
 
 
 ObjTraits str_traits = { .print = slash_str_print,
-			 .to_str = NULL,
+			 .to_str = slash_str_to_str,
 			 .item_get = slash_str_item_get,
 			 .item_assign = slash_str_item_assign,
 			 .item_in = slash_str_item_in,
@@ -113,7 +113,7 @@ SlashList *slash_str_internal_split(Interpreter *interpreter, SlashStr *str, cha
 	slash_list_append(list, (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)substr });
     }
 
-    gc_shadow_pop(&interpreter->gc_shadow_stack, &list->obj);
+    gc_shadow_pop(&interpreter->gc_shadow_stack);
     return list;
 }
 
@@ -123,7 +123,13 @@ SlashList *slash_str_internal_split(Interpreter *interpreter, SlashStr *str, cha
 void slash_str_print(SlashValue *value)
 {
     SlashStr *str = (SlashStr *)value->obj;
-    printf("%s", str->p);
+    printf("\"%s\"", str->p);
+}
+
+SlashValue slash_str_to_str(Interpreter *interpreter, SlashValue *value)
+{
+    (void)interpreter;
+    return *value;
 }
 
 SlashValue slash_str_item_get(Interpreter *interpreter, SlashValue *self, SlashValue *index)

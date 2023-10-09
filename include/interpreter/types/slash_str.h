@@ -58,6 +58,7 @@ SlashList *slash_str_internal_split(Interpreter *interpreter, SlashStr *str, cha
  * traits
  */
 void slash_str_print(SlashValue *value);
+SlashValue slash_str_to_str(Interpreter *interpreter, SlashValue *value);
 SlashValue slash_str_item_get(Interpreter *interpreter, SlashValue *self, SlashValue *index);
 void slash_str_item_assign(SlashValue *self, SlashValue *index, SlashValue *new_value);
 bool slash_str_item_in(SlashValue *self, SlashValue *item);

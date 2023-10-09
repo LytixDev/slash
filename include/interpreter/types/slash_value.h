@@ -77,6 +77,7 @@ void slash_none_print(void);
  */
 SlashValue slash_bool_to_str(Interpreter *interpreter, SlashValue *self);
 SlashValue slash_num_to_str(Interpreter *interpreter, SlashValue *self);
+SlashValue slash_none_to_str(Interpreter *interpreter, SlashValue *self);
 
 extern int slash_cmp_precedence[SLASH_TYPE_COUNT];
 
