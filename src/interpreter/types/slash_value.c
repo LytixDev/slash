@@ -175,6 +175,13 @@ SlashValue slash_num_to_str(Interpreter *interpreter, SlashValue *self)
     return (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)str };
 }
 
+SlashValue slash_shident_to_str(Interpreter *interpreter, SlashValue *self)
+{
+    SlashStr *str = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
+    slash_str_init_from_view(str, &self->shident);
+    return (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)str };
+}
+
 SlashValue slash_none_to_str(Interpreter *interpreter, SlashValue *self)
 {
     (void)self;

@@ -109,7 +109,7 @@ TraitToStr trait_to_str[SLASH_TYPE_COUNT] = {
     /* num */
     (TraitToStr)slash_num_to_str,
     /* shident */
-    (TraitToStr)slash_to_str_not_defined,
+    (TraitToStr)slash_shident_to_str,
     /* range */
     (TraitToStr)slash_to_str_not_defined,
     /* obj */

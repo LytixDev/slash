@@ -20,6 +20,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "builtin/builtin.h"
 #include "interpreter/ast.h"
 #include "interpreter/error.h"
 #include "interpreter/exec.h"
@@ -55,62 +56,33 @@ static void exec_block_body(Interpreter *interpreter, BlockStmt *stmt)
     }
 }
 
-// TODO: this is temporary
-static char **cmd_args_fmt(Interpreter *interpreter, CmdStmt *stmt)
+static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt, char *program_path)
 {
     size_t argc = 1;
     if (stmt->arg_exprs != NULL)
 	argc += stmt->arg_exprs->size;
-
-    char **argv = malloc(sizeof(char *) * (argc + 1));
-
-    char *cmd_name = scope_alloc(interpreter->scope, stmt->cmd_name.size + 6);
-    // TODO: 'which' builtin or something
-    memcpy(cmd_name, "/bin/", 5);
-    memcpy(cmd_name + 5, stmt->cmd_name.view, stmt->cmd_name.size);
-    cmd_name[stmt->cmd_name.size + 5] = 0;
-    argv[0] = cmd_name;
-
-    if (stmt->arg_exprs == NULL) {
-	argv[argc] = NULL;
-	return argv;
-    }
+    char *argv[argc + 1]; // + 1 because last element is NULL
+    argv[0] = program_path;
 
     size_t i = 1;
-    LLItem *item;
-    ARENA_LL_FOR_EACH(stmt->arg_exprs, item)
-    {
-	SlashValue v = eval(interpreter, item->value);
-
-	// TODO: better num to str
-	if (v.type == SLASH_NUM) {
-	    char *str = scope_alloc(interpreter->scope, 128);
-	    sprintf(str, "%f", v.num);
-	    argv[i] = str;
-	} else if (v.type == SLASH_SHIDENT) {
-	    char *str = scope_alloc(interpreter->scope, v.shident.size + 1);
-	    memcpy(str, v.shident.view, v.shident.size);
-	    str[v.shident.size] = 0;
-	    argv[i] = str;
-	} else if (v.type == SLASH_OBJ && v.obj->type == SLASH_OBJ_STR) {
-	    SlashStr *str = (SlashStr *)v.obj;
-	    argv[i] = str->p;
-	} else {
-	    REPORT_RUNTIME_ERROR("Currently only support evaluating number and string arguments");
+    if (stmt->arg_exprs != NULL) {
+	LLItem *item;
+	ARENA_LL_FOR_EACH(stmt->arg_exprs, item)
+	{
+	    SlashValue value = eval(interpreter, item->value);
+	    TraitToStr to_str = trait_to_str[value.type];
+	    SlashValue value_str_repr = to_str(interpreter, &value);
+	    gc_shadow_push(&interpreter->gc_shadow_stack, value_str_repr.obj);
+	    argv[i++] = ((SlashStr *)(value_str_repr.obj))->p;
 	}
-	i++;
     }
 
-    argv[argc] = NULL;
-    return argv;
-}
-
-static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt)
-{
-    char **argv_owning = cmd_args_fmt(interpreter, stmt);
-    int exit_code = exec_program(&interpreter->stream_ctx, argv_owning);
+    argv[i] = NULL;
+    int exit_code = exec_program(&interpreter->stream_ctx, argv);
     interpreter->prev_exit_code = exit_code;
-    free(argv_owning);
+
+    for (size_t n = 0; n < argc - 1; n++)
+	gc_shadow_pop(&interpreter->gc_shadow_stack);
 }
 
 static void check_num_operands(SlashValue *left, SlashValue *right)
@@ -494,7 +466,20 @@ static void exec_seq_var(Interpreter *interpreter, SeqVarStmt *stmt)
 
 static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
 {
-    exec_program_stub(interpreter, stmt);
+    ScopeAndValue path = var_get(interpreter->scope, &(StrView){ .view = "PATH", .size = 4 });
+    if (!(path.value->type == SLASH_OBJ && path.value->obj->type == SLASH_OBJ_STR))
+	REPORT_RUNTIME_ERROR("PATH variable should be type 'str' not '%s'",
+			     SLASH_TYPE_TO_STR(path.value));
+
+    WhichResult which_result = which(stmt->cmd_name, ((SlashStr *)path.value->obj)->p);
+
+    if (which_result.type == WHICH_EXTERN) {
+	exec_program_stub(interpreter, stmt, which_result.path);
+    } else if (which_result.type == WHICH_BUILTIN) {
+	which_result.builtin(interpreter, 0, NULL);
+    } else {
+	REPORT_RUNTIME_ERROR("program not found :-(");
+    }
 }
 
 static void exec_if(Interpreter *interpreter, IfStmt *stmt)
