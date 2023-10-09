@@ -709,7 +709,7 @@ static Expr *primary(Parser *parser)
 
     Token *token = previous(parser);
     /* shident */
-    if (token->type == SLASH_SHIDENT) {
+    if (token->type == t_dt_shident) {
 	LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
 	expr->value = (SlashValue){ .type = SLASH_SHIDENT, .shident = token->lexeme };
 	return (Expr *)expr;

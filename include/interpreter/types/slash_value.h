@@ -19,6 +19,7 @@
 
 #include <stdbool.h>
 
+#include "interpreter/interpreter.h"
 #include "interpreter/lexer.h"
 #include "sac/sac.h"
 
@@ -63,18 +64,24 @@ int slash_value_cmp(SlashValue *a, SlashValue *b);
 char *slash_type_to_name(SlashValue *value);
 #define SLASH_TYPE_TO_STR(value) slash_type_to_name((value))
 
-/* */
+/*
+ * print
+ */
 void slash_bool_print(SlashValue *value);
 void slash_num_print(SlashValue *value);
 void slash_range_print(SlashValue *value);
 void slash_none_print(void);
 
+/*
+ * to strings
+ */
+SlashValue slash_bool_to_str(Interpreter *interpreter, SlashValue *self);
+SlashValue slash_num_to_str(Interpreter *interpreter, SlashValue *self);
 
 extern int slash_cmp_precedence[SLASH_TYPE_COUNT];
 
 extern char *slash_type_names[SLASH_TYPE_COUNT];
 extern char *slash_obj_type_names[];
-
 
 extern SlashValue slash_glob_none;
 

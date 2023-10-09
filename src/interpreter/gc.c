@@ -169,8 +169,9 @@ static void gc_blacken_obj(Interpreter *interpreter, SlashObj *obj)
 static void gc_mark_roots(Interpreter *interpreter)
 {
     /* mark all paused objects */
-    for (LinkedListItem *paused = interpreter->gc_paused.head; paused != NULL; paused = paused->next) {
-        gc_visit_obj(interpreter, (SlashObj *)paused->data);
+    for (LinkedListItem *paused = interpreter->gc_paused.head; paused != NULL;
+	 paused = paused->next) {
+	gc_visit_obj(interpreter, (SlashObj *)paused->data);
     }
 
     /* mark all reachable objects */

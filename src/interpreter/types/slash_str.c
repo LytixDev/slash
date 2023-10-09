@@ -28,6 +28,7 @@
 
 
 ObjTraits str_traits = { .print = slash_str_print,
+			 .to_str = NULL,
 			 .item_get = slash_str_item_get,
 			 .item_assign = slash_str_item_assign,
 			 .item_in = slash_str_item_in,

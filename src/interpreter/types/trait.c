@@ -24,7 +24,12 @@
 
 void slash_print_not_defined(SlashValue *value)
 {
-    printf("Print not defined for %d", value->type);
+    printf("Print not defined for '%s'", SLASH_TYPE_TO_STR(value));
+}
+
+void slash_to_str_not_defined(SlashValue *value)
+{
+    printf("To string not defined for '%s'", SLASH_TYPE_TO_STR(value));
 }
 
 void slash_item_get_not_defined(void)
@@ -88,6 +93,21 @@ TraitPrint trait_print[SLASH_TYPE_COUNT] = {
     (TraitPrint)slash_obj_print,
     /* none */
     (TraitPrint)slash_none_print,
+};
+
+TraitToStr trait_to_str[SLASH_TYPE_COUNT] = {
+    /* bool */
+    (TraitToStr)slash_bool_to_str,
+    /* num */
+    (TraitToStr)slash_num_to_str,
+    /* shident */
+    (TraitToStr)slash_to_str_not_defined,
+    /* range */
+    (TraitToStr)slash_to_str_not_defined,
+    /* obj */
+    (TraitToStr)slash_to_str_not_defined,
+    /* none */
+    (TraitToStr)slash_to_str_not_defined,
 };
 
 TraitItemGet trait_item_get[SLASH_TYPE_COUNT] = {

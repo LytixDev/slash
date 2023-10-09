@@ -18,7 +18,9 @@
 #include <stdio.h>
 
 #include "interpreter/error.h"
+#include "interpreter/gc.h"
 #include "interpreter/types/slash_obj.h"
+#include "interpreter/types/slash_str.h"
 #include "interpreter/types/slash_value.h"
 #include "lib/str_view.h"
 #include "sac/sac.h"
@@ -124,25 +126,51 @@ char *slash_type_to_name(SlashValue *value)
     return slash_type_names[value->type];
 }
 
-void slash_bool_print(SlashValue *value)
+/*
+ * print
+ */
+void slash_bool_print(SlashValue *self)
 {
-    printf("%s", value->boolean == true ? "true" : "false");
+    printf("%s", self->boolean == true ? "true" : "false");
 }
 
-void slash_num_print(SlashValue *value)
+void slash_num_print(SlashValue *self)
 {
-    if (value->num == (int)value->num)
-	printf("%d", (int)value->num);
+    if (self->num == (int)self->num)
+	printf("%d", (int)self->num);
     else
-	printf("%f", value->num);
+	printf("%f", self->num);
 }
 
-void slash_range_print(SlashValue *value)
+void slash_range_print(SlashValue *self)
 {
-    printf("%d..%d", value->range.start, value->range.end);
+    printf("%d..%d", self->range.start, self->range.end);
 }
 
 void slash_none_print(void)
 {
     printf("none");
+}
+
+/*
+ * to strings
+ */
+SlashValue slash_bool_to_str(Interpreter *interpreter, SlashValue *self)
+{
+    SlashStr *str = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
+    if (self->boolean)
+	slash_str_init_from_slice(str, "true", 4);
+    else
+	slash_str_init_from_slice(str, "false", 5);
+
+    return (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)str };
+}
+
+SlashValue slash_num_to_str(Interpreter *interpreter, SlashValue *self)
+{
+    SlashStr *str = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
+    char buffer[256];
+    sprintf(buffer, "%f", self->num);
+    slash_str_init_from_slice(str, buffer, strlen(buffer));
+    return (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)str };
 }
