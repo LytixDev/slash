@@ -89,6 +89,7 @@ SlashList *slash_str_internal_split(Interpreter *interpreter, SlashStr *str, cha
 {
     SlashList *list = (SlashList *)gc_alloc(interpreter, SLASH_OBJ_LIST);
     slash_list_init(list);
+    gc_pause_obj(&interpreter->gc_paused, &list->obj);
 
     size_t separator_len = strlen(separator);
     char *start_ptr = str->p;
@@ -110,34 +111,8 @@ SlashList *slash_str_internal_split(Interpreter *interpreter, SlashStr *str, cha
 	slash_str_init_from_slice(substr, start_ptr, final_size);
 	slash_list_append(list, (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)substr });
     }
-    return list;
-}
 
-SlashList *slash_str_internal_split_any_char(Interpreter *interpreter, SlashStr *str, char *chars)
-{
-    SlashList *list = (SlashList *)gc_alloc(interpreter, SLASH_OBJ_LIST);
-    slash_list_init(list);
-
-    char *start_ptr = str->p;
-    char *end_ptr = split_single(start_ptr, chars);
-    while (end_ptr != NULL) {
-	/* save substr */
-	SlashStr *substr = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
-	slash_str_init_from_slice(substr, start_ptr, end_ptr - start_ptr);
-	slash_list_append(list, (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)substr });
-
-	/* continue */
-	start_ptr = end_ptr + 1;
-	end_ptr = split_single(start_ptr, chars);
-    }
-
-    /* final substr */
-    size_t final_size = (str->p + str->len - 1) - start_ptr;
-    if (final_size != 0) {
-	SlashStr *substr = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
-	slash_str_init_from_slice(substr, start_ptr, final_size);
-	slash_list_append(list, (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)substr });
-    }
+    gc_unpause_obj(&interpreter->gc_paused, &list->obj);
     return list;
 }
 
@@ -217,9 +192,11 @@ bool slash_str_truthy(SlashValue *self)
 
 bool slash_str_eq(SlashValue *a, SlashValue *b)
 {
+    if (!(b->type == SLASH_OBJ && b->obj->type == SLASH_OBJ_STR))
+	return false;
+
     SlashStr *A = (SlashStr *)a->obj;
     SlashStr *B = (SlashStr *)b->obj;
-
     if (A->len != B->len)
 	return false;
 

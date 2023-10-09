@@ -28,21 +28,6 @@
  */
 SlashObj *gc_alloc(Interpreter *interpreter, SlashObjType type);
 
-
-/*
- * Pausing an object means will treat it as not GC managed.
- * This is useful when allocating a collection that can not be marked until every element of the
- * initializtion is allocated.
- */
-#define GC_PAUSE_OBJ(obj)         \
-    do {                          \
-	(obj).gc_managed = false; \
-    } while (0)
-#define GC_UNPAUSE_OBJ(obj)      \
-    do {                         \
-	(obj).gc_managed = true; \
-    } while (0)
-
 /*
  * Runs the garbage collector.
  * Finds all unreachable objects and frees them.
@@ -54,5 +39,13 @@ void gc_run(Interpreter *interpreter);
  * Used on exit.
  */
 void gc_collect_all(LinkedList *gc_objs);
+
+/*
+ * An object in its init phase will be marked during a GC run.
+ * Useful when allocating a collection that can not be marked until every element of the
+ * initializtion is allocated.
+ */
+void gc_pause_obj(LinkedList *gc_objs_init_phase, SlashObj *obj);
+void gc_unpause_obj(LinkedList *gc_objs_init_phase, SlashObj *obj);
 
 #endif /* GC_H */

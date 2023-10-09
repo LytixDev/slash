@@ -168,6 +168,11 @@ static void gc_blacken_obj(Interpreter *interpreter, SlashObj *obj)
 
 static void gc_mark_roots(Interpreter *interpreter)
 {
+    /* mark all paused objects */
+    for (LinkedListItem *paused = interpreter->gc_paused.head; paused != NULL; paused = paused->next) {
+        gc_visit_obj(interpreter, (SlashObj *)paused->data);
+    }
+
     /* mark all reachable objects */
     for (Scope *scope = interpreter->scope; scope != NULL; scope = scope->enclosing) {
 	/* loop over all values */
@@ -259,4 +264,14 @@ SlashObj *gc_alloc(Interpreter *interpreter, SlashObjType type)
 
     gc_register(&interpreter->gc_objs, obj);
     return obj;
+}
+
+void gc_pause_obj(LinkedList *gc_paused, SlashObj *obj)
+{
+    linkedlist_append(gc_paused, obj);
+}
+
+void gc_unpause_obj(LinkedList *gc_paused, SlashObj *obj)
+{
+    linkedlist_remove(gc_paused, obj);
 }

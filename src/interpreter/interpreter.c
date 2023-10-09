@@ -318,7 +318,7 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
 static SlashValue eval_tuple(Interpreter *interpreter, SequenceExpr *expr)
 {
     SlashTuple *tuple = (SlashTuple *)gc_alloc(interpreter, SLASH_OBJ_TUPLE);
-    GC_PAUSE_OBJ(tuple->obj);
+    gc_pause_obj(&interpreter->gc_paused, &tuple->obj);
     SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)tuple };
     // TODO: possible?
     if (expr->seq.size == 0) {
@@ -335,7 +335,7 @@ static SlashValue eval_tuple(Interpreter *interpreter, SequenceExpr *expr)
 	tuple->values[i++] = element_value;
     }
 
-    GC_UNPAUSE_OBJ(tuple->obj);
+    gc_unpause_obj(&interpreter->gc_paused, &tuple->obj);
     return value;
 }
 
@@ -349,7 +349,7 @@ static SlashValue eval_str(Interpreter *interpreter, StrExpr *expr)
 static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
 {
     SlashList *list = (SlashList *)gc_alloc(interpreter, SLASH_OBJ_LIST);
-    GC_PAUSE_OBJ(list->obj);
+    gc_pause_obj(&interpreter->gc_paused, &list->obj);
     slash_list_init(list);
     SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)list };
 
@@ -363,14 +363,14 @@ static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
 	slash_list_append(list, element_value);
     }
 
-    GC_UNPAUSE_OBJ(list->obj);
+    gc_unpause_obj(&interpreter->gc_paused, &list->obj);
     return value;
 }
 
 static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
 {
     SlashMap *map = (SlashMap *)gc_alloc(interpreter, SLASH_OBJ_MAP);
-    GC_PAUSE_OBJ(map->obj);
+    gc_pause_obj(&interpreter->gc_paused, &map->obj);
     slash_map_init(map);
     SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)map };
 
@@ -387,7 +387,7 @@ static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
 	value.obj->traits->item_assign(&value, &k, &v);
     }
 
-    GC_UNPAUSE_OBJ(map->obj);
+    gc_unpause_obj(&interpreter->gc_paused, &map->obj);
     return value;
 }
 
@@ -750,7 +750,9 @@ static void exec_iter_loop_str(Interpreter *interpreter, IterLoopStmt *stmt, Sla
 
     SlashStr *ifs = (SlashStr *)ifs_res.value->obj;
     SlashList *substrings = slash_str_internal_split(interpreter, iterable, ifs->p, true);
+    gc_pause_obj(&interpreter->gc_paused, &substrings->obj);
     exec_iter_loop_list(interpreter, stmt, substrings);
+    gc_unpause_obj(&interpreter->gc_paused, &substrings->obj);
 }
 
 static void exec_iter_loop_range(Interpreter *interpreter, IterLoopStmt *stmt, SlashRange iterable)
@@ -776,11 +778,15 @@ static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
     interpreter->scope = &loop_scope;
 
     SlashValue underlying = eval(interpreter, stmt->underlying_iterable);
+    bool paused_underlying = false;
+
     switch (underlying.type) {
     case SLASH_RANGE:
 	exec_iter_loop_range(interpreter, stmt, underlying.range);
 	break;
     case SLASH_OBJ: {
+	paused_underlying = true;
+	gc_pause_obj(&interpreter->gc_paused, underlying.obj);
 	switch (underlying.obj->type) {
 	case SLASH_OBJ_LIST:
 	    exec_iter_loop_list(interpreter, stmt, (SlashList *)underlying.obj);
@@ -806,6 +812,8 @@ static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
 	ASSERT_NOT_REACHED;
     }
 
+    if (paused_underlying)
+	gc_unpause_obj(&interpreter->gc_paused, underlying.obj);
     interpreter->scope = loop_scope.enclosing;
     scope_destroy(&loop_scope);
 }
@@ -1000,6 +1008,7 @@ void interpreter_init(Interpreter *interpreter)
     linkedlist_init(&interpreter->gc_objs, sizeof(SlashObj *));
     arraylist_init(&interpreter->gc_gray_stack, sizeof(SlashObj *));
     interpreter->obj_alloced_since_next_gc = 0;
+    linkedlist_init(&interpreter->gc_paused, sizeof(SlashObj *));
 
     /* init default StreamCtx */
     StreamCtx stream_ctx = { .read_fd = STDIN_FILENO, .write_fd = STDOUT_FILENO };
@@ -1014,6 +1023,7 @@ void interpreter_free(Interpreter *interpreter)
     scope_destroy(&interpreter->globals);
     arraylist_free(&interpreter->stream_ctx.active_fds);
     linkedlist_free(&interpreter->gc_objs);
+    linkedlist_free(&interpreter->gc_paused);
     arraylist_free(&interpreter->gc_gray_stack);
 }
 
