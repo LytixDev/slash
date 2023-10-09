@@ -168,10 +168,8 @@ static void gc_blacken_obj(Interpreter *interpreter, SlashObj *obj)
 
 static void gc_mark_roots(Interpreter *interpreter)
 {
-    /* mark all paused objects */
-    for (LinkedListItem *paused = interpreter->gc_paused.head; paused != NULL;
-	 paused = paused->next) {
-	gc_visit_obj(interpreter, (SlashObj *)paused->data);
+    for (size_t i = 0; i < interpreter->gc_shadow_stack.size; i++) {
+	gc_visit_obj(interpreter, (SlashObj *)arraylist_get(&interpreter->gc_shadow_stack, i));
     }
 
     /* mark all reachable objects */
@@ -267,12 +265,12 @@ SlashObj *gc_alloc(Interpreter *interpreter, SlashObjType type)
     return obj;
 }
 
-void gc_pause_obj(LinkedList *gc_paused, SlashObj *obj)
+void gc_shadow_push(ArrayList *gc_shadow_stack, SlashObj *obj)
 {
-    linkedlist_append(gc_paused, obj);
+    arraylist_append(gc_shadow_stack, obj);
 }
 
-void gc_unpause_obj(LinkedList *gc_paused, SlashObj *obj)
+void gc_shadow_pop(ArrayList *gc_shadow_stack)
 {
-    linkedlist_remove(gc_paused, obj);
+    arraylist_rm(gc_shadow_stack, gc_shadow_stack->size - 1);
 }

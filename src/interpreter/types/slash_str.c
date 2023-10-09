@@ -90,7 +90,7 @@ SlashList *slash_str_internal_split(Interpreter *interpreter, SlashStr *str, cha
 {
     SlashList *list = (SlashList *)gc_alloc(interpreter, SLASH_OBJ_LIST);
     slash_list_init(list);
-    gc_pause_obj(&interpreter->gc_paused, &list->obj);
+    gc_shadow_push(&interpreter->gc_shadow_stack, &list->obj);
 
     size_t separator_len = strlen(separator);
     char *start_ptr = str->p;
@@ -113,7 +113,7 @@ SlashList *slash_str_internal_split(Interpreter *interpreter, SlashStr *str, cha
 	slash_list_append(list, (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)substr });
     }
 
-    gc_unpause_obj(&interpreter->gc_paused, &list->obj);
+    gc_shadow_pop(&interpreter->gc_shadow_stack, &list->obj);
     return list;
 }
 

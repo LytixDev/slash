@@ -41,11 +41,10 @@ void gc_run(Interpreter *interpreter);
 void gc_collect_all(LinkedList *gc_objs);
 
 /*
- * An object in its init phase will be marked during a GC run.
  * Useful when allocating a collection that can not be marked until every element of the
  * initializtion is allocated.
  */
-void gc_pause_obj(LinkedList *gc_objs_init_phase, SlashObj *obj);
-void gc_unpause_obj(LinkedList *gc_objs_init_phase, SlashObj *obj);
+void gc_shadow_push(ArrayList *gc_shadow_stack, SlashObj *obj);
+void gc_shadow_pop(ArrayList *gc_shadow_stack);
 
 #endif /* GC_H */

@@ -38,7 +38,7 @@ typedef struct {
     LinkedList gc_objs; // objects managed by the garbage collector
     ArrayList gc_gray_stack;
     size_t obj_alloced_since_next_gc;
-    LinkedList gc_paused; // list of paused objects that are always always marked during gc run.
+    ArrayList gc_shadow_stack; // list of objects that are always always marked during gc run.
 
     int prev_exit_code;
     StreamCtx stream_ctx;
