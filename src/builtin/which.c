@@ -26,47 +26,60 @@
 #include "lib/str_view.h"
 
 
-char *builtin_names[] = { "cd", "vars", "which" };
-#define BUILTINS_COUNT (sizeof((builtin_names)) / sizeof((builtin_names[0])))
+Builtin builtins[] = { { .name = "cd", .func = builtin_cd },
+		       { .name = "vars", .func = builtin_vars },
+		       { .name = "which", .func = builtin_which } };
 
+static bool cstr_starts_with(char *str, char *cmp)
+{
+    size_t i = 0;
+    while (cmp[i] != 0) {
+	if (!(str[i] != 0 && str[i] == cmp[i]))
+	    return false;
+	i++;
+    }
+    return true;
+}
 
 static void which_internal(WhichResult *mutable_result, char *PATH, char *command)
 {
-    // TODO: lol
-    PATH = PATH + 5;
+    /* PATH environment variable is often prefixed with 'PATH=' */
+    if (cstr_starts_with(PATH, "PATH="))
+	PATH = PATH + 5;
     size_t PATH_len = strlen(PATH) + 1;
     char *path_cpy = malloc(PATH_len);
     memcpy(path_cpy, PATH, PATH_len);
 
     char *single_path = strtok(path_cpy, ":");
     while (single_path != NULL) {
-	DIR *d = opendir(single_path);
-	if (d == NULL)
-	    goto builtin_internal_next;
+	DIR *path_dir = opendir(single_path);
 
-	struct dirent *dir_entry;
-	struct stat sb;
-	while ((dir_entry = readdir(d)) != NULL) {
+	struct dirent *candidate_program;
+	while (path_dir != NULL && (candidate_program = readdir(path_dir)) != NULL) {
+	    struct stat sb;
 	    /* check for name equality */
-	    if (strcmp(command, dir_entry->d_name) == 0) {
-		snprintf(mutable_result->path, 512, "%s/%s", single_path, command);
-		/* check if executable bit is on */
-		if (stat(mutable_result->path, &sb) == 0 && sb.st_mode & S_IXUSR &&
-		    !S_ISDIR(sb.st_mode)) {
-		    mutable_result->type = WHICH_EXTERN;
-		    return;
-		}
-		/* program can not be in this directory as the correct name is not executable */
-		closedir(d);
-		goto builtin_internal_next;
+	    if (strcmp(command, candidate_program->d_name) == 0)
+		continue;
+
+	    snprintf(mutable_result->path, PROGRAM_PATH_MAX_LEN, "%s/%s", single_path, command);
+	    /* check if executable bit is on */
+	    if (stat(mutable_result->path, &sb) == 0 && sb.st_mode & S_IXUSR &&
+		!S_ISDIR(sb.st_mode)) {
+		mutable_result->type = WHICH_EXTERN;
+		free(path_cpy);
+		closedir(path_dir);
+		return;
 	    }
+	    /* can not be in this path_dir as file with matching name is not an executable */
+	    break;
 	}
 
-	closedir(d);
-builtin_internal_next:
+	if (path_dir != NULL)
+	    closedir(path_dir);
 	single_path = strtok(NULL, ":");
     }
 
+    free(path_cpy);
     mutable_result->type = WHICH_NOT_FOUND;
 }
 
@@ -92,10 +105,10 @@ int builtin_which(Interpreter *interpreter, size_t argc, SlashValue *argv)
 	      ((SlashStr *)path.value->obj)->p);
     switch (which_result.type) {
     case WHICH_BUILTIN:
-	printf("%s: slash builtin\n", param_str->p);
+	fprintf(stdout, "%s: slash builtin\n", param_str->p);
 	break;
     case WHICH_EXTERN:
-	printf("%s\n", which_result.path);
+	fprintf(stdout, "%s\n", which_result.path);
 	break;
     case WHICH_NOT_FOUND:
 	printf("%s not found\n", param_str->p);
@@ -106,8 +119,6 @@ int builtin_which(Interpreter *interpreter, size_t argc, SlashValue *argv)
 
 WhichResult which(StrView cmd, char *PATH)
 {
-    // TODO: this function is not memory safe
-
     char command[cmd.size + 1];
     str_view_to_cstr(cmd, command);
 
@@ -115,24 +126,17 @@ WhichResult which(StrView cmd, char *PATH)
     /* edge case: command is a path */
     if (command[0] == '/') {
 	result.type = WHICH_EXTERN;
-	memcpy(result.path, command, cmd.size + 1);
+	memcpy(result.path, command,
+	       cmd.size + 1 > PROGRAM_PATH_MAX_LEN ? PROGRAM_PATH_MAX_LEN : cmd.size + 1);
 	return result;
     }
 
-    // TODO: is there a faster solution than a linear search?
-    for (size_t i = 0; i < BUILTINS_COUNT; i++) {
-	char *builtin_name = builtin_names[i];
-	if (strcmp(builtin_name, command) == 0) {
+    size_t builtins_count = sizeof(builtins) / sizeof(builtins[0]);
+    for (size_t i = 0; i < builtins_count; i++) {
+	Builtin builtin = builtins[i];
+	if (strcmp(builtin.name, command) == 0) {
 	    result.type = WHICH_BUILTIN;
-	    // TODO: X macro would work nicely here I think
-	    /* set correct function pointer */
-	    if (strcmp(command, "cd") == 0) {
-		result.builtin = builtin_cd;
-	    } else if (strcmp(command, "which") == 0) {
-		result.builtin = builtin_which;
-	    } else {
-		result.builtin = builtin_vars;
-	    }
+	    result.builtin = builtin.func;
 	    return result;
 	}
     }

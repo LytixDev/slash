@@ -257,9 +257,14 @@ SlashObj *gc_alloc(Interpreter *interpreter, SlashObjType type)
     // TODO: this is a lousy strategy
     //       a proper solution should track how many bytes has been allocated since the last
     //       time the gc ran.
+#ifndef DEBUG_STRESS_GC
     interpreter->obj_alloced_since_next_gc++;
     if (interpreter->obj_alloced_since_next_gc > 10)
 	gc_run(interpreter);
+#else
+    gc_run(interpreter);
+#endif
+
 
     gc_register(&interpreter->gc_objs, obj);
     return obj;

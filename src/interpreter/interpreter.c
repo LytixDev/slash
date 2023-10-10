@@ -777,14 +777,14 @@ static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
     interpreter->scope = &loop_scope;
 
     SlashValue underlying = eval(interpreter, stmt->underlying_iterable);
-    bool paused_underlying = false;
+    bool underyling_on_shadow_stack = false;
 
     switch (underlying.type) {
     case SLASH_RANGE:
 	exec_iter_loop_range(interpreter, stmt, underlying.range);
 	break;
     case SLASH_OBJ: {
-	paused_underlying = true;
+	underyling_on_shadow_stack = true;
 	gc_shadow_push(&interpreter->gc_shadow_stack, underlying.obj);
 	switch (underlying.obj->type) {
 	case SLASH_OBJ_LIST:
@@ -811,7 +811,7 @@ static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
 	ASSERT_NOT_REACHED;
     }
 
-    if (paused_underlying)
+    if (underyling_on_shadow_stack)
 	gc_shadow_pop(&interpreter->gc_shadow_stack);
     interpreter->scope = loop_scope.enclosing;
     scope_destroy(&loop_scope);

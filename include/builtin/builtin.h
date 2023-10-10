@@ -20,8 +20,14 @@
 #include "interpreter/interpreter.h"
 #include "interpreter/types/slash_value.h"
 
+#define PROGRAM_PATH_MAX_LEN 512
 
 typedef int (*BuiltinFunc)(Interpreter *interpreter, size_t argc, SlashValue *argv);
+
+typedef struct {
+    char *name;
+    BuiltinFunc func;
+} Builtin;
 
 typedef enum {
     WHICH_BUILTIN,
@@ -32,7 +38,7 @@ typedef enum {
 typedef struct {
     WhichResultType type;
     union {
-	char path[512];
+	char path[PROGRAM_PATH_MAX_LEN];
 	BuiltinFunc builtin;
     };
 } WhichResult;

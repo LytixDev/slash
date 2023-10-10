@@ -17,8 +17,8 @@
 #ifndef GC_H
 #define GC_H
 
-// #define DEBUG_STRESS_GC
-// #define DEBUG_LOG_GC
+#define DEBUG_STRESS_GC
+#define DEBUG_LOG_GC
 
 #include "interpreter/types/slash_obj.h"
 #include "nicc/nicc.h"
