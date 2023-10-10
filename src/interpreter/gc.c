@@ -147,6 +147,8 @@ static void gc_blacken_obj(Interpreter *interpreter, SlashObj *obj)
     }
     case SLASH_OBJ_MAP: {
 	SlashMap *map = (SlashMap *)obj;
+	if (map->underlying.len == 0)
+	    break;
 	SlashValue *keys[map->underlying.len];
 	hashmap_get_keys(&map->underlying, (void **)keys);
 	for (size_t i = 0; i < map->underlying.len; i++) {

@@ -216,26 +216,44 @@ static SlashValue cmp_binary_values(SlashValue left, SlashValue right, TokenType
 
 static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
 {
+    SlashValue return_value;
     SlashValue left = eval(interpreter, expr->left);
+    if (IS_OBJ(left.type))
+	gc_shadow_push(&interpreter->gc_shadow_stack, left.obj);
+
     /* logical operators */
     if (expr->operator_ == t_and) {
-	if (!is_truthy(&left))
-	    return (SlashValue){ .type = SLASH_BOOL, .boolean = false };
+	if (!is_truthy(&left)) {
+	    return_value = (SlashValue){ .type = SLASH_BOOL, .boolean = false };
+	    goto defer_shadow_pop;
+	}
 	SlashValue right = eval(interpreter, expr->right);
-	return (SlashValue){ .type = SLASH_BOOL, .boolean = is_truthy(&right) };
+	return_value = (SlashValue){ .type = SLASH_BOOL, .boolean = is_truthy(&right) };
+	goto defer_shadow_pop;
     }
     SlashValue right = eval(interpreter, expr->right);
-    if (expr->operator_ == t_or)
-	return (SlashValue){ .type = SLASH_BOOL, .boolean = is_truthy(&left) || is_truthy(&right) };
+    if (expr->operator_ == t_or) {
+	return_value =
+	    (SlashValue){ .type = SLASH_BOOL, .boolean = is_truthy(&left) || is_truthy(&right) };
+	goto defer_shadow_pop;
+    }
 
-    if (expr->operator_ != t_in)
-	return cmp_binary_values(left, right, expr->operator_);
+    if (expr->operator_ != t_in) {
+	return_value = cmp_binary_values(left, right, expr->operator_);
+	goto defer_shadow_pop;
+    }
 
     /* left "IN" right */
     TraitItemIn func = trait_item_in[right.type];
     bool rc = func(&right, &left);
-    return (SlashValue){ .type = SLASH_BOOL, .boolean = rc };
+    return_value = (SlashValue){ .type = SLASH_BOOL, .boolean = rc };
+
+defer_shadow_pop:
+    if (IS_OBJ(left.type))
+	gc_shadow_pop(&interpreter->gc_shadow_stack);
+    return return_value;
 }
+
 
 static SlashValue eval_literal(Interpreter *interpreter, LiteralExpr *expr)
 {
