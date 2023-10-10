@@ -366,6 +366,9 @@ static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
 static SlashValue eval_method(Interpreter *interpreter, MethodExpr *expr)
 {
     SlashValue self = eval(interpreter, expr->obj);
+    if (IS_OBJ(self.type))
+	gc_shadow_push(&interpreter->gc_shadow_stack, self.obj);
+
     // TODO: fix cursed manual conversion from str_view to cstr
     size_t method_name_size = expr->method_name.size;
     char method_name[method_name_size + 1];
@@ -378,20 +381,34 @@ static SlashValue eval_method(Interpreter *interpreter, MethodExpr *expr)
 	REPORT_RUNTIME_ERROR("Method '%s' does not exist on type '%s'", method_name,
 			     SLASH_TYPE_TO_STR(&self));
 
-    if (expr->args == NULL)
-	return method(interpreter, &self, 0, NULL);
+    SlashValue return_value;
+    size_t shadow_push_count = 0;
+    if (expr->args == NULL) {
+	return_value = method(interpreter, &self, 0, NULL);
+    } else {
+	SlashValue argv[expr->args->seq.size];
+	size_t i = 0;
+	LLItem *item;
+	ARENA_LL_FOR_EACH(&expr->args->seq, item)
+	{
+	    SlashValue sv = eval(interpreter, item->value);
+	    if (IS_OBJ(sv.type)) {
+		gc_shadow_push(&interpreter->gc_shadow_stack, sv.obj);
+		shadow_push_count++;
+	    }
+	    argv[i++] = sv;
+	}
 
-    SlashValue argv[expr->args->seq.size];
-    size_t i = 0;
-    LLItem *item;
-    ARENA_LL_FOR_EACH(&expr->args->seq, item)
-    {
-	SlashValue sv = eval(interpreter, item->value);
-	argv[i++] = sv;
+	assert(i == expr->args->seq.size);
+	return_value = method(interpreter, &self, i, argv);
     }
 
-    assert(i == expr->args->seq.size);
-    return method(interpreter, &self, i, argv);
+    for (size_t n = 0; n < shadow_push_count; n++)
+	gc_shadow_pop(&interpreter->gc_shadow_stack);
+    if (IS_OBJ(self.type))
+	gc_shadow_pop(&interpreter->gc_shadow_stack);
+
+    return return_value;
 }
 
 static SlashValue eval_grouping(Interpreter *interpreter, GroupingExpr *expr)
@@ -777,15 +794,14 @@ static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
     interpreter->scope = &loop_scope;
 
     SlashValue underlying = eval(interpreter, stmt->underlying_iterable);
-    bool underyling_on_shadow_stack = false;
+    if (IS_OBJ(underlying.type))
+	gc_shadow_push(&interpreter->gc_shadow_stack, underlying.obj);
 
     switch (underlying.type) {
     case SLASH_RANGE:
 	exec_iter_loop_range(interpreter, stmt, underlying.range);
 	break;
     case SLASH_OBJ: {
-	underyling_on_shadow_stack = true;
-	gc_shadow_push(&interpreter->gc_shadow_stack, underlying.obj);
 	switch (underlying.obj->type) {
 	case SLASH_OBJ_LIST:
 	    exec_iter_loop_list(interpreter, stmt, (SlashList *)underlying.obj);
@@ -811,7 +827,7 @@ static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
 	ASSERT_NOT_REACHED;
     }
 
-    if (underyling_on_shadow_stack)
+    if (IS_OBJ(underlying.type))
 	gc_shadow_pop(&interpreter->gc_shadow_stack);
     interpreter->scope = loop_scope.enclosing;
     scope_destroy(&loop_scope);
@@ -1007,7 +1023,7 @@ void interpreter_init(Interpreter *interpreter)
     linkedlist_init(&interpreter->gc_objs, sizeof(SlashObj *));
     arraylist_init(&interpreter->gc_gray_stack, sizeof(SlashObj *));
     interpreter->obj_alloced_since_next_gc = 0;
-    arraylist_init(&interpreter->gc_shadow_stack, sizeof(SlashObj *));
+    arraylist_init(&interpreter->gc_shadow_stack, sizeof(SlashObj **));
 
     /* init default StreamCtx */
     StreamCtx stream_ctx = { .read_fd = STDIN_FILENO, .write_fd = STDOUT_FILENO };
