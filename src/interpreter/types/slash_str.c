@@ -216,6 +216,7 @@ bool slash_str_eq(SlashValue *a, SlashValue *b)
  */
 SlashMethod slash_str_methods[SLASH_STR_METHODS_COUNT] = {
     { .name = "split", .fp = slash_str_split },
+    { .name = "len", .fp = slash_str_len },
 };
 
 SlashValue slash_str_split(Interpreter *interpreter, SlashValue *self, size_t argc,
@@ -229,4 +230,20 @@ SlashValue slash_str_split(Interpreter *interpreter, SlashValue *self, size_t ar
     SlashStr *separator = (SlashStr *)argv[0].obj;
     SlashList *substrings = slash_str_internal_split(interpreter, str, separator->p, false);
     return (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)substrings };
+}
+
+SlashValue slash_str_len(Interpreter *interpreter, SlashValue *self, size_t argc, SlashValue *argv)
+{
+    (void)interpreter;
+    assert(self->type == SLASH_OBJ);
+    assert(self->obj->type == SLASH_OBJ_STR);
+
+    SlashStr *str = (SlashStr *)self->obj;
+
+    if (!match_signature("", argc, argv)) {
+	REPORT_RUNTIME_ERROR("Bad method args");
+	ASSERT_NOT_REACHED;
+    }
+    SlashValue len = { .type = SLASH_NUM, .num = (double)str->len - 1 };
+    return len;
 }

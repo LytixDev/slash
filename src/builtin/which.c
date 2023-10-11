@@ -103,18 +103,22 @@ int builtin_which(Interpreter *interpreter, size_t argc, SlashValue *argv)
     WhichResult which_result =
 	which((StrView){ .view = param_str->p, .size = strlen(param_str->p) },
 	      ((SlashStr *)path.value->obj)->p);
+
+    int return_code = 0;
     switch (which_result.type) {
     case WHICH_BUILTIN:
-	fprintf(stdout, "%s: slash builtin\n", param_str->p);
+	printf("%s: slash builtin\n", param_str->p);
 	break;
     case WHICH_EXTERN:
-	fprintf(stdout, "%s\n", which_result.path);
+	printf("%s\n", which_result.path);
 	break;
     case WHICH_NOT_FOUND:
 	printf("%s not found\n", param_str->p);
-	return 1;
+	return_code = 1;
+	break;
     }
-    return 0;
+
+    return return_code;
 }
 
 WhichResult which(StrView cmd, char *PATH)

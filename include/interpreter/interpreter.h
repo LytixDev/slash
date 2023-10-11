@@ -25,8 +25,8 @@
 #define STREAM_READ_END 0
 
 typedef struct {
-    int read_fd; // the file descriptor we are reading from, defaulted to STDIN
-    int write_fd; // the file descriptor we are writing to, defaulted to STDOUT
+    int read_fd; // the file descriptor we are reading from, defaulted to fileno(STDIN)
+    int write_fd; // the file descriptor we are writing to, defaulted to fileno(STDOUT)
     ArrayList active_fds; // list/stack of open file descriptors that need to be closed on fork()
 } StreamCtx;
 

@@ -69,11 +69,12 @@ bool slash_str_eq(SlashValue *a, SlashValue *b);
 /*
  * methods
  */
-#define SLASH_STR_METHODS_COUNT 1
+#define SLASH_STR_METHODS_COUNT 2
 extern SlashMethod slash_str_methods[SLASH_STR_METHODS_COUNT];
 
 SlashValue slash_str_split(Interpreter *interpreter, SlashValue *self, size_t argc,
 			   SlashValue *argv);
+SlashValue slash_str_len(Interpreter *interpreter, SlashValue *self, size_t argc, SlashValue *argv);
 
 
 #endif /* SLASH_STR_H */
