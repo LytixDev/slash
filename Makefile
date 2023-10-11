@@ -13,7 +13,7 @@ LDFLAGS = -lm
 
 .PHONY: format clean tags bear $(OBJDIR)
 TARGET = slash
-TARGET-FUZZ = slash-fuzz
+TARGET-FUZZ = slash-asan
 
 all: $(TARGET)
 
@@ -32,9 +32,9 @@ $(TARGET-FUZZ): $(OBJS)
 debug: CFLAGS = -Iinclude -Wall -Wpedantic -Wextra -Wshadow -std=gnu11 -g -DDEBUG -DDEBUG_PERF
 debug: $(TARGET)
 
-fuzz: CFLAGS += -fsanitize=address -fsanitize=undefined
-fuzz: LDFLAGS += -fsanitize=address -fsanitize=undefined
-fuzz: $(TARGET-FUZZ)
+asan: CFLAGS += -fsanitize=address -fsanitize=undefined
+asan: LDFLAGS += -fsanitize=address -fsanitize=undefined
+asan: $(TARGET-FUZZ)
 
 clean:
 	rm -rf $(OBJDIR) $(TARGET) $(TARGET-FUZZ)

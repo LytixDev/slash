@@ -9,7 +9,7 @@ compile_commands.json
 
 # ignore compiled binary, but not src folder
 slash
-slash-fuzz
+slash-asan
 !src/slash
 !include/slash
 

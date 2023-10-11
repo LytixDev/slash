@@ -69,6 +69,7 @@ char *slash_type_to_name(SlashValue *value);
  */
 void slash_bool_print(SlashValue *value);
 void slash_num_print(SlashValue *value);
+SlashValue slash_shident_to_str(Interpreter *interpreter, SlashValue *self);
 void slash_range_print(SlashValue *value);
 void slash_none_print(void);
 

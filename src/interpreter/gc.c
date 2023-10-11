@@ -147,6 +147,8 @@ static void gc_blacken_obj(Interpreter *interpreter, SlashObj *obj)
     }
     case SLASH_OBJ_MAP: {
 	SlashMap *map = (SlashMap *)obj;
+	if (map->underlying.len == 0)
+	    break;
 	SlashValue *keys[map->underlying.len];
 	hashmap_get_keys(&map->underlying, (void **)keys);
 	for (size_t i = 0; i < map->underlying.len; i++) {
@@ -169,7 +171,7 @@ static void gc_blacken_obj(Interpreter *interpreter, SlashObj *obj)
 static void gc_mark_roots(Interpreter *interpreter)
 {
     for (size_t i = 0; i < interpreter->gc_shadow_stack.size; i++) {
-	gc_visit_obj(interpreter, (SlashObj *)arraylist_get(&interpreter->gc_shadow_stack, i));
+	gc_visit_obj(interpreter, *(SlashObj **)arraylist_get(&interpreter->gc_shadow_stack, i));
     }
 
     /* mark all reachable objects */
@@ -257,9 +259,14 @@ SlashObj *gc_alloc(Interpreter *interpreter, SlashObjType type)
     // TODO: this is a lousy strategy
     //       a proper solution should track how many bytes has been allocated since the last
     //       time the gc ran.
+#ifndef DEBUG_STRESS_GC
     interpreter->obj_alloced_since_next_gc++;
     if (interpreter->obj_alloced_since_next_gc > 10)
 	gc_run(interpreter);
+#else
+    gc_run(interpreter);
+#endif
+
 
     gc_register(&interpreter->gc_objs, obj);
     return obj;
@@ -267,10 +274,25 @@ SlashObj *gc_alloc(Interpreter *interpreter, SlashObjType type)
 
 void gc_shadow_push(ArrayList *gc_shadow_stack, SlashObj *obj)
 {
-    arraylist_append(gc_shadow_stack, obj);
+#ifdef DEBUG_LOG_GC
+    printf("%p push to shadow stack ", (void *)obj);
+    TraitPrint print_func = trait_print[SLASH_OBJ];
+    SlashValue value = { .type = SLASH_OBJ, .obj = obj };
+    print_func(&value);
+    putchar('\n');
+#endif /* DEBUG_LOG_GC */
+    arraylist_append(gc_shadow_stack, &obj);
 }
 
 void gc_shadow_pop(ArrayList *gc_shadow_stack)
 {
+#ifdef DEBUG_LOG_GC
+    SlashObj **obj = arraylist_get(gc_shadow_stack, gc_shadow_stack->size - 1);
+    printf("%p pop shadow stack", (void *)*obj);
+    TraitPrint print_func = trait_print[SLASH_OBJ];
+    SlashValue value = { .type = SLASH_OBJ, .obj = *obj };
+    print_func(&value);
+    putchar('\n');
+#endif /* DEBUG_LOG_GC */
     arraylist_rm(gc_shadow_stack, gc_shadow_stack->size - 1);
 }

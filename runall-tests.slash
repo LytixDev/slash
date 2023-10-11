@@ -1,15 +1,15 @@
 #!/bin/slash
 make clean
-make fuzz
-# hack because './slash-fuzz' doesnt work yet
-sudo cp slash-fuzz /bin/slash-fuzz
+make asan
+# hack because './slash-asan' doesnt work yet
+sudo cp slash-asan /bin/slash-asan
 
 var successes = 0
 var tests = 0
 
 loop file in (find "test/" -name "*.slash") {
     $tests += 1
-    if (slash-fuzz $file) as bool {
+    if (slash-asan $file) as bool {
         $successes += 1
         echo $file "passed"
     } else {
@@ -17,5 +17,5 @@ loop file in (find "test/" -name "*.slash") {
     }
 }
 
-echo "finished fuzz"
+echo "finished asan"
 echo $successes "out of" $tests "passed"

@@ -20,6 +20,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "builtin/builtin.h"
 #include "interpreter/ast.h"
 #include "interpreter/error.h"
 #include "interpreter/exec.h"
@@ -55,62 +56,33 @@ static void exec_block_body(Interpreter *interpreter, BlockStmt *stmt)
     }
 }
 
-// TODO: this is temporary
-static char **cmd_args_fmt(Interpreter *interpreter, CmdStmt *stmt)
+static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt, char *program_path)
 {
     size_t argc = 1;
     if (stmt->arg_exprs != NULL)
 	argc += stmt->arg_exprs->size;
-
-    char **argv = malloc(sizeof(char *) * (argc + 1));
-
-    char *cmd_name = scope_alloc(interpreter->scope, stmt->cmd_name.size + 6);
-    // TODO: 'which' builtin or something
-    memcpy(cmd_name, "/bin/", 5);
-    memcpy(cmd_name + 5, stmt->cmd_name.view, stmt->cmd_name.size);
-    cmd_name[stmt->cmd_name.size + 5] = 0;
-    argv[0] = cmd_name;
-
-    if (stmt->arg_exprs == NULL) {
-	argv[argc] = NULL;
-	return argv;
-    }
+    char *argv[argc + 1]; // + 1 because last element is NULL
+    argv[0] = program_path;
 
     size_t i = 1;
-    LLItem *item;
-    ARENA_LL_FOR_EACH(stmt->arg_exprs, item)
-    {
-	SlashValue v = eval(interpreter, item->value);
-
-	// TODO: better num to str
-	if (v.type == SLASH_NUM) {
-	    char *str = scope_alloc(interpreter->scope, 128);
-	    sprintf(str, "%f", v.num);
-	    argv[i] = str;
-	} else if (v.type == SLASH_SHIDENT) {
-	    char *str = scope_alloc(interpreter->scope, v.shident.size + 1);
-	    memcpy(str, v.shident.view, v.shident.size);
-	    str[v.shident.size] = 0;
-	    argv[i] = str;
-	} else if (v.type == SLASH_OBJ && v.obj->type == SLASH_OBJ_STR) {
-	    SlashStr *str = (SlashStr *)v.obj;
-	    argv[i] = str->p;
-	} else {
-	    REPORT_RUNTIME_ERROR("Currently only support evaluating number and string arguments");
+    if (stmt->arg_exprs != NULL) {
+	LLItem *item;
+	ARENA_LL_FOR_EACH(stmt->arg_exprs, item)
+	{
+	    SlashValue value = eval(interpreter, item->value);
+	    TraitToStr to_str = trait_to_str[value.type];
+	    SlashValue value_str_repr = to_str(interpreter, &value);
+	    gc_shadow_push(&interpreter->gc_shadow_stack, value_str_repr.obj);
+	    argv[i++] = ((SlashStr *)(value_str_repr.obj))->p;
 	}
-	i++;
     }
 
-    argv[argc] = NULL;
-    return argv;
-}
+    for (size_t n = 0; n < argc - 1; n++)
+	gc_shadow_pop(&interpreter->gc_shadow_stack);
 
-static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt)
-{
-    char **argv_owning = cmd_args_fmt(interpreter, stmt);
-    int exit_code = exec_program(&interpreter->stream_ctx, argv_owning);
+    argv[i] = NULL;
+    int exit_code = exec_program(&interpreter->stream_ctx, argv);
     interpreter->prev_exit_code = exit_code;
-    free(argv_owning);
 }
 
 static void check_num_operands(SlashValue *left, SlashValue *right)
@@ -244,26 +216,44 @@ static SlashValue cmp_binary_values(SlashValue left, SlashValue right, TokenType
 
 static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
 {
+    SlashValue return_value;
     SlashValue left = eval(interpreter, expr->left);
+    if (IS_OBJ(left.type))
+	gc_shadow_push(&interpreter->gc_shadow_stack, left.obj);
+
     /* logical operators */
     if (expr->operator_ == t_and) {
-	if (!is_truthy(&left))
-	    return (SlashValue){ .type = SLASH_BOOL, .boolean = false };
+	if (!is_truthy(&left)) {
+	    return_value = (SlashValue){ .type = SLASH_BOOL, .boolean = false };
+	    goto defer_shadow_pop;
+	}
 	SlashValue right = eval(interpreter, expr->right);
-	return (SlashValue){ .type = SLASH_BOOL, .boolean = is_truthy(&right) };
+	return_value = (SlashValue){ .type = SLASH_BOOL, .boolean = is_truthy(&right) };
+	goto defer_shadow_pop;
     }
     SlashValue right = eval(interpreter, expr->right);
-    if (expr->operator_ == t_or)
-	return (SlashValue){ .type = SLASH_BOOL, .boolean = is_truthy(&left) || is_truthy(&right) };
+    if (expr->operator_ == t_or) {
+	return_value =
+	    (SlashValue){ .type = SLASH_BOOL, .boolean = is_truthy(&left) || is_truthy(&right) };
+	goto defer_shadow_pop;
+    }
 
-    if (expr->operator_ != t_in)
-	return cmp_binary_values(left, right, expr->operator_);
+    if (expr->operator_ != t_in) {
+	return_value = cmp_binary_values(left, right, expr->operator_);
+	goto defer_shadow_pop;
+    }
 
     /* left "IN" right */
     TraitItemIn func = trait_item_in[right.type];
     bool rc = func(&right, &left);
-    return (SlashValue){ .type = SLASH_BOOL, .boolean = rc };
+    return_value = (SlashValue){ .type = SLASH_BOOL, .boolean = rc };
+
+defer_shadow_pop:
+    if (IS_OBJ(left.type))
+	gc_shadow_pop(&interpreter->gc_shadow_stack);
+    return return_value;
 }
+
 
 static SlashValue eval_literal(Interpreter *interpreter, LiteralExpr *expr)
 {
@@ -394,6 +384,9 @@ static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
 static SlashValue eval_method(Interpreter *interpreter, MethodExpr *expr)
 {
     SlashValue self = eval(interpreter, expr->obj);
+    if (IS_OBJ(self.type))
+	gc_shadow_push(&interpreter->gc_shadow_stack, self.obj);
+
     // TODO: fix cursed manual conversion from str_view to cstr
     size_t method_name_size = expr->method_name.size;
     char method_name[method_name_size + 1];
@@ -406,20 +399,34 @@ static SlashValue eval_method(Interpreter *interpreter, MethodExpr *expr)
 	REPORT_RUNTIME_ERROR("Method '%s' does not exist on type '%s'", method_name,
 			     SLASH_TYPE_TO_STR(&self));
 
-    if (expr->args == NULL)
-	return method(interpreter, &self, 0, NULL);
+    SlashValue return_value;
+    size_t shadow_push_count = 0;
+    if (expr->args == NULL) {
+	return_value = method(interpreter, &self, 0, NULL);
+    } else {
+	SlashValue argv[expr->args->seq.size];
+	size_t i = 0;
+	LLItem *item;
+	ARENA_LL_FOR_EACH(&expr->args->seq, item)
+	{
+	    SlashValue sv = eval(interpreter, item->value);
+	    if (IS_OBJ(sv.type)) {
+		gc_shadow_push(&interpreter->gc_shadow_stack, sv.obj);
+		shadow_push_count++;
+	    }
+	    argv[i++] = sv;
+	}
 
-    SlashValue argv[expr->args->seq.size];
-    size_t i = 0;
-    LLItem *item;
-    ARENA_LL_FOR_EACH(&expr->args->seq, item)
-    {
-	SlashValue sv = eval(interpreter, item->value);
-	argv[i++] = sv;
+	assert(i == expr->args->seq.size);
+	return_value = method(interpreter, &self, i, argv);
     }
 
-    assert(i == expr->args->seq.size);
-    return method(interpreter, &self, i, argv);
+    for (size_t n = 0; n < shadow_push_count; n++)
+	gc_shadow_pop(&interpreter->gc_shadow_stack);
+    if (IS_OBJ(self.type))
+	gc_shadow_pop(&interpreter->gc_shadow_stack);
+
+    return return_value;
 }
 
 static SlashValue eval_grouping(Interpreter *interpreter, GroupingExpr *expr)
@@ -494,7 +501,34 @@ static void exec_seq_var(Interpreter *interpreter, SeqVarStmt *stmt)
 
 static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
 {
-    exec_program_stub(interpreter, stmt);
+    ScopeAndValue path = var_get(interpreter->scope, &(StrView){ .view = "PATH", .size = 4 });
+    if (!(path.value->type == SLASH_OBJ && path.value->obj->type == SLASH_OBJ_STR))
+	REPORT_RUNTIME_ERROR("PATH variable should be type 'str' not '%s'",
+			     SLASH_TYPE_TO_STR(path.value));
+
+    WhichResult which_result = which(stmt->cmd_name, ((SlashStr *)path.value->obj)->p);
+    if (which_result.type == WHICH_NOT_FOUND)
+	REPORT_RUNTIME_ERROR("Command not found");
+
+    if (which_result.type == WHICH_EXTERN) {
+	exec_program_stub(interpreter, stmt, which_result.path);
+    } else {
+	/* builtin */
+	if (stmt->arg_exprs == NULL) {
+	    which_result.builtin(interpreter, 0, NULL);
+	    return;
+	}
+
+	size_t argc = stmt->arg_exprs->size;
+	SlashValue argv[argc];
+	LLItem *item = stmt->arg_exprs->head;
+	for (size_t i = 0; i < argc; i++) {
+	    SlashValue value = eval(interpreter, (Expr *)item->value);
+	    argv[i] = value;
+	    item = item->next;
+	}
+	which_result.builtin(interpreter, argc, argv);
+    }
 }
 
 static void exec_if(Interpreter *interpreter, IfStmt *stmt)
@@ -778,15 +812,14 @@ static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
     interpreter->scope = &loop_scope;
 
     SlashValue underlying = eval(interpreter, stmt->underlying_iterable);
-    bool paused_underlying = false;
+    if (IS_OBJ(underlying.type))
+	gc_shadow_push(&interpreter->gc_shadow_stack, underlying.obj);
 
     switch (underlying.type) {
     case SLASH_RANGE:
 	exec_iter_loop_range(interpreter, stmt, underlying.range);
 	break;
     case SLASH_OBJ: {
-	paused_underlying = true;
-	gc_shadow_push(&interpreter->gc_shadow_stack, underlying.obj);
 	switch (underlying.obj->type) {
 	case SLASH_OBJ_LIST:
 	    exec_iter_loop_list(interpreter, stmt, (SlashList *)underlying.obj);
@@ -812,7 +845,7 @@ static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
 	ASSERT_NOT_REACHED;
     }
 
-    if (paused_underlying)
+    if (IS_OBJ(underlying.type))
 	gc_shadow_pop(&interpreter->gc_shadow_stack);
     interpreter->scope = loop_scope.enclosing;
     scope_destroy(&loop_scope);
@@ -1008,7 +1041,7 @@ void interpreter_init(Interpreter *interpreter)
     linkedlist_init(&interpreter->gc_objs, sizeof(SlashObj *));
     arraylist_init(&interpreter->gc_gray_stack, sizeof(SlashObj *));
     interpreter->obj_alloced_since_next_gc = 0;
-    arraylist_init(&interpreter->gc_shadow_stack, sizeof(SlashObj *));
+    arraylist_init(&interpreter->gc_shadow_stack, sizeof(SlashObj **));
 
     /* init default StreamCtx */
     StreamCtx stream_ctx = { .read_fd = STDIN_FILENO, .write_fd = STDOUT_FILENO };

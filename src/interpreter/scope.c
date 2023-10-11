@@ -43,6 +43,7 @@ static void set_env_as_var(Scope *scope, char *env_entry)
     int pos = get_char_pos(env_entry, '=');
     StrView key = { .view = env_entry, .size = pos };
     SlashStr *str = scope_alloc(scope, sizeof(SlashStr));
+    str->obj.type = SLASH_OBJ_STR;
     str->obj.gc_managed = false;
     slash_str_init_from_alloced_cstr(str, env_entry);
     SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)str };
