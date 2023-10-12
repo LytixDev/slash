@@ -64,6 +64,8 @@ int slash_value_cmp(SlashValue *a, SlashValue *b);
 char *slash_type_to_name(SlashValue *value);
 #define SLASH_TYPE_TO_STR(value) slash_type_to_name((value))
 
+bool slash_range_is_nonzero(SlashRange range);
+
 /*
  * print
  */

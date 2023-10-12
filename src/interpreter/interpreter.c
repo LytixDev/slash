@@ -713,18 +713,11 @@ static void exec_assert(Interpreter *interpreter, AssertStmt *stmt)
 
 static void exec_loop(Interpreter *interpreter, LoopStmt *stmt)
 {
-    Scope loop_scope;
-    scope_init(&loop_scope, interpreter->scope);
-    interpreter->scope = &loop_scope;
-
     SlashValue r = eval(interpreter, stmt->condition);
     while (is_truthy(&r)) {
-	exec_block_body(interpreter, stmt->body_block);
+	exec_block(interpreter, stmt->body_block);
 	r = eval(interpreter, stmt->condition);
     }
-
-    interpreter->scope = loop_scope.enclosing;
-    scope_destroy(&loop_scope);
 }
 
 static void exec_iter_loop_list(Interpreter *interpreter, IterLoopStmt *stmt, SlashList *iterable)
@@ -736,7 +729,7 @@ static void exec_iter_loop_list(Interpreter *interpreter, IterLoopStmt *stmt, Sl
     for (size_t i = 0; i < iterable->underlying.size; i++) {
 	iterator_value = slash_list_get(iterable, i);
 	var_assign(&stmt->var_name, interpreter->scope, iterator_value);
-	exec_block_body(interpreter, stmt->body_block);
+	exec_block(interpreter, stmt->body_block);
     }
 }
 
@@ -749,7 +742,7 @@ static void exec_iter_loop_tuple(Interpreter *interpreter, IterLoopStmt *stmt, S
     for (size_t i = 0; i < iterable->size; i++) {
 	iterator_value = &iterable->values[i];
 	var_assign(&stmt->var_name, interpreter->scope, iterator_value);
-	exec_block_body(interpreter, stmt->body_block);
+	exec_block(interpreter, stmt->body_block);
     }
 }
 
@@ -767,7 +760,7 @@ static void exec_iter_loop_map(Interpreter *interpreter, IterLoopStmt *stmt, Sla
     for (size_t i = 0; i < keys_tuple->size; i++) {
 	iterator_value = &keys_tuple->values[i];
 	var_assign(&stmt->var_name, interpreter->scope, iterator_value);
-	exec_block_body(interpreter, stmt->body_block);
+	exec_block(interpreter, stmt->body_block);
     }
 }
 
@@ -791,18 +784,18 @@ static void exec_iter_loop_str(Interpreter *interpreter, IterLoopStmt *stmt, Sla
 
 static void exec_iter_loop_range(Interpreter *interpreter, IterLoopStmt *stmt, SlashRange iterable)
 {
+    if (!slash_range_is_nonzero(iterable))
+	return;
     SlashValue iterator_value = { .type = SLASH_NUM, .num = iterable.start };
 
     /* define the loop variable that holds the current iterator value */
     var_define(interpreter->scope, &stmt->var_name, &iterator_value);
 
     while (iterator_value.num != iterable.end) {
-	exec_block_body(interpreter, stmt->body_block);
+	exec_block(interpreter, stmt->body_block);
 	iterator_value.num++;
 	var_assign(&stmt->var_name, interpreter->scope, &iterator_value);
     }
-
-    /* don't need to undefine the iterator value as the scope will be destroyed imminently */
 }
 
 static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
