@@ -299,6 +299,8 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
     // TODO: dynamic buffer coupled with SlashStr
     char buffer[4096] = { 0 };
     size_t size = read(fd[0], buffer, 4096);
+    if (buffer[size - 1] == '\n')
+	size--;
     close(fd[0]);
     SlashStr *str = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
     slash_str_init_from_slice(str, buffer, size);
