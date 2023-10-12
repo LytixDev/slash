@@ -44,11 +44,11 @@ typedef struct {
     StreamCtx stream_ctx;
 } Interpreter;
 
-void interpreter_init(Interpreter *interpreter);
+void interpreter_init(Interpreter *interpreter, int argc, char **argv);
 void interpreter_free(Interpreter *interpreter);
 int interpreter_run(Interpreter *interpreter, ArrayList *statements);
 
-int interpret(ArrayList *statements);
+int interpret(ArrayList *statements, int argc, char **argv);
 
 
 #endif /* INTERPRETER_H */

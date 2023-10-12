@@ -1026,11 +1026,11 @@ static void exec(Interpreter *interpreter, Stmt *stmt)
     }
 }
 
-void interpreter_init(Interpreter *interpreter)
+void interpreter_init(Interpreter *interpreter, int argc, char **argv)
 {
     m_arena_init_dynamic(&interpreter->arena, 1, 16384);
 
-    scope_init_global(&interpreter->globals, &interpreter->arena);
+    scope_init_globals(&interpreter->globals, &interpreter->arena, argc, argv);
     interpreter->scope = &interpreter->globals;
 
     linkedlist_init(&interpreter->gc_objs, sizeof(SlashObj *));
@@ -1085,10 +1085,10 @@ int interpreter_run(Interpreter *interpreter, ArrayList *statements)
     return interpreter->prev_exit_code;
 }
 
-int interpret(ArrayList *statements)
+int interpret(ArrayList *statements, int argc, char **argv)
 {
     Interpreter interpreter = { 0 };
-    interpreter_init(&interpreter);
+    interpreter_init(&interpreter, argc, argv);
     interpreter_run(&interpreter, statements);
     interpreter_free(&interpreter);
     return interpreter.prev_exit_code;

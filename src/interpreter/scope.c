@@ -15,6 +15,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <assert.h>
+#include <stdio.h>
 
 #include "interpreter/scope.h"
 #include "interpreter/types/slash_str.h"
@@ -38,45 +39,53 @@ static int get_char_pos(char *str, char m)
     return -1;
 }
 
-static void set_env_as_var(Scope *scope, char *env_entry)
+static void define_scope_alloced_var(Scope *scope, StrView *key, char *cstr)
 {
-    int pos = get_char_pos(env_entry, '=');
-    StrView key = { .view = env_entry, .size = pos };
     SlashStr *str = scope_alloc(scope, sizeof(SlashStr));
-    str->obj.type = SLASH_OBJ_STR;
     str->obj.gc_managed = false;
-    slash_str_init_from_alloced_cstr(str, env_entry + pos + 1);
+    str->obj.type = SLASH_OBJ_STR;
+    slash_str_init_from_alloced_cstr(str, cstr);
     SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)str };
-    var_define(scope, &key, &value);
+    var_define(scope, key, &value);
 }
+
 
 static void set_globals(Scope *scope)
 {
     assert(scope->enclosing == NULL);
 
-    char *item;
+    char *env_entry;
     char **environ_cpy = environ;
-    for (item = *environ_cpy; item != NULL; item = *(++environ_cpy))
-	set_env_as_var(scope, item);
+    for (env_entry = *environ_cpy; env_entry != NULL; env_entry = *(++environ_cpy)) {
+	int pos = get_char_pos(env_entry, '=');
+	StrView key = { .view = env_entry, .size = pos };
+	define_scope_alloced_var(scope, &key, env_entry + pos + 1);
+    }
 
     StrView ifs_key = { .view = "IFS", .size = 3 };
     char *ifs_cstr = scope_alloc(scope, 3);
     memcpy(ifs_cstr, "\n\t ", 3);
-    SlashStr *str = scope_alloc(scope, sizeof(SlashStr));
-    str->obj.gc_managed = false;
-    str->obj.type = SLASH_OBJ_STR;
-    slash_str_init_from_alloced_cstr(str, ifs_cstr);
-    SlashValue ifs = { .type = SLASH_OBJ, .obj = (SlashObj *)str };
-    var_define(scope, &ifs_key, &ifs);
+    define_scope_alloced_var(scope, &ifs_key, ifs_cstr);
 }
 
-void scope_init_global(Scope *scope, Arena *arena)
+static void scope_init_argv(Scope *scope, int argc, char **argv)
+{
+    for (size_t i = 0; i < (size_t)argc; i++) {
+	char *value = argv[i];
+	char key[32];
+	size_t size = sprintf(key, "%zu", i);
+	define_scope_alloced_var(scope, &(StrView){ .view = key, .size = size }, value);
+    }
+}
+
+void scope_init_globals(Scope *scope, Arena *arena, int argc, char **argv)
 {
     scope->arena_tmp = m_arena_tmp_init(arena);
     scope->enclosing = NULL;
     scope->depth = 0;
     hashmap_init(&scope->values);
     set_globals(scope);
+    scope_init_argv(scope, argc, argv);
 }
 
 void scope_init(Scope *scope, Scope *enclosing)
