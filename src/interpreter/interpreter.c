@@ -47,6 +47,13 @@ static void exec(Interpreter *interpreter, Stmt *stmt);
 /*
  * helpers
  */
+static void set_exit_code(Interpreter *interpreter, int exit_code)
+{
+    interpreter->prev_exit_code = exit_code;
+    SlashValue value = { .type = SLASH_NUM, .num = interpreter->prev_exit_code };
+    var_assign(&(StrView){ .view = "?", .size = 1 }, &interpreter->globals, &value);
+}
+
 static void exec_block_body(Interpreter *interpreter, BlockStmt *stmt)
 {
     LLItem *item;
@@ -82,7 +89,7 @@ static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt, char *pro
 
     argv[i] = NULL;
     int exit_code = exec_program(&interpreter->stream_ctx, argv);
-    interpreter->prev_exit_code = exit_code;
+    set_exit_code(interpreter, exit_code);
 }
 
 static void check_num_operands(SlashValue *left, SlashValue *right)
@@ -299,6 +306,8 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
     // TODO: dynamic buffer coupled with SlashStr
     char buffer[4096] = { 0 };
     size_t size = read(fd[0], buffer, 4096);
+    if (buffer[size - 1] == '\n')
+	size--;
     close(fd[0]);
     SlashStr *str = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
     slash_str_init_from_slice(str, buffer, size);
@@ -713,18 +722,11 @@ static void exec_assert(Interpreter *interpreter, AssertStmt *stmt)
 
 static void exec_loop(Interpreter *interpreter, LoopStmt *stmt)
 {
-    Scope loop_scope;
-    scope_init(&loop_scope, interpreter->scope);
-    interpreter->scope = &loop_scope;
-
     SlashValue r = eval(interpreter, stmt->condition);
     while (is_truthy(&r)) {
-	exec_block_body(interpreter, stmt->body_block);
+	exec_block(interpreter, stmt->body_block);
 	r = eval(interpreter, stmt->condition);
     }
-
-    interpreter->scope = loop_scope.enclosing;
-    scope_destroy(&loop_scope);
 }
 
 static void exec_iter_loop_list(Interpreter *interpreter, IterLoopStmt *stmt, SlashList *iterable)
@@ -736,7 +738,7 @@ static void exec_iter_loop_list(Interpreter *interpreter, IterLoopStmt *stmt, Sl
     for (size_t i = 0; i < iterable->underlying.size; i++) {
 	iterator_value = slash_list_get(iterable, i);
 	var_assign(&stmt->var_name, interpreter->scope, iterator_value);
-	exec_block_body(interpreter, stmt->body_block);
+	exec_block(interpreter, stmt->body_block);
     }
 }
 
@@ -749,7 +751,7 @@ static void exec_iter_loop_tuple(Interpreter *interpreter, IterLoopStmt *stmt, S
     for (size_t i = 0; i < iterable->size; i++) {
 	iterator_value = &iterable->values[i];
 	var_assign(&stmt->var_name, interpreter->scope, iterator_value);
-	exec_block_body(interpreter, stmt->body_block);
+	exec_block(interpreter, stmt->body_block);
     }
 }
 
@@ -767,7 +769,7 @@ static void exec_iter_loop_map(Interpreter *interpreter, IterLoopStmt *stmt, Sla
     for (size_t i = 0; i < keys_tuple->size; i++) {
 	iterator_value = &keys_tuple->values[i];
 	var_assign(&stmt->var_name, interpreter->scope, iterator_value);
-	exec_block_body(interpreter, stmt->body_block);
+	exec_block(interpreter, stmt->body_block);
     }
 }
 
@@ -791,18 +793,18 @@ static void exec_iter_loop_str(Interpreter *interpreter, IterLoopStmt *stmt, Sla
 
 static void exec_iter_loop_range(Interpreter *interpreter, IterLoopStmt *stmt, SlashRange iterable)
 {
+    if (!slash_range_is_nonzero(iterable))
+	return;
     SlashValue iterator_value = { .type = SLASH_NUM, .num = iterable.start };
 
     /* define the loop variable that holds the current iterator value */
     var_define(interpreter->scope, &stmt->var_name, &iterator_value);
 
     while (iterator_value.num != iterable.end) {
-	exec_block_body(interpreter, stmt->body_block);
+	exec_block(interpreter, stmt->body_block);
 	iterator_value.num++;
 	var_assign(&stmt->var_name, interpreter->scope, &iterator_value);
     }
-
-    /* don't need to undefine the iterator value as the scope will be destroyed imminently */
 }
 
 static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
@@ -880,11 +882,9 @@ static void exec_redirect(Interpreter *interpreter, BinaryStmt *stmt)
     //      always be guaranteed ?.
 
     SlashValue value = eval(interpreter, stmt->right_expr);
-    // TODO: to_str trait
-    if (value.type != SLASH_SHIDENT)
-	REPORT_RUNTIME_ERROR("Redirect failed: implement to_str trait!");
-    char file_name[value.shident.size + 1];
-    str_view_to_cstr(value.shident, file_name);
+    TraitToStr to_str = trait_to_str[value.type];
+    SlashStr *value_as_str = (SlashStr *)to_str(interpreter, &value).obj;
+    char *file_name = value_as_str->p;
 
     StreamCtx *stream_ctx = &interpreter->stream_ctx;
     int og_read = stream_ctx->read_fd;
@@ -1031,11 +1031,11 @@ static void exec(Interpreter *interpreter, Stmt *stmt)
     }
 }
 
-void interpreter_init(Interpreter *interpreter)
+void interpreter_init(Interpreter *interpreter, int argc, char **argv)
 {
     m_arena_init_dynamic(&interpreter->arena, 1, 16384);
 
-    scope_init_global(&interpreter->globals, &interpreter->arena);
+    scope_init_globals(&interpreter->globals, &interpreter->arena, argc, argv);
     interpreter->scope = &interpreter->globals;
 
     linkedlist_init(&interpreter->gc_objs, sizeof(SlashObj *));
@@ -1084,16 +1084,16 @@ int interpreter_run(Interpreter *interpreter, ArrayList *statements)
     } else {
 	/* execution enters here on a runtime error, therefore we must "reset" the interpreter */
 	interpreter_reset_from_err(interpreter);
-	interpreter->prev_exit_code = 1;
+	set_exit_code(interpreter, 1);
     }
 
     return interpreter->prev_exit_code;
 }
 
-int interpret(ArrayList *statements)
+int interpret(ArrayList *statements, int argc, char **argv)
 {
     Interpreter interpreter = { 0 };
-    interpreter_init(&interpreter);
+    interpreter_init(&interpreter, argc, argv);
     interpreter_run(&interpreter, statements);
     interpreter_free(&interpreter);
     return interpreter.prev_exit_code;

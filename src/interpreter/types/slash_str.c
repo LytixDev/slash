@@ -140,13 +140,19 @@ SlashValue slash_str_item_get(Interpreter *interpreter, SlashValue *self, SlashV
 	ASSERT_NOT_REACHED;
     }
 
+    SlashStr *new_str = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
     size_t offset = (size_t)index->num;
     size_t size = 1;
     if (index->type == SLASH_RANGE) {
+	if (!slash_range_is_nonzero(index->range)) {
+	    /* if range is zero or negative return empty string */
+	    slash_str_init_from_view(new_str, &(StrView){ .view = "", .size = 0 });
+	    return (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)new_str };
+	}
+
 	offset = index->range.start;
 	size = index->range.end;
     }
-    SlashStr *new_str = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
     slash_str_init_from_slice(new_str, str->p + offset, size);
     return (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)new_str };
 }

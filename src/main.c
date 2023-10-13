@@ -32,10 +32,10 @@
 #include "nicc/nicc.h"
 
 
-void interactive(void)
+void interactive(int argc, char **argv)
 {
     Interpreter interpreter = { 0 };
-    interpreter_init(&interpreter);
+    interpreter_init(&interpreter, argc, argv);
     Arena ast_arena;
     ast_arena_init(&ast_arena);
     Prompt prompt;
@@ -73,7 +73,7 @@ void interactive(void)
 int main(int argc, char **argv)
 {
     if (argc == 1) {
-	interactive();
+	interactive(argc, argv);
 	return 0;
     }
 
@@ -151,7 +151,7 @@ int main(int argc, char **argv)
 #endif /* DEBUG_PERF */
 
     /* interpret */
-    exit_code = interpret(&stmts.stmts);
+    exit_code = interpret(&stmts.stmts, argc - 1, argv + 1);
 
 #ifdef DEBUG_PERF
     end_time = clock();

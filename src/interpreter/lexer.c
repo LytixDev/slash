@@ -496,6 +496,12 @@ StateFn lex_access(Lexer *lexer)
     /* came from '$' which we want to ignore */
     ignore(lexer);
 
+    /* edge case: $? is a valid access */
+    if (match(lexer, '?')) {
+	emit(lexer, t_access);
+	return STATE_FN(lex_any);
+    }
+
     if (!is_valid_identifier(next(lexer))) {
 	report_lex_err(lexer, true, "Illegal identifier name");
 	return STATE_FN(lex_any);
@@ -505,7 +511,6 @@ StateFn lex_access(Lexer *lexer)
 	;
     backup(lexer);
     emit(lexer, t_access);
-
     return STATE_FN(lex_any);
 }
 

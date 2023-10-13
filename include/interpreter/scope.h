@@ -37,10 +37,10 @@ typedef struct {
 } ScopeAndValue;
 
 
-void scope_init_global(Scope *scope, Arena *arena);
 void scope_init(Scope *scope, Scope *enclosing);
 void scope_destroy(Scope *scope);
 void *scope_alloc(Scope *scope, size_t size);
+void scope_init_globals(Scope *scope, Arena *arena, int argc, char **argv);
 
 /*
  * copies the SlashValue object into the hashmap

@@ -126,6 +126,13 @@ char *slash_type_to_name(SlashValue *value)
     return slash_type_names[value->type];
 }
 
+
+bool slash_range_is_nonzero(SlashRange range)
+{
+    return range.end > range.start;
+}
+
+
 /*
  * print
  */

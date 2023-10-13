@@ -30,22 +30,10 @@ Builtin builtins[] = { { .name = "cd", .func = builtin_cd },
 		       { .name = "vars", .func = builtin_vars },
 		       { .name = "which", .func = builtin_which } };
 
-static bool cstr_starts_with(char *str, char *cmp)
-{
-    size_t i = 0;
-    while (cmp[i] != 0) {
-	if (!(str[i] != 0 && str[i] == cmp[i]))
-	    return false;
-	i++;
-    }
-    return true;
-}
 
 static void which_internal(WhichResult *mutable_result, char *PATH, char *command)
 {
     /* PATH environment variable is often prefixed with 'PATH=' */
-    if (cstr_starts_with(PATH, "PATH="))
-	PATH = PATH + 5;
     size_t PATH_len = strlen(PATH) + 1;
     char *path_cpy = malloc(PATH_len);
     memcpy(path_cpy, PATH, PATH_len);
