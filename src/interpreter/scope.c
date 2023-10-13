@@ -86,6 +86,9 @@ void scope_init_globals(Scope *scope, Arena *arena, int argc, char **argv)
     hashmap_init(&scope->values);
     set_globals(scope);
     scope_init_argv(scope, argc, argv);
+    /* Define '$?' that holds the value of the previous exit code */
+    SlashValue exit_code_value = { .type = SLASH_NUM, .num = 0 };
+    var_define(scope, &(StrView){ .view = "?", .size = 1 }, &exit_code_value);
 }
 
 void scope_init(Scope *scope, Scope *enclosing)

@@ -47,6 +47,13 @@ static void exec(Interpreter *interpreter, Stmt *stmt);
 /*
  * helpers
  */
+static void set_exit_code(Interpreter *interpreter, int exit_code)
+{
+    interpreter->prev_exit_code = exit_code;
+    SlashValue value = { .type = SLASH_NUM, .num = interpreter->prev_exit_code };
+    var_assign(&(StrView){ .view = "?", .size = 1 }, &interpreter->globals, &value);
+}
+
 static void exec_block_body(Interpreter *interpreter, BlockStmt *stmt)
 {
     LLItem *item;
@@ -82,7 +89,7 @@ static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt, char *pro
 
     argv[i] = NULL;
     int exit_code = exec_program(&interpreter->stream_ctx, argv);
-    interpreter->prev_exit_code = exit_code;
+    set_exit_code(interpreter, exit_code);
 }
 
 static void check_num_operands(SlashValue *left, SlashValue *right)
@@ -875,11 +882,9 @@ static void exec_redirect(Interpreter *interpreter, BinaryStmt *stmt)
     //      always be guaranteed ?.
 
     SlashValue value = eval(interpreter, stmt->right_expr);
-    // TODO: to_str trait
-    if (value.type != SLASH_SHIDENT)
-	REPORT_RUNTIME_ERROR("Redirect failed: implement to_str trait!");
-    char file_name[value.shident.size + 1];
-    str_view_to_cstr(value.shident, file_name);
+    TraitToStr to_str = trait_to_str[value.type];
+    SlashStr *value_as_str = (SlashStr *)to_str(interpreter, &value).obj;
+    char *file_name = value_as_str->p;
 
     StreamCtx *stream_ctx = &interpreter->stream_ctx;
     int og_read = stream_ctx->read_fd;
@@ -1079,7 +1084,7 @@ int interpreter_run(Interpreter *interpreter, ArrayList *statements)
     } else {
 	/* execution enters here on a runtime error, therefore we must "reset" the interpreter */
 	interpreter_reset_from_err(interpreter);
-	interpreter->prev_exit_code = 1;
+	set_exit_code(interpreter, 1);
     }
 
     return interpreter->prev_exit_code;
