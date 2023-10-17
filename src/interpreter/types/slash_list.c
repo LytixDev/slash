@@ -31,7 +31,8 @@ ObjTraits list_traits = { .print = slash_list_print,
 			  .item_in = slash_list_item_in,
 			  .truthy = slash_list_truthy,
 			  .equals = slash_list_eq,
-			  .cmp = NULL };
+			  .cmp = NULL,
+			  .hash = NULL };
 
 
 void slash_list_init(SlashList *list)

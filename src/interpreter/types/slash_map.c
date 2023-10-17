@@ -32,7 +32,8 @@ ObjTraits map_traits = { .print = slash_map_print,
 			 .item_in = slash_map_item_in,
 			 .truthy = slash_map_truthy,
 			 .equals = slash_map_eq,
-			 .cmp = NULL };
+			 .cmp = NULL,
+			 .hash = NULL };
 
 
 void slash_map_init(SlashMap *map)

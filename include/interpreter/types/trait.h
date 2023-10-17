@@ -28,7 +28,8 @@ typedef void (*TraitItemAssign)(SlashValue *self, SlashValue *, SlashValue *);
 typedef bool (*TraitItemIn)(SlashValue *self, SlashValue *);
 typedef bool (*TraitTruthy)(SlashValue *self);
 typedef bool (*TraitEquals)(SlashValue *self, SlashValue *other);
-typedef bool (*TraitCmp)(SlashValue *self, SlashValue *other);
+typedef int (*TraitCmp)(SlashValue *self, SlashValue *other);
+typedef size_t (*TraitHash)(SlashValue *self);
 
 typedef void (*ObjInit)(SlashObj *obj);
 typedef void (*ObjFree)(SlashObj *obj);
@@ -42,6 +43,7 @@ typedef struct {
     TraitTruthy truthy;
     TraitEquals equals;
     TraitCmp cmp;
+    TraitHash hash;
 
     ObjInit init;
     ObjFree free;
@@ -60,6 +62,7 @@ extern TraitToStr trait_to_str[SLASH_TYPE_COUNT];
 extern TraitItemGet trait_item_get[SLASH_TYPE_COUNT];
 extern TraitItemAssign trait_item_assign[SLASH_TYPE_COUNT];
 extern TraitItemIn trait_item_in[SLASH_TYPE_COUNT];
+extern TraitHash trait_hash[SLASH_TYPE_COUNT];
 
 
 #endif /* SLASH_TRAIT_H */

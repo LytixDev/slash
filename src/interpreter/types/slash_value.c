@@ -46,6 +46,15 @@ int slash_cmp_precedence[SLASH_TYPE_COUNT] = {
     __INT_MAX__,
 };
 
+size_t slash_generic_hash(void *data, size_t size)
+{
+    size_t A = 1327217885;
+    size_t k = 0;
+    for (size_t i = 0; i < size; i++)
+	k += (k << 5) + ((uint8_t *)data)[i];
+
+    return k * A;
+}
 
 bool is_truthy(SlashValue *value)
 {
@@ -178,6 +187,15 @@ SlashValue slash_num_to_str(Interpreter *interpreter, SlashValue *self)
     SlashStr *str = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
     char buffer[256];
     sprintf(buffer, "%f", self->num);
+    slash_str_init_from_slice(str, buffer, strlen(buffer));
+    return (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)str };
+}
+
+SlashValue slash_range_to_str(Interpreter *interpreter, SlashValue *self)
+{
+    SlashStr *str = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
+    char buffer[512];
+    sprintf(buffer, "%d->%d", self->range.start, self->range.end);
     slash_str_init_from_slice(str, buffer, strlen(buffer));
     return (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)str };
 }

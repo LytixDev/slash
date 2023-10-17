@@ -55,6 +55,7 @@ typedef struct slash_value_t {
 } SlashValue;
 
 
+size_t slash_generic_hash(void *data, size_t size);
 bool is_truthy(SlashValue *value);
 bool slash_value_eq(SlashValue *a, SlashValue *b);
 int slash_value_cmp_stub(const void *a, const void *b);
@@ -80,6 +81,7 @@ void slash_none_print(void);
  */
 SlashValue slash_bool_to_str(Interpreter *interpreter, SlashValue *self);
 SlashValue slash_num_to_str(Interpreter *interpreter, SlashValue *self);
+SlashValue slash_range_to_str(Interpreter *interpreter, SlashValue *self);
 SlashValue slash_none_to_str(Interpreter *interpreter, SlashValue *self);
 
 extern int slash_cmp_precedence[SLASH_TYPE_COUNT];

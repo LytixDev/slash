@@ -20,6 +20,7 @@
 #include "interpreter/types/slash_obj.h"
 #include "interpreter/types/slash_str.h"
 #include "interpreter/types/slash_value.h"
+#include "lib/str_view.h"
 
 
 SlashValue dynamic_cast(Interpreter *interpreter, SlashValue value, SlashType new_type)
@@ -30,7 +31,9 @@ SlashValue dynamic_cast(Interpreter *interpreter, SlashValue value, SlashType ne
     /* str -> num */
     if (value.type == SLASH_OBJ && value.obj->type == SLASH_OBJ_STR && new_type == SLASH_NUM) {
 	SlashStr *str = (SlashStr *)value.obj;
-	return (SlashValue){ .type = SLASH_NUM, .num = strtod(str->p, NULL) };
+	return (SlashValue){ .type = SLASH_NUM,
+			     .num = str_view_to_double(
+				 (StrView){ .view = str->p, .size = str->len - 1 }) };
     }
 
     REPORT_RUNTIME_ERROR("Cast not supported");

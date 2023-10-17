@@ -25,6 +25,11 @@
 #include "interpreter/types/slash_obj.h"
 #include "lib/str_view.h"
 
+/*
+ * The String type for Slash.
+ * Null terminated.
+ * Mutable.
+ */
 typedef struct {
     SlashObj obj;
     char *p; // Null terminated
@@ -54,6 +59,8 @@ char slash_str_last_char(SlashStr *str);
 SlashList *slash_str_internal_split(Interpreter *interpreter, SlashStr *str, char *separator,
 				    bool split_any);
 
+void slash_str_internal_concat(SlashStr *self, SlashStr *other);
+
 /*
  * traits
  */
@@ -64,17 +71,20 @@ void slash_str_item_assign(SlashValue *self, SlashValue *index, SlashValue *new_
 bool slash_str_item_in(SlashValue *self, SlashValue *item);
 bool slash_str_truthy(SlashValue *self);
 bool slash_str_eq(SlashValue *a, SlashValue *b);
-
+int slash_str_cmp(SlashValue *self, SlashValue *other);
+size_t slash_str_hash(SlashValue *self);
 
 /*
  * methods
  */
-#define SLASH_STR_METHODS_COUNT 2
+#define SLASH_STR_METHODS_COUNT 3
 extern SlashMethod slash_str_methods[SLASH_STR_METHODS_COUNT];
 
 SlashValue slash_str_split(Interpreter *interpreter, SlashValue *self, size_t argc,
 			   SlashValue *argv);
 SlashValue slash_str_len(Interpreter *interpreter, SlashValue *self, size_t argc, SlashValue *argv);
+SlashValue slash_str_concat(Interpreter *interpreter, SlashValue *self, size_t argc,
+			    SlashValue *argv);
 
 
 #endif /* SLASH_STR_H */

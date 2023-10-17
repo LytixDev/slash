@@ -22,6 +22,11 @@
 #include "interpreter/types/slash_value.h"
 
 
+void slash_trait_not_defined(SlashValue *value)
+{
+    printf("Requested trait not defined for '%s'", SLASH_TYPE_TO_STR(value));
+}
+
 void slash_print_not_defined(SlashValue *value)
 {
     printf("Print not defined for '%s'", SLASH_TYPE_TO_STR(value));
@@ -63,7 +68,6 @@ SlashValue slash_obj_to_str(Interpreter *interpreter, SlashValue *value)
     return obj->traits->to_str(interpreter, value);
 }
 
-
 SlashValue slash_obj_item_get(Interpreter *interpreter, SlashValue *self, SlashValue *idx)
 {
     SlashObj *obj = self->obj;
@@ -86,6 +90,14 @@ bool slash_obj_item_in(SlashValue *self, SlashValue *a)
     if (obj->traits->item_in == NULL)
 	REPORT_RUNTIME_ERROR("In not defined for this type");
     return obj->traits->item_in(self, a);
+}
+
+size_t slash_obj_hash(SlashValue *self)
+{
+    SlashObj *obj = self->obj;
+    if (obj->traits->hash == NULL)
+	REPORT_RUNTIME_ERROR("Hash defined for this type");
+    return obj->traits->hash(self);
 }
 
 TraitPrint trait_print[SLASH_TYPE_COUNT] = {
@@ -111,7 +123,7 @@ TraitToStr trait_to_str[SLASH_TYPE_COUNT] = {
     /* shident */
     (TraitToStr)slash_shident_to_str,
     /* range */
-    (TraitToStr)slash_to_str_not_defined,
+    (TraitToStr)slash_range_to_str,
     /* obj */
     (TraitToStr)slash_obj_to_str,
     /* none */
@@ -161,4 +173,19 @@ TraitItemIn trait_item_in[SLASH_TYPE_COUNT] = {
     (TraitItemIn)slash_obj_item_in,
     /* none */
     (TraitItemIn)slash_item_in_not_defined,
+};
+
+TraitHash trait_hash[SLASH_TYPE_COUNT] = {
+    /* bool */
+    (TraitHash)NULL,
+    /* num */
+    (TraitHash)NULL,
+    /* shident */
+    (TraitHash)NULL,
+    /* range */
+    (TraitHash)NULL,
+    /* obj */
+    (TraitHash)slash_obj_hash,
+    /* none */
+    (TraitHash)NULL,
 };

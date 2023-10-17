@@ -27,20 +27,41 @@
 #include "lib/str_view.h"
 
 
-ObjTraits str_traits = { .print = slash_str_print,
-			 .to_str = slash_str_to_str,
-			 .item_get = slash_str_item_get,
-			 .item_assign = slash_str_item_assign,
-			 .item_in = slash_str_item_in,
-			 .truthy = slash_str_truthy,
-			 .equals = slash_str_eq,
-			 .cmp = NULL };
+ObjTraits str_traits = {
+    .print = slash_str_print,
+    .to_str = slash_str_to_str,
+    .item_get = slash_str_item_get,
+    .item_assign = slash_str_item_assign,
+    .item_in = slash_str_item_in,
+    .truthy = slash_str_truthy,
+    .equals = slash_str_eq,
+    .cmp = NULL,
+    .hash = slash_str_hash,
+};
 
+
+static void slash_str_ensure_capacity(SlashStr *str, size_t added_size)
+{
+    if (str->len + added_size < str->cap)
+	return;
+
+    /* Strategy for increasing capacity is to always double */
+    while (str->len > str->cap) {
+	if (str->cap >= SIZE_MAX / 2)
+	    REPORT_RUNTIME_ERROR("Max memory capacity reached for str");
+	str->cap *= 2;
+    }
+
+    str->p = realloc(str->p, str->cap);
+}
 
 void slash_str_init_from_view(SlashStr *str, StrView *view)
 {
-    // TODO: make string buffer dynamic similar to list
     str->len = view->size + 1;
+    /*
+     * We do not eagerly pre-alloc any more memory than we need as I suspect most of the time the
+     * contents of a string will be constant.
+     */
     str->cap = str->len;
     str->p = malloc(str->cap);
     memcpy(str->p, view->view, str->len - 1);
@@ -51,10 +72,8 @@ void slash_str_init_from_view(SlashStr *str, StrView *view)
 
 void slash_str_init_from_alloced_cstr(SlashStr *str, char *cstr)
 {
-    str->len = strlen(cstr) + 1;
-    str->cap = str->len;
-    str->p = cstr;
-    str->obj.traits = &str_traits;
+    size_t size = strlen(cstr);
+    slash_str_init_from_view(str, &(StrView){ .view = cstr, .size = size });
 }
 
 void slash_str_init_from_slice(SlashStr *str, char *cstr, size_t size)
@@ -99,7 +118,7 @@ SlashList *slash_str_internal_split(Interpreter *interpreter, SlashStr *str, cha
 	/* save substr */
 	SlashStr *substr = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
 	slash_str_init_from_slice(substr, start_ptr, end_ptr - start_ptr);
-	slash_list_append(list, (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)substr });
+	slash_list_concat(list, (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)substr });
 	/* continue */
 	start_ptr = end_ptr + (split_any ? 1 : separator_len);
 	end_ptr = split_any ? split_single(start_ptr, separator) : strstr(start_ptr, separator);
@@ -110,11 +129,18 @@ SlashList *slash_str_internal_split(Interpreter *interpreter, SlashStr *str, cha
     if (final_size != 0) {
 	SlashStr *substr = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
 	slash_str_init_from_slice(substr, start_ptr, final_size);
-	slash_list_append(list, (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)substr });
+	slash_list_concat(list, (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)substr });
     }
 
     gc_shadow_pop(&interpreter->gc_shadow_stack);
     return list;
+}
+
+void slash_str_internal_concat(SlashStr *self, SlashStr *other)
+{
+    slash_str_ensure_capacity(self, other->len - 1);
+    memcpy(self->p + self->len - 1, other->p, other->len);
+    self->len += other->len - 1;
 }
 
 /*
@@ -216,6 +242,23 @@ bool slash_str_eq(SlashValue *a, SlashValue *b)
     return strcmp(A->p, B->p) == 0;
 }
 
+int slash_str_cmp(SlashValue *self, SlashValue *other)
+{
+    assert(self->type == SLASH_OBJ && self->obj->type == SLASH_OBJ_STR);
+    assert(other->type == SLASH_OBJ && other->obj->type == SLASH_OBJ_STR);
+
+    SlashStr *a = (SlashStr *)self->obj;
+    SlashStr *b = (SlashStr *)other->obj;
+    return strcmp(a->p, b->p);
+}
+
+size_t slash_str_hash(SlashValue *self)
+{
+    assert(self->type == SLASH_OBJ && self->obj->type == SLASH_OBJ_STR);
+    SlashStr *str = (SlashStr *)self->obj;
+    return slash_generic_hash(str->p, str->len);
+}
+
 
 /*
  * methods
@@ -223,6 +266,7 @@ bool slash_str_eq(SlashValue *a, SlashValue *b)
 SlashMethod slash_str_methods[SLASH_STR_METHODS_COUNT] = {
     { .name = "split", .fp = slash_str_split },
     { .name = "len", .fp = slash_str_len },
+    { .name = "concat", .fp = slash_str_concat },
 };
 
 SlashValue slash_str_split(Interpreter *interpreter, SlashValue *self, size_t argc,
@@ -252,4 +296,21 @@ SlashValue slash_str_len(Interpreter *interpreter, SlashValue *self, size_t argc
     }
     SlashValue len = { .type = SLASH_NUM, .num = (double)str->len - 1 };
     return len;
+}
+
+SlashValue slash_str_concat(Interpreter *interpreter, SlashValue *self, size_t argc,
+			    SlashValue *argv)
+{
+    (void)interpreter;
+    assert(self->type == SLASH_OBJ);
+    assert(self->obj->type == SLASH_OBJ_STR);
+
+    if (!match_signature("s", argc, argv)) {
+	REPORT_RUNTIME_ERROR("Bad method args");
+	ASSERT_NOT_REACHED;
+    }
+
+    SlashValue other = argv[0];
+    slash_str_internal_concat((SlashStr *)self->obj, (SlashStr *)other.obj);
+    return (SlashValue){ .type = SLASH_NONE };
 }

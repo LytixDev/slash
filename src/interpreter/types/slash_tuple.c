@@ -23,14 +23,17 @@
 #include "interpreter/types/slash_value.h"
 
 
-ObjTraits tuple_traits = { .print = slash_tuple_print,
-			   .to_str = NULL,
-			   .item_get = slash_tuple_item_get,
-			   .item_assign = NULL,
-			   .item_in = slash_tuple_item_in,
-			   .truthy = slash_tuple_truthy,
-			   .equals = slash_tuple_eq,
-			   .cmp = NULL };
+ObjTraits tuple_traits = {
+    .print = slash_tuple_print,
+    .to_str = NULL,
+    .item_get = slash_tuple_item_get,
+    .item_assign = NULL,
+    .item_in = slash_tuple_item_in,
+    .truthy = slash_tuple_truthy,
+    .equals = slash_tuple_eq,
+    .cmp = NULL,
+    .hash = NULL,
+};
 
 
 void slash_tuple_init(SlashTuple *tuple, size_t size)
