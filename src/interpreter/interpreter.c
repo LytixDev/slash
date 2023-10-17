@@ -121,7 +121,8 @@ static SlashValue eval_unary(Interpreter *interpreter, UnaryExpr *expr)
     return (SlashValue){ 0 };
 }
 
-static SlashValue cmp_binary_values(SlashValue left, SlashValue right, TokenType operator)
+static SlashValue cmp_binary_values(Interpreter *interpreter, SlashValue left, SlashValue right,
+				    TokenType operator)
 {
     SlashValue result = { 0 };
 
@@ -157,6 +158,11 @@ static SlashValue cmp_binary_values(SlashValue left, SlashValue right, TokenType
 		REPORT_RUNTIME_ERROR("'+' operator on '%s' and '%s' not supported",
 				     SLASH_TYPE_TO_STR(&left), SLASH_TYPE_TO_STR(&right));
 	    }
+	} else if (IS_OBJ(left.type) && left.obj->type == SLASH_OBJ_STR && IS_OBJ(right.type) &&
+		   right.obj->type == SLASH_OBJ_STR) {
+	    SlashStr *str = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
+	    slash_str_init_and_concat(str, (SlashStr *)left.obj, (SlashStr *)right.obj);
+	    return (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)str };
 	} else {
 	    REPORT_RUNTIME_ERROR("'+' operator on '%s' and '%s' not supported",
 				 SLASH_TYPE_TO_STR(&left), SLASH_TYPE_TO_STR(&right));
@@ -246,7 +252,7 @@ static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
     }
 
     if (expr->operator_ != t_in) {
-	return_value = cmp_binary_values(left, right, expr->operator_);
+	return_value = cmp_binary_values(interpreter, left, right, expr->operator_);
 	goto defer_shadow_pop;
     }
 
@@ -587,7 +593,7 @@ static void exec_subscript_assign(Interpreter *interpreter, AssignStmt *stmt)
     SlashValue current_item_value = eval_subscript(interpreter, subscript);
     /* convert from += to + and -= to - */
     TokenType operator= stmt->assignment_op == t_plus_equal ? t_plus : t_minus;
-    new_value = cmp_binary_values(current_item_value, new_value, operator);
+    new_value = cmp_binary_values(interpreter, current_item_value, new_value, operator);
 
     TraitItemAssign func = trait_item_assign[self->type];
     func(self, &access_index, &new_value);
@@ -678,7 +684,7 @@ static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
 	REPORT_RUNTIME_ERROR("Unrecognized assignment operator");
 	ASSERT_NOT_REACHED;
     }
-    new_value = cmp_binary_values(*variable.value, new_value, operator_);
+    new_value = cmp_binary_values(interpreter, *variable.value, new_value, operator_);
     /*
      * For dynamic types the binary compare will update the underlying object.
      * Therefore, we only assign if the variable type is not dynamic.

@@ -1,0 +1,14 @@
+#!/bin/slash
+var dir = $HOME + "/Pictures/screenshots"
+mkdir -p $dir
+var file_name = $dir + "/" + (date +%Y-%m-%d-%H%M%S) + ".png"
+
+if $1 == "-a" {
+    gnome-screenshot -a -f $file_name
+} else {
+    scrot -F $file_name
+}
+
+xclip -selection clipboard -target image/png -i $file_name
+var msg = "Took screenshot '" + $file_name + "'. Copied contents to clipboard."
+notify-send -t 5000 $msg
