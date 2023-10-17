@@ -41,8 +41,7 @@ void slash_str_init_from_view(SlashStr *str, StrView *view)
 {
     // TODO: make string buffer dynamic similar to list
     str->len = view->size + 1;
-    str->cap = str->len;
-    str->p = malloc(str->cap);
+    str->p = malloc(str->len);
     memcpy(str->p, view->view, str->len - 1);
     str->p[str->len - 1] = 0;
 
@@ -52,7 +51,6 @@ void slash_str_init_from_view(SlashStr *str, StrView *view)
 void slash_str_init_from_alloced_cstr(SlashStr *str, char *cstr)
 {
     str->len = strlen(cstr) + 1;
-    str->cap = str->len;
     str->p = cstr;
     str->obj.traits = &str_traits;
 }
