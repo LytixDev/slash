@@ -39,7 +39,6 @@ ObjTraits str_traits = { .print = slash_str_print,
 
 void slash_str_init_from_view(SlashStr *str, StrView *view)
 {
-    // TODO: make string buffer dynamic similar to list
     str->len = view->size + 1;
     str->p = malloc(str->len);
     memcpy(str->p, view->view, str->len - 1);
@@ -54,6 +53,16 @@ void slash_str_init_from_alloced_cstr(SlashStr *str, char *cstr)
     str->p = cstr;
     str->obj.traits = &str_traits;
 }
+
+void slash_str_init_and_concat(SlashStr *str, SlashStr *a, SlashStr *b)
+{
+    str->len = a->len + b->len - 1;
+    str->p = malloc(str->len);
+    memcpy(str->p, a->p, a->len - 1);
+    memcpy(str->p + a->len - 1, b->p, b->len);
+    str->obj.traits = &str_traits;
+}
+
 
 void slash_str_init_from_slice(SlashStr *str, char *cstr, size_t size)
 {

@@ -1,0 +1,14 @@
+#!/bin/slash
+if not $1 {
+    echo "No wallpaper directory provieded."
+    echo "usage: background-carousel wallpaper_directory"
+    exit 1
+}
+
+var wallpaper_dir = $1
+var delay = 1
+
+loop true {
+    feh --bg-fill (find $wallpaper_dir | shuf -n 1)
+    sleep $delay
+}

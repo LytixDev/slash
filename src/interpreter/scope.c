@@ -99,6 +99,12 @@ void scope_init(Scope *scope, Scope *enclosing)
     hashmap_init(&scope->values);
 }
 
+void scope_reset(Scope *scope)
+{
+    hashmap_free(&scope->values);
+    hashmap_init(&scope->values);
+}
+
 void scope_destroy(Scope *scope)
 {
     hashmap_free(&scope->values);

@@ -25,11 +25,11 @@
 #include "interpreter/types/slash_obj.h"
 #include "lib/str_view.h"
 
+/* Immutable */
 typedef struct {
     SlashObj obj;
     char *p; // Null terminated
     size_t len; // Length of string: includes null terminator. So "hi" has length 3
-    size_t cap;
 } SlashStr;
 
 
@@ -45,6 +45,10 @@ void slash_str_init_from_alloced_cstr(SlashStr *str, char *cstr);
  * Init and GC allocate `size` bytes
  */
 void slash_str_init_from_slice(SlashStr *str, char *cstr, size_t size);
+/*
+ * Init and set value to be concatenation of a and b
+ */
+void slash_str_init_and_concat(SlashStr *str, SlashStr *a, SlashStr *b);
 
 /*
  * Returns the last char of the string.

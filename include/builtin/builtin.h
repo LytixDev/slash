@@ -50,6 +50,7 @@ WhichResult which(StrView cmd, char *PATH);
 int builtin_which(Interpreter *interpreter, size_t argc, SlashValue *argv);
 int builtin_cd(Interpreter *interpreter, size_t argc, SlashValue *argv);
 int builtin_vars(Interpreter *interpreter, size_t argc, SlashValue *argv);
+int builtin_exit(Interpreter *interpreter, size_t argc, SlashValue *argv);
 
 
 #endif /* BUILTIN_H */
