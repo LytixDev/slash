@@ -555,6 +555,10 @@ static void exec_if(Interpreter *interpreter, IfStmt *stmt)
 	exec(interpreter, stmt->else_branch);
 }
 
+/*
+ * Should not be called in a loop.
+ * For exec'ing blocks in a loop, see exec_loop and exec_block_body
+ */
 static void exec_block(Interpreter *interpreter, BlockStmt *stmt)
 {
     Scope *block_scope = scope_alloc(interpreter->scope, sizeof(Scope));
@@ -564,6 +568,7 @@ static void exec_block(Interpreter *interpreter, BlockStmt *stmt)
     exec_block_body(interpreter, stmt);
 
     interpreter->scope = block_scope->enclosing;
+    interpreter->scope->arena_tmp.arena->offset -= sizeof(Scope);
     scope_destroy(block_scope);
 }
 
@@ -728,11 +733,18 @@ static void exec_assert(Interpreter *interpreter, AssertStmt *stmt)
 
 static void exec_loop(Interpreter *interpreter, LoopStmt *stmt)
 {
+    Scope *block_scope = scope_alloc(interpreter->scope, sizeof(Scope));
+    scope_init(block_scope, interpreter->scope);
+    interpreter->scope = block_scope;
+
     SlashValue r = eval(interpreter, stmt->condition);
     while (is_truthy(&r)) {
-	exec_block(interpreter, stmt->body_block);
+	exec_block_body(interpreter, stmt->body_block);
 	r = eval(interpreter, stmt->condition);
+	scope_reset(block_scope);
     }
+
+    scope_destroy(block_scope);
 }
 
 static void exec_iter_loop_list(Interpreter *interpreter, IterLoopStmt *stmt, SlashList *iterable)
@@ -744,7 +756,8 @@ static void exec_iter_loop_list(Interpreter *interpreter, IterLoopStmt *stmt, Sl
     for (size_t i = 0; i < iterable->underlying.size; i++) {
 	iterator_value = slash_list_get(iterable, i);
 	var_assign(&stmt->var_name, interpreter->scope, iterator_value);
-	exec_block(interpreter, stmt->body_block);
+	exec_block_body(interpreter, stmt->body_block);
+	scope_reset(interpreter->scope);
     }
 }
 
@@ -757,7 +770,8 @@ static void exec_iter_loop_tuple(Interpreter *interpreter, IterLoopStmt *stmt, S
     for (size_t i = 0; i < iterable->size; i++) {
 	iterator_value = &iterable->values[i];
 	var_assign(&stmt->var_name, interpreter->scope, iterator_value);
-	exec_block(interpreter, stmt->body_block);
+	exec_block_body(interpreter, stmt->body_block);
+	scope_reset(interpreter->scope);
     }
 }
 
@@ -775,7 +789,8 @@ static void exec_iter_loop_map(Interpreter *interpreter, IterLoopStmt *stmt, Sla
     for (size_t i = 0; i < keys_tuple->size; i++) {
 	iterator_value = &keys_tuple->values[i];
 	var_assign(&stmt->var_name, interpreter->scope, iterator_value);
-	exec_block(interpreter, stmt->body_block);
+	exec_block_body(interpreter, stmt->body_block);
+	scope_reset(interpreter->scope);
     }
 }
 
@@ -807,7 +822,8 @@ static void exec_iter_loop_range(Interpreter *interpreter, IterLoopStmt *stmt, S
     var_define(interpreter->scope, &stmt->var_name, &iterator_value);
 
     while (iterator_value.num != iterable.end) {
-	exec_block(interpreter, stmt->body_block);
+	exec_block_body(interpreter, stmt->body_block);
+	scope_reset(interpreter->scope);
 	iterator_value.num++;
 	var_assign(&stmt->var_name, interpreter->scope, &iterator_value);
     }
