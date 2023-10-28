@@ -14,27 +14,13 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef SLASH_OBJ_H
-#define SLASH_OBJ_H
 
-#include <stdbool.h>
+#include "interpreter/types/slash_value.h"
 
-#include "interpreter/scope.h"
-#include "interpreter/types/trait.h"
-
-typedef enum {
-    SLASH_OBJ_LIST,
-    SLASH_OBJ_TUPLE,
-    SLASH_OBJ_MAP,
-    SLASH_OBJ_STR,
-    SLASH_OBJ_TYPE_COUNT,
-} SlashObjType;
-
-struct slash_obj_t {
-    SlashObjType type;
-    bool gc_managed;
-    bool gc_marked;
-    ObjTraits *traits;
-};
-
-#endif /* SLASH_OBJ_H */
+SlashTypeInfo bool_type_info = { .name = "bool" };
+SlashTypeInfo num_type_info = { .name = "num" };
+SlashTypeInfo range_type_info = { .name = "range" };
+SlashTypeInfo map_type_info = { .name = "map" };
+SlashTypeInfo list_type_info = { .name = "list" };
+SlashTypeInfo tuple_type_info = { .name = "tuple" };
+SlashTypeInfo str_type_info = { .name = "str" };

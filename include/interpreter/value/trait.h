@@ -19,7 +19,10 @@
 
 #include "interpreter/interpreter.h"
 #include "interpreter/scope.h"
-#include "interpreter/types/slash_value.h"
+
+typedef struct slash_type_info_t SlashTypeInfo; // Forward decl
+typedef struct slash_obj_t SlashObj; // Forward dec
+
 
 typedef void (*TraitPrint)(SlashValue *self);
 typedef SlashValue (*TraitToStr)(Interpreter *interpreter, SlashValue *self);
@@ -32,34 +35,5 @@ typedef bool (*TraitCmp)(SlashValue *self, SlashValue *other);
 
 typedef void (*ObjInit)(SlashObj *obj);
 typedef void (*ObjFree)(SlashObj *obj);
-
-typedef struct {
-    TraitPrint print;
-    TraitToStr to_str;
-    TraitItemGet item_get;
-    TraitItemAssign item_assign;
-    TraitItemIn item_in;
-    TraitTruthy truthy;
-    TraitEquals equals;
-    TraitCmp cmp;
-
-    ObjInit init;
-    ObjFree free;
-} ObjTraits;
-
-/*
- * Table containing function pointers implementing print for each type
- *
- * Example usage for printing a SlashValue:
- * SlashValue value = ...
- * print_func = slash_print[value.type]
- * print_func(&value)
- */
-extern TraitPrint trait_print[SLASH_TYPE_COUNT];
-extern TraitToStr trait_to_str[SLASH_TYPE_COUNT];
-extern TraitItemGet trait_item_get[SLASH_TYPE_COUNT];
-extern TraitItemAssign trait_item_assign[SLASH_TYPE_COUNT];
-extern TraitItemIn trait_item_in[SLASH_TYPE_COUNT];
-
 
 #endif /* SLASH_TRAIT_H */
