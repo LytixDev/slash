@@ -50,10 +50,6 @@
     X(and)             \
     X(or)              \
     X(not )            \
-    X(str)             \
-    X(num)             \
-    X(bool)            \
-    X(none)            \
     X(assert)          \
     X(break)           \
     X(continue)

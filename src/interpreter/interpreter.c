@@ -92,14 +92,6 @@ static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt, char *pro
     set_exit_code(interpreter, exit_code);
 }
 
-static void check_num_operands(SlashValue *left, SlashValue *right)
-{
-    if (!(left->type == SLASH_NUM && right->type == SLASH_NUM))
-	REPORT_RUNTIME_ERROR(
-	    "Binary operation only supported for two numbers and not '%s' and '%s'",
-	    SLASH_TYPE_TO_STR(left), SLASH_TYPE_TO_STR(right));
-}
-
 
 /*
  * expression evaluation functions
@@ -119,112 +111,6 @@ static SlashValue eval_unary(Interpreter *interpreter, UnaryExpr *expr)
 
     ASSERT_NOT_REACHED;
     return (SlashValue){ 0 };
-}
-
-static SlashValue cmp_binary_values(Interpreter *interpreter, SlashValue left, SlashValue right,
-				    TokenType operator)
-{
-    SlashValue result = { 0 };
-
-    switch (operator) {
-    case t_greater:
-	check_num_operands(&left, &right);
-	result = (SlashValue){ .type = SLASH_BOOL, .boolean = left.num > right.num };
-	break;
-    case t_greater_equal:
-	check_num_operands(&left, &right);
-	result = (SlashValue){ .type = SLASH_BOOL, .boolean = left.num >= right.num };
-	break;
-    case t_less:
-	check_num_operands(&left, &right);
-	result = (SlashValue){ .type = SLASH_BOOL, .boolean = left.num < right.num };
-	break;
-    case t_less_equal:
-	check_num_operands(&left, &right);
-	result = (SlashValue){ .type = SLASH_BOOL, .boolean = left.num <= right.num };
-	break;
-
-    case t_plus: {
-	if (left.type == SLASH_NUM && right.type == SLASH_NUM) {
-	    result = (SlashValue){ .type = SLASH_NUM, .num = left.num + right.num };
-	} else if (IS_OBJ(left.type) && left.obj->type == SLASH_OBJ_LIST) {
-	    if (IS_OBJ(right.type) && right.obj->type == SLASH_OBJ_LIST) {
-		slash_list_append_list((SlashList *)left.obj, (SlashList *)right.obj);
-		return left;
-	    } else if (!IS_OBJ(right.type)) {
-		slash_list_append((SlashList *)left.obj, right);
-		return left;
-	    } else {
-		REPORT_RUNTIME_ERROR("'+' operator on '%s' and '%s' not supported",
-				     SLASH_TYPE_TO_STR(&left), SLASH_TYPE_TO_STR(&right));
-	    }
-	} else if (IS_OBJ(left.type) && left.obj->type == SLASH_OBJ_STR && IS_OBJ(right.type) &&
-		   right.obj->type == SLASH_OBJ_STR) {
-	    SlashStr *str = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
-	    slash_str_init_and_concat(str, (SlashStr *)left.obj, (SlashStr *)right.obj);
-	    return (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)str };
-	} else {
-	    REPORT_RUNTIME_ERROR("'+' operator on '%s' and '%s' not supported",
-				 SLASH_TYPE_TO_STR(&left), SLASH_TYPE_TO_STR(&right));
-	}
-	break;
-    }
-
-    case t_minus:
-	check_num_operands(&left, &right);
-	result = (SlashValue){ .type = SLASH_NUM, .num = left.num - right.num };
-	break;
-
-    case t_slash: {
-	if (right.num == 0)
-	    REPORT_RUNTIME_ERROR("Division by zero error");
-	check_num_operands(&left, &right);
-	result = (SlashValue){ .type = SLASH_NUM, .num = left.num / right.num };
-	break;
-    }
-    case t_slash_slash: {
-	if (right.num == 0)
-	    REPORT_RUNTIME_ERROR("Division by zero error");
-	check_num_operands(&left, &right);
-	result = (SlashValue){ .type = SLASH_NUM, .num = (int)(left.num / right.num) };
-	break;
-    }
-
-    case t_percent: {
-	if (right.num == 0)
-	    REPORT_RUNTIME_ERROR("Modulo by zero error");
-	check_num_operands(&left, &right);
-	double m = fmod(left.num, right.num);
-	/* same behaviour as we tend to see in maths */
-	m = m < 0 && right.num > 0 ? m + right.num : m;
-	result = (SlashValue){ .type = SLASH_NUM, .num = m };
-	break;
-    }
-
-    case t_star:
-	check_num_operands(&left, &right);
-	result = (SlashValue){ .type = SLASH_NUM, .num = left.num * right.num };
-	break;
-    case t_star_star:
-	check_num_operands(&left, &right);
-	result = (SlashValue){ .type = SLASH_NUM, .num = pow(left.num, right.num) };
-	break;
-
-    case t_equal_equal:
-	result = (SlashValue){ .type = SLASH_BOOL, .boolean = slash_value_eq(&left, &right) };
-	break;
-
-    case t_bang_equal:
-	result = (SlashValue){ .type = SLASH_BOOL, .boolean = !slash_value_eq(&left, &right) };
-	break;
-
-    default:
-	REPORT_RUNTIME_ERROR("Unrecognized binary operator");
-	ASSERT_NOT_REACHED;
-	return (SlashValue){ 0 };
-    }
-
-    return result;
 }
 
 static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
@@ -252,7 +138,7 @@ static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
     }
 
     if (expr->operator_ != t_in) {
-	return_value = cmp_binary_values(interpreter, left, right, expr->operator_);
+	REPORT_RUNTIME_ERROR("TODO: add binary operator traits");
 	goto defer_shadow_pop;
     }
 
@@ -598,7 +484,8 @@ static void exec_subscript_assign(Interpreter *interpreter, AssignStmt *stmt)
     SlashValue current_item_value = eval_subscript(interpreter, subscript);
     /* convert from += to + and -= to - */
     TokenType operator= stmt->assignment_op == t_plus_equal ? t_plus : t_minus;
-    new_value = cmp_binary_values(interpreter, current_item_value, new_value, operator);
+    //new_value = cmp_binary_values(interpreter, current_item_value, new_value, operator);
+    REPORT_RUNTIME_ERROR("Implement trait stuff");
 
     TraitItemAssign func = trait_item_assign[self->type];
     func(self, &access_index, &new_value);
@@ -662,7 +549,7 @@ static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
     }
 
     /* convert from assignment operator to correct binary operator */
-    TokenType operator_ = t_none;
+    TokenType operator_;
     switch (stmt->assignment_op) {
     case t_plus_equal:
 	operator_ = t_plus;
@@ -689,7 +576,8 @@ static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
 	REPORT_RUNTIME_ERROR("Unrecognized assignment operator");
 	ASSERT_NOT_REACHED;
     }
-    new_value = cmp_binary_values(interpreter, *variable.value, new_value, operator_);
+    REPORT_RUNTIME_ERROR("Implement trait stuff");
+    //new_value = cmp_binary_values(interpreter, *variable.value, new_value, operator_);
     /*
      * For dynamic types the binary compare will update the underlying object.
      * Therefore, we only assign if the variable type is not dynamic.

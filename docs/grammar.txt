@@ -94,7 +94,7 @@ method_call     -> expression "." IDENTIFIER "(" sequence_expr ")" ;
 
 contains        -> expression "in" expression ;
 
-cast            -> expression "as" TYPE ;
+cast            -> expression "as" IDENTIFIER ;
 
 subscript       -> access ( "[" expression "]" access? )* ;
 

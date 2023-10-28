@@ -185,20 +185,6 @@ static bool match_either(Parser *parser, unsigned int n, ...)
 
 #define match(parser, ...) match_either(parser, VA_NUMBER_OF_ARGS(__VA_ARGS__), __VA_ARGS__)
 
-static SlashType token_type_to_slash_type(TokenType type)
-{
-    switch (type) {
-    case t_num:
-	return SLASH_NUM;
-    case t_bool:
-	return SLASH_BOOL;
-    default:
-	ASSERT_NOT_REACHED;
-    };
-
-    ASSERT_NOT_REACHED;
-    return 0;
-}
 
 /* grammar functions */
 static void newline(Parser *parser)
@@ -619,13 +605,13 @@ static Expr *single(Parser *parser)
 	CastExpr *expr = (CastExpr *)expr_alloc(parser->ast_arena, EXPR_CAST);
 	expr->expr = left;
 	// TODO: support more casts later
-	if (!match(parser, t_num, t_str, t_bool)) {
-	    report_parse_err(parser, "Expected 'num' or 'bool' keyword after cast");
+	if (!match(parser, t_ident)) {
+	    report_parse_err(parser, "Expected identifier after cast");
 	    /* move past token and continue as normal */
 	    parser->token_pos++;
 	    return NULL;
 	}
-	expr->as = token_type_to_slash_type(previous(parser)->type);
+	expr->as = SLASH_NUM;//token_type_to_slash_type(previous(parser)->type);
 	return (Expr *)expr;
     }
 
