@@ -15,7 +15,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "interpreter/types/slash_value.h"
+#include "interpreter/value/slash_value.h"
 
 SlashTypeInfo bool_type_info = { .name = "bool" };
 SlashTypeInfo num_type_info = { .name = "num" };

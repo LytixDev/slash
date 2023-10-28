@@ -32,50 +32,50 @@
 #include "nicc/nicc.h"
 
 
-void interactive(int argc, char **argv)
-{
-    Interpreter interpreter = { 0 };
-    interpreter_init(&interpreter, argc, argv);
-    Arena ast_arena;
-    ast_arena_init(&ast_arena);
-    Prompt prompt;
-    prompt_init(&prompt, "-> ");
-
-    while (prompt_run(&prompt)) {
-	Lexer lex_result = lex(prompt.buf, prompt.buf_len);
-	if (lex_result.had_error) {
-	    m_arena_clear(&ast_arena);
-	    arraylist_free(&lex_result.tokens);
-	    continue;
-	}
-
-	StmtsOrErr stmts = parse(&ast_arena, &lex_result.tokens, prompt.buf);
-	if (stmts.had_error) {
-	    m_arena_clear(&ast_arena);
-	    arraylist_free(&lex_result.tokens);
-	    arraylist_free(&stmts.stmts);
-	    continue;
-	}
-
-	interpreter_run(&interpreter, &stmts.stmts);
-
-	m_arena_clear(&ast_arena);
-	arraylist_free(&lex_result.tokens);
-	arraylist_free(&stmts.stmts);
-    }
-
-    ast_arena_release(&ast_arena);
-    interpreter_free(&interpreter);
-    prompt_free(&prompt);
-}
+///void interactive(int argc, char **argv)
+///{
+///    Interpreter interpreter = { 0 };
+///    interpreter_init(&interpreter, argc, argv);
+///    Arena ast_arena;
+///    ast_arena_init(&ast_arena);
+///    Prompt prompt;
+///    prompt_init(&prompt, "-> ");
+///
+///    while (prompt_run(&prompt)) {
+///	Lexer lex_result = lex(prompt.buf, prompt.buf_len);
+///	if (lex_result.had_error) {
+///	    m_arena_clear(&ast_arena);
+///	    arraylist_free(&lex_result.tokens);
+///	    continue;
+///	}
+///
+///	StmtsOrErr stmts = parse(&ast_arena, &lex_result.tokens, prompt.buf);
+///	if (stmts.had_error) {
+///	    m_arena_clear(&ast_arena);
+///	    arraylist_free(&lex_result.tokens);
+///	    arraylist_free(&stmts.stmts);
+///	    continue;
+///	}
+///
+///	interpreter_run(&interpreter, &stmts.stmts);
+///
+///	m_arena_clear(&ast_arena);
+///	arraylist_free(&lex_result.tokens);
+///	arraylist_free(&stmts.stmts);
+///    }
+///
+///    ast_arena_release(&ast_arena);
+///    interpreter_free(&interpreter);
+///    prompt_free(&prompt);
+///}
 
 
 int main(int argc, char **argv)
 {
-    if (argc == 1) {
-	interactive(argc, argv);
-	return 0;
-    }
+    ///if (argc == 1) {
+    ///    interactive(argc, argv);
+    ///    return 0;
+    ///}
 
     int exit_code;
     char *file_path = argv[1];
@@ -151,7 +151,7 @@ int main(int argc, char **argv)
 #endif /* DEBUG_PERF */
 
     /* interpret */
-    exit_code = interpret(&stmts.stmts, argc - 1, argv + 1);
+    ///exit_code = interpret(&stmts.stmts, argc - 1, argv + 1);
 
 #ifdef DEBUG_PERF
     end_time = clock();

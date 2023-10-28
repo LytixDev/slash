@@ -18,7 +18,7 @@
 
 #include "interpreter/ast.h"
 #include "interpreter/lexer.h"
-#include "interpreter/types/slash_value.h"
+#include "interpreter/value/slash_value.h"
 #include "lib/arena_ll.h"
 #include "lib/str_view.h"
 #include "sac/sac.h"
@@ -112,26 +112,27 @@ static void ast_print_range_literal(SlashRange *range)
 
 static void ast_print_literal(LiteralExpr *expr)
 {
-    switch (expr->value.type) {
-    case SLASH_SHIDENT:
-	str_view_print(expr->value.shident);
-	break;
+    printf("literal");
+    //switch (expr->value.type) {
+    //case SLASH_SHIDENT:
+    //    str_view_print(expr->value.shident);
+    //    break;
 
-    case SLASH_NUM:
-	printf("%f", expr->value.num);
-	break;
+    //case SLASH_NUM:
+    //    printf("%f", expr->value.num);
+    //    break;
 
-    case SLASH_BOOL:
-	printf("%s", expr->value.boolean == true ? "true" : "false");
-	break;
+    //case SLASH_BOOL:
+    //    printf("%s", expr->value.boolean == true ? "true" : "false");
+    //    break;
 
-    case SLASH_RANGE:
-	ast_print_range_literal(&expr->value.range);
-	break;
+    //case SLASH_RANGE:
+    //    ast_print_range_literal(&expr->value.range);
+    //    break;
 
-    default:
-	printf("bad literal type");
-    }
+    //default:
+    //    printf("bad literal type");
+    //}
 }
 
 static void ast_print_access(AccessExpr *expr)

@@ -20,7 +20,7 @@
 #include "interpreter/error.h"
 #include "interpreter/lexer.h"
 #include "interpreter/parser.h"
-#include "interpreter/types/slash_value.h"
+#include "interpreter/value/slash_value.h"
 #include "lib/arena_ll.h"
 #include "lib/str_view.h"
 #include "nicc/nicc.h"
@@ -611,7 +611,7 @@ static Expr *single(Parser *parser)
 	    parser->token_pos++;
 	    return NULL;
 	}
-	expr->as = SLASH_NUM;//token_type_to_slash_type(previous(parser)->type);
+	///expr->as = SLASH_NUM;//token_type_to_slash_type(previous(parser)->type);
 	return (Expr *)expr;
     }
 
@@ -697,7 +697,7 @@ static Expr *primary(Parser *parser)
     /* shident */
     if (token->type == t_dt_shident) {
 	LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
-	expr->value = (SlashValue){ .type = SLASH_SHIDENT, .shident = token->lexeme };
+	expr->value = (SlashValue){ .T_info = NULL, .shident = token->lexeme };
 	return (Expr *)expr;
     }
 
@@ -712,7 +712,7 @@ static Expr *bool_lit(Parser *parser)
     Token *token = previous(parser);
     LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
     expr->value =
-	(SlashValue){ .type = SLASH_BOOL, .boolean = token->type == t_true ? true : false };
+	(SlashValue){ .T_info = &bool_type_info, .boolean = token->type == t_true ? true : false };
     return (Expr *)expr;
 }
 
@@ -720,7 +720,7 @@ static Expr *number(Parser *parser)
 {
     Token *token = previous(parser);
     LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
-    expr->value = (SlashValue){ .type = SLASH_NUM, .num = str_view_to_double(token->lexeme) };
+    expr->value = (SlashValue){ .T_info = &num_type_info, .num = str_view_to_double(token->lexeme) };
     return (Expr *)expr;
 }
 
@@ -739,7 +739,7 @@ static Expr *range(Parser *parser)
     range.end = str_view_to_int(end_num->lexeme);
 
     LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
-    expr->value = (SlashValue){ .type = SLASH_RANGE, .range = range };
+    expr->value = (SlashValue){ .T_info = &range_type_info, .range = range };
     return (Expr *)expr;
 }
 

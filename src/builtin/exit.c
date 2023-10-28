@@ -14,26 +14,26 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
-#include <unistd.h>
-
-#include "interpreter/interpreter.h"
-#include "interpreter/types/slash_value.h"
-
-
-int builtin_exit(Interpreter *interpreter, size_t argc, SlashValue *argv)
-{
-    (void)interpreter;
-    if (argc == 0)
-	exit(0);
-
-    SlashValue arg = argv[0];
-    if (arg.type == SLASH_NUM)
-	exit(arg.num);
-
-    if (arg.type == SLASH_SHIDENT) {
-	int exit_code = str_view_to_int(arg.shident);
-	exit(exit_code);
-    }
-    exit(2);
-}
+///
+///#include <unistd.h>
+///
+///#include "interpreter/interpreter.h"
+///#include "interpreter/types/slash_value.h"
+///
+///
+///int builtin_exit(Interpreter *interpreter, size_t argc, SlashValue *argv)
+///{
+///    (void)interpreter;
+///    if (argc == 0)
+///	exit(0);
+///
+///    SlashValue arg = argv[0];
+///    if (arg.type == SLASH_NUM)
+///	exit(arg.num);
+///
+///    if (arg.type == SLASH_SHIDENT) {
+///	int exit_code = str_view_to_int(arg.shident);
+///	exit(exit_code);
+///    }
+///    exit(2);
+///}

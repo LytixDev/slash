@@ -21,7 +21,7 @@
 
 #include "interpreter/interpreter.h"
 #include "interpreter/lexer.h"
-#include "interpreter/types/trait.h"
+#include "interpreter/value/trait.h"
 #include "sac/sac.h"
 
 

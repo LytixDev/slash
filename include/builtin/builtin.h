@@ -14,43 +14,43 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef BUILTIN_H
-#define BUILTIN_H
-
-#include "interpreter/interpreter.h"
-#include "interpreter/types/slash_value.h"
-
-#define PROGRAM_PATH_MAX_LEN 512
-
-typedef int (*BuiltinFunc)(Interpreter *interpreter, size_t argc, SlashValue *argv);
-
-typedef struct {
-    char *name;
-    BuiltinFunc func;
-} Builtin;
-
-typedef enum {
-    WHICH_BUILTIN,
-    WHICH_EXTERN,
-    WHICH_NOT_FOUND,
-} WhichResultType;
-
-typedef struct {
-    WhichResultType type;
-    union {
-	char path[PROGRAM_PATH_MAX_LEN];
-	BuiltinFunc builtin;
-    };
-} WhichResult;
-
-
-WhichResult which(StrView cmd, char *PATH);
-
-/* builtins */
-int builtin_which(Interpreter *interpreter, size_t argc, SlashValue *argv);
-int builtin_cd(Interpreter *interpreter, size_t argc, SlashValue *argv);
-int builtin_vars(Interpreter *interpreter, size_t argc, SlashValue *argv);
-int builtin_exit(Interpreter *interpreter, size_t argc, SlashValue *argv);
-
-
-#endif /* BUILTIN_H */
+///#ifndef BUILTIN_H
+///#define BUILTIN_H
+///
+///#include "interpreter/interpreter.h"
+///#include "interpreter/types/slash_value.h"
+///
+///#define PROGRAM_PATH_MAX_LEN 512
+///
+///typedef int (*BuiltinFunc)(Interpreter *interpreter, size_t argc, SlashValue *argv);
+///
+///typedef struct {
+///    char *name;
+///    BuiltinFunc func;
+///} Builtin;
+///
+///typedef enum {
+///    WHICH_BUILTIN,
+///    WHICH_EXTERN,
+///    WHICH_NOT_FOUND,
+///} WhichResultType;
+///
+///typedef struct {
+///    WhichResultType type;
+///    union {
+///	char path[PROGRAM_PATH_MAX_LEN];
+///	BuiltinFunc builtin;
+///    };
+///} WhichResult;
+///
+///
+///WhichResult which(StrView cmd, char *PATH);
+///
+////* builtins */
+///int builtin_which(Interpreter *interpreter, size_t argc, SlashValue *argv);
+///int builtin_cd(Interpreter *interpreter, size_t argc, SlashValue *argv);
+///int builtin_vars(Interpreter *interpreter, size_t argc, SlashValue *argv);
+///int builtin_exit(Interpreter *interpreter, size_t argc, SlashValue *argv);
+///
+///
+///#endif /* BUILTIN_H */
