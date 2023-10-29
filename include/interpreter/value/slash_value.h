@@ -118,18 +118,20 @@ extern SlashTypeInfo list_type_info;
 extern SlashTypeInfo tuple_type_info;
 extern SlashTypeInfo str_type_info;
 
-#define IS_BOOL(value) ((value)->T_info == &bool_type_info);
-#define IS_NUM(value) ((value)->T_info == &num_type_info);
-#define IS_RANGE(value) ((value)->T_info == &range_type_info);
-#define IS_MAP(value) ((value)->T_info == &map_type_info);
-#define IS_LIST(value) ((value)->T_info == &list_type_info);
-#define IS_TUPLE(value) ((value)->T_info == &tuple_type_info);
-#define IS_STR(value) ((value)->T_info == &str_type_info);
+#define IS_BOOL(value) ((value).T_info == &bool_type_info)
+#define IS_NUM(value) ((value).T_info == &num_type_info)
+#define IS_RANGE(value) ((value).T_info == &range_type_info)
+#define IS_MAP(value) ((value).T_info == &map_type_info)
+#define IS_LIST(value) ((value).T_info == &list_type_info)
+#define IS_TUPLE(value) ((value).T_info == &tuple_type_info)
+#define IS_STR(value) ((value).T_info == &str_type_info)
 #define IS_OBJ(value) (!(IS_BOOL((value)) && IS_NUM((value)) && IS_RANGE((value))))
 
-#define AS_MAP(value) ((SlashMap *)(value)->obj)
-#define AS_LIST(value) ((SlashList *)(value)->obj)
-#define AS_TUPLE(value) ((SlashTuple *)(value)->obj)
-#define AS_STR(value) ((SlashStr *)(value)->obj)
+#define AS_MAP(value) ((SlashMap *)(value).obj)
+#define AS_LIST(value) ((SlashList *)(value).obj)
+#define AS_TUPLE(value) ((SlashTuple *)(value).obj)
+#define AS_STR(value) ((SlashStr *)(value).obj)
+
+#define TYPE_EQ(a, b) ((a).T_info == (b).T_info)
 
 #endif /* SLASH_VALUE_H */

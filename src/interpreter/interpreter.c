@@ -36,8 +36,8 @@
 #include "nicc/nicc.h"
 
 
-/// static SlashValue eval(Interpreter *interpreter, Expr *expr);
-/// static void exec(Interpreter *interpreter, Stmt *stmt);
+static SlashValue eval(Interpreter *interpreter, Expr *expr);
+static void exec(Interpreter *interpreter, Stmt *stmt);
 ///
 ////*
 ///  * helpers
@@ -108,6 +108,22 @@
 ///     return (SlashValue){ 0 };
 /// }
 ///
+static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
+{
+    SlashValue left = eval(interpreter, expr->left);
+    SlashValue right = eval(interpreter, expr->left);
+    if (!TYPE_EQ(left, right))
+        REPORT_RUNTIME_ERROR("Bad types");
+
+    switch (expr->operator_) {
+        case t_plus:
+            return left.T_info->plus(left, right);
+
+        default:
+	REPORT_RUNTIME_ERROR("Unrecognized binary operator");
+    }
+}
+
 /// static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
 ///{
 ///     SlashValue return_value;
@@ -149,11 +165,11 @@
 /// }
 ///
 ///
-/// static SlashValue eval_literal(Interpreter *interpreter, LiteralExpr *expr)
-///{
-///     (void)interpreter;
-///     return expr->value;
-/// }
+static SlashValue eval_literal(Interpreter *interpreter, LiteralExpr *expr)
+{
+    (void)interpreter;
+    return expr->value;
+}
 ///
 /// static SlashValue eval_access(Interpreter *interpreter, AccessExpr *expr)
 ///{
@@ -349,9 +365,10 @@
 ///  */
 static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
 {
-    // SlashValue value = eval(interpreter, stmt->expression);
-    // TraitPrint print_func = trait_print[value.type];
-    // print_func(&value);
+    SlashValue value = eval(interpreter, stmt->expression);
+    TraitPrint trait_print = value.T_info->print;
+    assert(trait_print != NULL);
+    trait_print(value);
     ///* edge case: if last char printed was a newline then we don't bother printing one */
     // if (value.type == SLASH_OBJ && value.obj->type == SLASH_OBJ_STR) {
     //     SlashStr *str = (SlashStr *)value.obj;
@@ -834,18 +851,18 @@ static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
 ///	exec_redirect(interpreter, stmt);
 ///}
 ///
-/// static SlashValue eval(Interpreter *interpreter, Expr *expr)
-///{
-///    switch (expr->type) {
+ static SlashValue eval(Interpreter *interpreter, Expr *expr)
+{
+    switch (expr->type) {
 ///    case EXPR_UNARY:
 ///	return eval_unary(interpreter, (UnaryExpr *)expr);
-///
-///    case EXPR_BINARY:
-///	return eval_binary(interpreter, (BinaryExpr *)expr);
-///
-///    case EXPR_LITERAL:
-///	return eval_literal(interpreter, (LiteralExpr *)expr);
-///
+
+    case EXPR_BINARY:
+	return eval_binary(interpreter, (BinaryExpr *)expr);
+
+    case EXPR_LITERAL:
+	return eval_literal(interpreter, (LiteralExpr *)expr);
+
 ///    case EXPR_ACCESS:
 ///	return eval_access(interpreter, (AccessExpr *)expr);
 ///
@@ -875,13 +892,13 @@ static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
 ///
 ///    case EXPR_CAST:
 ///	return eval_cast(interpreter, (CastExpr *)expr);
-///
-///    default:
-///	REPORT_RUNTIME_ERROR("Internal error: expression type not recognized");
-///	/* will never happen, but lets make the compiler happy */
-///	return (SlashValue){ 0 };
-///    }
-///}
+
+    default:
+	REPORT_RUNTIME_ERROR("Internal error: expression type not recognized");
+	/* will never happen, but lets make the compiler happy */
+	return (SlashValue){ 0 };
+    }
+}
 
 static void exec(Interpreter *interpreter, Stmt *stmt)
 {
