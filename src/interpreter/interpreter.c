@@ -14,65 +14,60 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-///#include <math.h>
-///#include <setjmp.h>
-///#include <stdio.h>
-///#include <string.h>
-///#include <unistd.h>
-///
-///#include "builtin/builtin.h"
-///#include "interpreter/ast.h"
-///#include "interpreter/error.h"
-///#include "interpreter/exec.h"
-///#include "interpreter/gc.h"
-///#include "interpreter/interpreter.h"
-///#include "interpreter/lexer.h"
-///#include "interpreter/scope.h"
-///#include "interpreter/types/cast.h"
-///#include "interpreter/types/method.h"
-///#include "interpreter/types/slash_list.h"
-///#include "interpreter/types/slash_map.h"
-///#include "interpreter/types/slash_str.h"
-///#include "interpreter/types/slash_tuple.h"
-///#include "interpreter/types/slash_value.h"
-///#include "interpreter/types/trait.h"
-///#include "lib/arena_ll.h"
-///#include "lib/str_view.h"
-///#include "nicc/nicc.h"
-///
-///
-///static SlashValue eval(Interpreter *interpreter, Expr *expr);
-///static void exec(Interpreter *interpreter, Stmt *stmt);
+#include <math.h>
+#include <setjmp.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+
+#include "builtin/builtin.h"
+#include "interpreter/ast.h"
+#include "interpreter/error.h"
+#include "interpreter/exec.h"
+/// #include "interpreter/gc.h"
+#include "interpreter/interpreter.h"
+#include "interpreter/lexer.h"
+/// #include "interpreter/scope.h"
+/// #include "interpreter/value/cast.h"
+/// #include "interpreter/value/method.h"
+#include "interpreter/value/slash_value.h"
+#include "lib/arena_ll.h"
+#include "lib/str_view.h"
+#include "nicc/nicc.h"
+
+
+/// static SlashValue eval(Interpreter *interpreter, Expr *expr);
+/// static void exec(Interpreter *interpreter, Stmt *stmt);
 ///
 ////*
-/// * helpers
-/// */
-///static void set_exit_code(Interpreter *interpreter, int exit_code)
+///  * helpers
+///  */
+/// static void set_exit_code(Interpreter *interpreter, int exit_code)
 ///{
-///    interpreter->prev_exit_code = exit_code;
-///    SlashValue value = { .type = SLASH_NUM, .num = interpreter->prev_exit_code };
-///    var_assign(&(StrView){ .view = "?", .size = 1 }, &interpreter->globals, &value);
-///}
+///     interpreter->prev_exit_code = exit_code;
+///     SlashValue value = { .type = SLASH_NUM, .num = interpreter->prev_exit_code };
+///     var_assign(&(StrView){ .view = "?", .size = 1 }, &interpreter->globals, &value);
+/// }
 ///
-///static void exec_block_body(Interpreter *interpreter, BlockStmt *stmt)
+/// static void exec_block_body(Interpreter *interpreter, BlockStmt *stmt)
 ///{
-///    LLItem *item;
-///    ARENA_LL_FOR_EACH(stmt->statements, item)
-///    {
+///     LLItem *item;
+///     ARENA_LL_FOR_EACH(stmt->statements, item)
+///     {
 ///	exec(interpreter, item->value);
-///    }
-///}
+///     }
+/// }
 ///
-///static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt, char *program_path)
+/// static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt, char *program_path)
 ///{
-///    size_t argc = 1;
-///    if (stmt->arg_exprs != NULL)
+///     size_t argc = 1;
+///     if (stmt->arg_exprs != NULL)
 ///	argc += stmt->arg_exprs->size;
-///    char *argv[argc + 1]; // + 1 because last element is NULL
-///    argv[0] = program_path;
+///     char *argv[argc + 1]; // + 1 because last element is NULL
+///     argv[0] = program_path;
 ///
-///    size_t i = 1;
-///    if (stmt->arg_exprs != NULL) {
+///     size_t i = 1;
+///     if (stmt->arg_exprs != NULL) {
 ///	LLItem *item;
 ///	ARENA_LL_FOR_EACH(stmt->arg_exprs, item)
 ///	{
@@ -82,46 +77,46 @@
 ///	    gc_shadow_push(&interpreter->gc_shadow_stack, value_str_repr.obj);
 ///	    argv[i++] = ((SlashStr *)(value_str_repr.obj))->p;
 ///	}
-///    }
+///     }
 ///
-///    for (size_t n = 0; n < argc - 1; n++)
+///     for (size_t n = 0; n < argc - 1; n++)
 ///	gc_shadow_pop(&interpreter->gc_shadow_stack);
 ///
-///    argv[i] = NULL;
-///    int exit_code = exec_program(&interpreter->stream_ctx, argv);
-///    set_exit_code(interpreter, exit_code);
-///}
+///     argv[i] = NULL;
+///     int exit_code = exec_program(&interpreter->stream_ctx, argv);
+///     set_exit_code(interpreter, exit_code);
+/// }
 ///
 ///
 ////*
-/// * expression evaluation functions
-/// */
-///static SlashValue eval_unary(Interpreter *interpreter, UnaryExpr *expr)
+///  * expression evaluation functions
+///  */
+/// static SlashValue eval_unary(Interpreter *interpreter, UnaryExpr *expr)
 ///{
-///    SlashValue right = eval(interpreter, expr->right);
-///    if (expr->operator_ == t_not)
+///     SlashValue right = eval(interpreter, expr->right);
+///     if (expr->operator_ == t_not)
 ///	return (SlashValue){ .type = SLASH_BOOL, .boolean = !is_truthy(&right) };
-///    if (expr->operator_ == t_minus) {
+///     if (expr->operator_ == t_minus) {
 ///	if (right.type != SLASH_NUM)
 ///	    REPORT_RUNTIME_ERROR("'-' operator not defined for type '%s'",
 ///				 SLASH_TYPE_TO_STR(&right));
 ///	right.num = -right.num;
 ///	return right;
-///    }
+///     }
 ///
-///    ASSERT_NOT_REACHED;
-///    return (SlashValue){ 0 };
-///}
+///     ASSERT_NOT_REACHED;
+///     return (SlashValue){ 0 };
+/// }
 ///
-///static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
+/// static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
 ///{
-///    SlashValue return_value;
-///    SlashValue left = eval(interpreter, expr->left);
-///    if (IS_OBJ(left.type))
+///     SlashValue return_value;
+///     SlashValue left = eval(interpreter, expr->left);
+///     if (IS_OBJ(left.type))
 ///	gc_shadow_push(&interpreter->gc_shadow_stack, left.obj);
 ///
-///    /* logical operators */
-///    if (expr->operator_ == t_and) {
+///     /* logical operators */
+///     if (expr->operator_ == t_and) {
 ///	if (!is_truthy(&left)) {
 ///	    return_value = (SlashValue){ .type = SLASH_BOOL, .boolean = false };
 ///	    goto defer_shadow_pop;
@@ -129,182 +124,182 @@
 ///	SlashValue right = eval(interpreter, expr->right);
 ///	return_value = (SlashValue){ .type = SLASH_BOOL, .boolean = is_truthy(&right) };
 ///	goto defer_shadow_pop;
-///    }
-///    SlashValue right = eval(interpreter, expr->right);
-///    if (expr->operator_ == t_or) {
+///     }
+///     SlashValue right = eval(interpreter, expr->right);
+///     if (expr->operator_ == t_or) {
 ///	return_value =
 ///	    (SlashValue){ .type = SLASH_BOOL, .boolean = is_truthy(&left) || is_truthy(&right) };
 ///	goto defer_shadow_pop;
-///    }
+///     }
 ///
-///    if (expr->operator_ != t_in) {
+///     if (expr->operator_ != t_in) {
 ///	REPORT_RUNTIME_ERROR("TODO: add binary operator traits");
 ///	goto defer_shadow_pop;
-///    }
+///     }
 ///
-///    /* left "IN" right */
-///    TraitItemIn func = trait_item_in[right.type];
-///    bool rc = func(&right, &left);
-///    return_value = (SlashValue){ .type = SLASH_BOOL, .boolean = rc };
+///     /* left "IN" right */
+///     TraitItemIn func = trait_item_in[right.type];
+///     bool rc = func(&right, &left);
+///     return_value = (SlashValue){ .type = SLASH_BOOL, .boolean = rc };
 ///
-///defer_shadow_pop:
-///    if (IS_OBJ(left.type))
+/// defer_shadow_pop:
+///     if (IS_OBJ(left.type))
 ///	gc_shadow_pop(&interpreter->gc_shadow_stack);
-///    return return_value;
-///}
+///     return return_value;
+/// }
 ///
 ///
-///static SlashValue eval_literal(Interpreter *interpreter, LiteralExpr *expr)
+/// static SlashValue eval_literal(Interpreter *interpreter, LiteralExpr *expr)
 ///{
-///    (void)interpreter;
-///    return expr->value;
-///}
+///     (void)interpreter;
+///     return expr->value;
+/// }
 ///
-///static SlashValue eval_access(Interpreter *interpreter, AccessExpr *expr)
+/// static SlashValue eval_access(Interpreter *interpreter, AccessExpr *expr)
 ///{
-///    ScopeAndValue sv = var_get(interpreter->scope, &expr->var_name);
-///    /* If variable is not defined, then return None. Same behaviour as POSIX sh I think */
-///    if (sv.value == NULL)
+///     ScopeAndValue sv = var_get(interpreter->scope, &expr->var_name);
+///     /* If variable is not defined, then return None. Same behaviour as POSIX sh I think */
+///     if (sv.value == NULL)
 ///	return (SlashValue){ .type = SLASH_NONE };
 ///
-///    return *sv.value;
-///}
+///     return *sv.value;
+/// }
 ///
-///static SlashValue eval_subscript(Interpreter *interpreter, SubscriptExpr *expr)
+/// static SlashValue eval_subscript(Interpreter *interpreter, SubscriptExpr *expr)
 ///{
-///    SlashValue value = eval(interpreter, expr->expr);
-///    SlashValue access_index = eval(interpreter, expr->access_value);
-///    TraitItemGet func = trait_item_get[value.type];
-///    SlashValue item = func(interpreter, &value, &access_index);
-///    return item;
-///}
+///     SlashValue value = eval(interpreter, expr->expr);
+///     SlashValue access_index = eval(interpreter, expr->access_value);
+///     TraitItemGet func = trait_item_get[value.type];
+///     SlashValue item = func(interpreter, &value, &access_index);
+///     return item;
+/// }
 ///
-///static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
+/// static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
 ///{
-///    /* pipe output will be written to */
-///    int fd[2];
-///    pipe(fd);
+///     /* pipe output will be written to */
+///     int fd[2];
+///     pipe(fd);
 ///
-///    StreamCtx *stream_ctx = &interpreter->stream_ctx;
-///    int original_write_fd = stream_ctx->write_fd;
-///    /* set the write fd to the newly created pipe */
-///    stream_ctx->write_fd = fd[STREAM_WRITE_END];
+///     StreamCtx *stream_ctx = &interpreter->stream_ctx;
+///     int original_write_fd = stream_ctx->write_fd;
+///     /* set the write fd to the newly created pipe */
+///     stream_ctx->write_fd = fd[STREAM_WRITE_END];
 ///
-///    exec(interpreter, expr->stmt);
-///    close(fd[1]);
-///    /* restore original write fd */
-///    stream_ctx->write_fd = original_write_fd;
+///     exec(interpreter, expr->stmt);
+///     close(fd[1]);
+///     /* restore original write fd */
+///     stream_ctx->write_fd = original_write_fd;
 ///
-///    // TODO: dynamic buffer coupled with SlashStr
-///    char buffer[4096] = { 0 };
-///    size_t size = read(fd[0], buffer, 4096);
-///    if (buffer[size - 1] == '\n')
+///     // TODO: dynamic buffer coupled with SlashStr
+///     char buffer[4096] = { 0 };
+///     size_t size = read(fd[0], buffer, 4096);
+///     if (buffer[size - 1] == '\n')
 ///	size--;
-///    close(fd[0]);
-///    SlashStr *str = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
-///    slash_str_init_from_slice(str, buffer, size);
-///    return (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)str };
-///}
+///     close(fd[0]);
+///     SlashStr *str = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
+///     slash_str_init_from_slice(str, buffer, size);
+///     return (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)str };
+/// }
 ///
-///static SlashValue eval_tuple(Interpreter *interpreter, SequenceExpr *expr)
+/// static SlashValue eval_tuple(Interpreter *interpreter, SequenceExpr *expr)
 ///{
-///    SlashTuple *tuple = (SlashTuple *)gc_alloc(interpreter, SLASH_OBJ_TUPLE);
-///    gc_shadow_push(&interpreter->gc_shadow_stack, &tuple->obj);
-///    SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)tuple };
-///    // TODO: possible?
-///    if (expr->seq.size == 0) {
+///     SlashTuple *tuple = (SlashTuple *)gc_alloc(interpreter, SLASH_OBJ_TUPLE);
+///     gc_shadow_push(&interpreter->gc_shadow_stack, &tuple->obj);
+///     SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)tuple };
+///     // TODO: possible?
+///     if (expr->seq.size == 0) {
 ///	slash_tuple_init(tuple, 0);
 ///	return value;
-///    }
+///     }
 ///
-///    slash_tuple_init(tuple, expr->seq.size);
-///    size_t i = 0;
-///    LLItem *item;
-///    ARENA_LL_FOR_EACH(&expr->seq, item)
-///    {
+///     slash_tuple_init(tuple, expr->seq.size);
+///     size_t i = 0;
+///     LLItem *item;
+///     ARENA_LL_FOR_EACH(&expr->seq, item)
+///     {
 ///	SlashValue element_value = eval(interpreter, item->value);
 ///	tuple->values[i++] = element_value;
-///    }
+///     }
 ///
-///    gc_shadow_pop(&interpreter->gc_shadow_stack);
-///    return value;
-///}
+///     gc_shadow_pop(&interpreter->gc_shadow_stack);
+///     return value;
+/// }
 ///
-///static SlashValue eval_str(Interpreter *interpreter, StrExpr *expr)
+/// static SlashValue eval_str(Interpreter *interpreter, StrExpr *expr)
 ///{
-///    SlashStr *str = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
-///    slash_str_init_from_view(str, &expr->view);
-///    return (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)str };
-///}
+///     SlashStr *str = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
+///     slash_str_init_from_view(str, &expr->view);
+///     return (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)str };
+/// }
 ///
-///static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
+/// static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
 ///{
-///    SlashList *list = (SlashList *)gc_alloc(interpreter, SLASH_OBJ_LIST);
-///    gc_shadow_push(&interpreter->gc_shadow_stack, &list->obj);
-///    slash_list_init(list);
-///    SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)list };
+///     SlashList *list = (SlashList *)gc_alloc(interpreter, SLASH_OBJ_LIST);
+///     gc_shadow_push(&interpreter->gc_shadow_stack, &list->obj);
+///     slash_list_init(list);
+///     SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)list };
 ///
-///    if (expr->exprs == NULL)
+///     if (expr->exprs == NULL)
 ///	return value;
 ///
-///    LLItem *item;
-///    ARENA_LL_FOR_EACH(&expr->exprs->seq, item)
-///    {
+///     LLItem *item;
+///     ARENA_LL_FOR_EACH(&expr->exprs->seq, item)
+///     {
 ///	SlashValue element_value = eval(interpreter, item->value);
 ///	slash_list_append(list, element_value);
-///    }
+///     }
 ///
-///    gc_shadow_pop(&interpreter->gc_shadow_stack);
-///    return value;
-///}
+///     gc_shadow_pop(&interpreter->gc_shadow_stack);
+///     return value;
+/// }
 ///
-///static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
+/// static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
 ///{
-///    SlashMap *map = (SlashMap *)gc_alloc(interpreter, SLASH_OBJ_MAP);
-///    gc_shadow_push(&interpreter->gc_shadow_stack, &map->obj);
-///    slash_map_init(map);
-///    SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)map };
+///     SlashMap *map = (SlashMap *)gc_alloc(interpreter, SLASH_OBJ_MAP);
+///     gc_shadow_push(&interpreter->gc_shadow_stack, &map->obj);
+///     slash_map_init(map);
+///     SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)map };
 ///
-///    if (expr->key_value_pairs == NULL)
+///     if (expr->key_value_pairs == NULL)
 ///	return value;
 ///
-///    LLItem *item;
-///    KeyValuePair *pair;
-///    ARENA_LL_FOR_EACH(expr->key_value_pairs, item)
-///    {
+///     LLItem *item;
+///     KeyValuePair *pair;
+///     ARENA_LL_FOR_EACH(expr->key_value_pairs, item)
+///     {
 ///	pair = item->value;
 ///	SlashValue k = eval(interpreter, pair->key);
 ///	SlashValue v = eval(interpreter, pair->value);
 ///	value.obj->traits->item_assign(&value, &k, &v);
-///    }
+///     }
 ///
-///    gc_shadow_pop(&interpreter->gc_shadow_stack);
-///    return value;
-///}
+///     gc_shadow_pop(&interpreter->gc_shadow_stack);
+///     return value;
+/// }
 ///
-///static SlashValue eval_method(Interpreter *interpreter, MethodExpr *expr)
+/// static SlashValue eval_method(Interpreter *interpreter, MethodExpr *expr)
 ///{
-///    SlashValue self = eval(interpreter, expr->obj);
-///    if (IS_OBJ(self.type))
+///     SlashValue self = eval(interpreter, expr->obj);
+///     if (IS_OBJ(self.type))
 ///	gc_shadow_push(&interpreter->gc_shadow_stack, self.obj);
 ///
-///    // TODO: fix cursed manual conversion from str_view to cstr
-///    size_t method_name_size = expr->method_name.size;
-///    char method_name[method_name_size + 1];
-///    memcpy(method_name, expr->method_name.view, method_name_size);
-///    method_name[method_name_size] = 0;
+///     // TODO: fix cursed manual conversion from str_view to cstr
+///     size_t method_name_size = expr->method_name.size;
+///     char method_name[method_name_size + 1];
+///     memcpy(method_name, expr->method_name.view, method_name_size);
+///     method_name[method_name_size] = 0;
 ///
-///    /* get method */
-///    MethodFunc method = get_method(&self, method_name);
-///    if (method == NULL)
+///     /* get method */
+///     MethodFunc method = get_method(&self, method_name);
+///     if (method == NULL)
 ///	REPORT_RUNTIME_ERROR("Method '%s' does not exist on type '%s'", method_name,
 ///			     SLASH_TYPE_TO_STR(&self));
 ///
-///    SlashValue return_value;
-///    size_t shadow_push_count = 0;
-///    if (expr->args == NULL) {
+///     SlashValue return_value;
+///     size_t shadow_push_count = 0;
+///     if (expr->args == NULL) {
 ///	return_value = method(interpreter, &self, 0, NULL);
-///    } else {
+///     } else {
 ///	SlashValue argv[expr->args->seq.size];
 ///	size_t i = 0;
 ///	LLItem *item;
@@ -320,53 +315,53 @@
 ///
 ///	assert(i == expr->args->seq.size);
 ///	return_value = method(interpreter, &self, i, argv);
-///    }
+///     }
 ///
-///    for (size_t n = 0; n < shadow_push_count; n++)
+///     for (size_t n = 0; n < shadow_push_count; n++)
 ///	gc_shadow_pop(&interpreter->gc_shadow_stack);
-///    if (IS_OBJ(self.type))
+///     if (IS_OBJ(self.type))
 ///	gc_shadow_pop(&interpreter->gc_shadow_stack);
 ///
-///    return return_value;
-///}
+///     return return_value;
+/// }
 ///
-///static SlashValue eval_grouping(Interpreter *interpreter, GroupingExpr *expr)
+/// static SlashValue eval_grouping(Interpreter *interpreter, GroupingExpr *expr)
 ///{
-///    return eval(interpreter, expr->expr);
-///}
+///     return eval(interpreter, expr->expr);
+/// }
 ///
-///static SlashValue eval_cast(Interpreter *interpreter, CastExpr *expr)
+/// static SlashValue eval_cast(Interpreter *interpreter, CastExpr *expr)
 ///{
-///    SlashValue value = eval(interpreter, expr->expr);
-///    /*
-///     * When LHS is a subshell and RHS is boolean then the final exit code of the subshell
-///     * expression determines the boolean value.
-///     */
-///    if (expr->as == SLASH_BOOL && expr->expr->type == EXPR_SUBSHELL)
+///     SlashValue value = eval(interpreter, expr->expr);
+///     /*
+///      * When LHS is a subshell and RHS is boolean then the final exit code of the subshell
+///      * expression determines the boolean value.
+///      */
+///     if (expr->as == SLASH_BOOL && expr->expr->type == EXPR_SUBSHELL)
 ///	return (SlashValue){ .type = SLASH_BOOL,
 ///			     .boolean = interpreter->prev_exit_code == 0 ? true : false };
-///    return dynamic_cast(interpreter, value, expr->as);
-///}
+///     return dynamic_cast(interpreter, value, expr->as);
+/// }
 ///
 ///
 ////*
-/// * statement execution functions
-/// */
-///static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
-///{
-///    SlashValue value = eval(interpreter, stmt->expression);
-///    TraitPrint print_func = trait_print[value.type];
-///    print_func(&value);
-///    /* edge case: if last char printed was a newline then we don't bother printing one */
-///    if (value.type == SLASH_OBJ && value.obj->type == SLASH_OBJ_STR) {
-///	SlashStr *str = (SlashStr *)value.obj;
-///	if (slash_str_last_char(str) == '\n')
-///	    return;
-///    }
-///    putchar('\n');
-///}
+///  * statement execution functions
+///  */
+static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
+{
+    // SlashValue value = eval(interpreter, stmt->expression);
+    // TraitPrint print_func = trait_print[value.type];
+    // print_func(&value);
+    ///* edge case: if last char printed was a newline then we don't bother printing one */
+    // if (value.type == SLASH_OBJ && value.obj->type == SLASH_OBJ_STR) {
+    //     SlashStr *str = (SlashStr *)value.obj;
+    //     if (slash_str_last_char(str) == '\n')
+    //         return;
+    // }
+    putchar('\n');
+}
 ///
-///static void exec_var(Interpreter *interpreter, VarStmt *stmt)
+/// static void exec_var(Interpreter *interpreter, VarStmt *stmt)
 ///{
 ///    /* Make sure variable is not defined already */
 ///    ScopeAndValue current = var_get(interpreter->scope, &stmt->name);
@@ -377,7 +372,7 @@
 ///    var_define(interpreter->scope, &stmt->name, &value);
 ///}
 ///
-///static void exec_seq_var(Interpreter *interpreter, SeqVarStmt *stmt)
+/// static void exec_seq_var(Interpreter *interpreter, SeqVarStmt *stmt)
 ///{
 ///    SequenceExpr *initializer = (SequenceExpr *)stmt->initializer;
 ///    if (initializer->type != EXPR_SEQUENCE)
@@ -400,7 +395,7 @@
 ///    }
 ///}
 ///
-///static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
+/// static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
 ///{
 ///    ScopeAndValue path = var_get(interpreter->scope, &(StrView){ .view = "PATH", .size = 4 });
 ///    if (!(path.value->type == SLASH_OBJ && path.value->obj->type == SLASH_OBJ_STR))
@@ -432,7 +427,7 @@
 ///    }
 ///}
 ///
-///static void exec_if(Interpreter *interpreter, IfStmt *stmt)
+/// static void exec_if(Interpreter *interpreter, IfStmt *stmt)
 ///{
 ///    SlashValue r = eval(interpreter, stmt->condition);
 ///    if (is_truthy(&r))
@@ -445,7 +440,7 @@
 /// * Should not be called in a loop.
 /// * For exec'ing blocks in a loop, see exec_loop and exec_block_body
 /// */
-///static void exec_block(Interpreter *interpreter, BlockStmt *stmt)
+/// static void exec_block(Interpreter *interpreter, BlockStmt *stmt)
 ///{
 ///    Scope *block_scope = scope_alloc(interpreter->scope, sizeof(Scope));
 ///    scope_init(block_scope, interpreter->scope);
@@ -458,7 +453,7 @@
 ///    scope_destroy(block_scope);
 ///}
 ///
-///static void exec_subscript_assign(Interpreter *interpreter, AssignStmt *stmt)
+/// static void exec_subscript_assign(Interpreter *interpreter, AssignStmt *stmt)
 ///{
 ///    SubscriptExpr *subscript = (SubscriptExpr *)stmt->var;
 ///    /* this would mean assigning to an inline variable which would do nothing */
@@ -491,7 +486,7 @@
 ///    func(self, &access_index, &new_value);
 ///}
 ///
-///static void exec_assign_unpack(Interpreter *interpreter, AssignStmt *stmt)
+/// static void exec_assign_unpack(Interpreter *interpreter, AssignStmt *stmt)
 ///{
 ///    SequenceExpr *left = (SequenceExpr *)stmt->var;
 ///    // TODO: add support for list and maps
@@ -518,7 +513,7 @@
 ///    }
 ///}
 ///
-///static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
+/// static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
 ///{
 ///    if (stmt->var->type == EXPR_SUBSCRIPT) {
 ///	exec_subscript_assign(interpreter, stmt);
@@ -586,7 +581,7 @@
 ///	var_assign(&var_name, variable.scope, &new_value);
 ///}
 ///
-///static void exec_pipeline(Interpreter *interpreter, PipelineStmt *stmt)
+/// static void exec_pipeline(Interpreter *interpreter, PipelineStmt *stmt)
 ///{
 ///    int fd[2];
 ///    pipe(fd);
@@ -612,14 +607,14 @@
 ///    arraylist_rm(&stream_ctx->active_fds, stream_ctx->active_fds.size - 1);
 ///}
 ///
-///static void exec_assert(Interpreter *interpreter, AssertStmt *stmt)
+/// static void exec_assert(Interpreter *interpreter, AssertStmt *stmt)
 ///{
 ///    SlashValue result = eval(interpreter, stmt->expr);
 ///    if (!is_truthy(&result))
 ///	REPORT_RUNTIME_ERROR("Assertion failed");
 ///}
 ///
-///static void exec_loop(Interpreter *interpreter, LoopStmt *stmt)
+/// static void exec_loop(Interpreter *interpreter, LoopStmt *stmt)
 ///{
 ///    Scope *block_scope = scope_alloc(interpreter->scope, sizeof(Scope));
 ///    scope_init(block_scope, interpreter->scope);
@@ -635,7 +630,8 @@
 ///    scope_destroy(block_scope);
 ///}
 ///
-///static void exec_iter_loop_list(Interpreter *interpreter, IterLoopStmt *stmt, SlashList *iterable)
+/// static void exec_iter_loop_list(Interpreter *interpreter, IterLoopStmt *stmt, SlashList
+/// *iterable)
 ///{
 ///    /* define the loop variable that holds the current iterator value */
 ///    var_define(interpreter->scope, &stmt->var_name, NULL);
@@ -649,7 +645,8 @@
 ///    }
 ///}
 ///
-///static void exec_iter_loop_tuple(Interpreter *interpreter, IterLoopStmt *stmt, SlashTuple *iterable)
+/// static void exec_iter_loop_tuple(Interpreter *interpreter, IterLoopStmt *stmt, SlashTuple
+/// *iterable)
 ///{
 ///    /* define the loop variable that holds the current iterator value */
 ///    var_define(interpreter->scope, &stmt->var_name, NULL);
@@ -663,7 +660,7 @@
 ///    }
 ///}
 ///
-///static void exec_iter_loop_map(Interpreter *interpreter, IterLoopStmt *stmt, SlashMap *iterable)
+/// static void exec_iter_loop_map(Interpreter *interpreter, IterLoopStmt *stmt, SlashMap *iterable)
 ///{
 ///    if (iterable->underlying.len == 0)
 ///	return;
@@ -682,7 +679,7 @@
 ///    }
 ///}
 ///
-///static void exec_iter_loop_str(Interpreter *interpreter, IterLoopStmt *stmt, SlashStr *iterable)
+/// static void exec_iter_loop_str(Interpreter *interpreter, IterLoopStmt *stmt, SlashStr *iterable)
 ///{
 ///    ScopeAndValue ifs_res = var_get(interpreter->scope, &(StrView){ .view = "IFS", .size = 3 });
 ///    if (ifs_res.value == NULL) {
@@ -700,7 +697,8 @@
 ///    gc_shadow_pop(&interpreter->gc_shadow_stack);
 ///}
 ///
-///static void exec_iter_loop_range(Interpreter *interpreter, IterLoopStmt *stmt, SlashRange iterable)
+/// static void exec_iter_loop_range(Interpreter *interpreter, IterLoopStmt *stmt, SlashRange
+/// iterable)
 ///{
 ///    if (!slash_range_is_nonzero(iterable))
 ///	return;
@@ -717,7 +715,7 @@
 ///    }
 ///}
 ///
-///static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
+/// static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
 ///{
 ///    Scope loop_scope;
 ///    scope_init(&loop_scope, interpreter->scope);
@@ -763,7 +761,7 @@
 ///    scope_destroy(&loop_scope);
 ///}
 ///
-///static void exec_andor(Interpreter *interpreter, BinaryStmt *stmt)
+/// static void exec_andor(Interpreter *interpreter, BinaryStmt *stmt)
 ///{
 ///    /*
 ///     * L ( "&&" | "||" ) R.
@@ -786,9 +784,10 @@
 ///	exec(interpreter, stmt->right_stmt);
 ///}
 ///
-///static void exec_redirect(Interpreter *interpreter, BinaryStmt *stmt)
+/// static void exec_redirect(Interpreter *interpreter, BinaryStmt *stmt)
 ///{
-///    // TODO: here we assume the cmd_stmt can NOT mutate the stmt->right_expr, however, this may not
+///    // TODO: here we assume the cmd_stmt can NOT mutate the stmt->right_expr, however, this may
+///    not
 ///    //      always be guaranteed ?.
 ///
 ///    SlashValue value = eval(interpreter, stmt->right_expr);
@@ -827,7 +826,7 @@
 ///    stream_ctx->write_fd = og_write;
 ///}
 ///
-///static void exec_binary(Interpreter *interpreter, BinaryStmt *stmt)
+/// static void exec_binary(Interpreter *interpreter, BinaryStmt *stmt)
 ///{
 ///    if (stmt->operator_ == t_anp_anp || stmt->operator_ == t_pipe_pipe)
 ///	exec_andor(interpreter, stmt);
@@ -835,7 +834,7 @@
 ///	exec_redirect(interpreter, stmt);
 ///}
 ///
-///static SlashValue eval(Interpreter *interpreter, Expr *expr)
+/// static SlashValue eval(Interpreter *interpreter, Expr *expr)
 ///{
 ///    switch (expr->type) {
 ///    case EXPR_UNARY:
@@ -883,128 +882,128 @@
 ///	return (SlashValue){ 0 };
 ///    }
 ///}
-///
-///static void exec(Interpreter *interpreter, Stmt *stmt)
+
+static void exec(Interpreter *interpreter, Stmt *stmt)
+{
+    switch (stmt->type) {
+	///    case STMT_VAR:
+	///	exec_var(interpreter, (VarStmt *)stmt);
+	///	break;
+	///
+	///    case STMT_SEQ_VAR:
+	///	exec_seq_var(interpreter, (SeqVarStmt *)stmt);
+	///	break;
+
+    case STMT_EXPRESSION:
+	exec_expr(interpreter, (ExpressionStmt *)stmt);
+	break;
+
+	///    case STMT_CMD:
+	///	exec_cmd(interpreter, (CmdStmt *)stmt);
+	///	break;
+	///
+	///    case STMT_LOOP:
+	///	exec_loop(interpreter, (LoopStmt *)stmt);
+	///	break;
+	///
+	///    case STMT_ITER_LOOP:
+	///	exec_iter_loop(interpreter, (IterLoopStmt *)stmt);
+	///	break;
+	///
+	///    case STMT_IF:
+	///	exec_if(interpreter, (IfStmt *)stmt);
+	///	break;
+	///
+	///    case STMT_BLOCK:
+	///	exec_block(interpreter, (BlockStmt *)stmt);
+	///	break;
+	///
+	///    case STMT_ASSIGN:
+	///	exec_assign(interpreter, (AssignStmt *)stmt);
+	///	break;
+	///
+	///    case STMT_PIPELINE:
+	///	exec_pipeline(interpreter, (PipelineStmt *)stmt);
+	///	break;
+	///
+	///    case STMT_ASSERT:
+	///	exec_assert(interpreter, (AssertStmt *)stmt);
+	///	break;
+	///
+	///    case STMT_BINARY:
+	///	exec_binary(interpreter, (BinaryStmt *)stmt);
+	///	break;
+
+
+    default:
+	REPORT_RUNTIME_ERROR("Internal error: Statement type not recognized");
+    }
+}
+
+/// void interpreter_init(Interpreter *interpreter, int argc, char **argv)
 ///{
-///    switch (stmt->type) {
-///    case STMT_VAR:
-///	exec_var(interpreter, (VarStmt *)stmt);
-///	break;
+///     m_arena_init_dynamic(&interpreter->arena, 1, 16384);
 ///
-///    case STMT_SEQ_VAR:
-///	exec_seq_var(interpreter, (SeqVarStmt *)stmt);
-///	break;
+///     scope_init_globals(&interpreter->globals, &interpreter->arena, argc, argv);
+///     interpreter->scope = &interpreter->globals;
 ///
-///    case STMT_EXPRESSION:
-///	exec_expr(interpreter, (ExpressionStmt *)stmt);
-///	break;
+///     linkedlist_init(&interpreter->gc_objs, sizeof(SlashObj *));
+///     arraylist_init(&interpreter->gc_gray_stack, sizeof(SlashObj *));
+///     interpreter->obj_alloced_since_next_gc = 0;
+///     arraylist_init(&interpreter->gc_shadow_stack, sizeof(SlashObj **));
 ///
-///    case STMT_CMD:
-///	exec_cmd(interpreter, (CmdStmt *)stmt);
-///	break;
+///     /* init default StreamCtx */
+///     StreamCtx stream_ctx = { .read_fd = STDIN_FILENO, .write_fd = STDOUT_FILENO };
+///     arraylist_init(&stream_ctx.active_fds, sizeof(int));
+///     interpreter->stream_ctx = stream_ctx;
+/// }
 ///
-///    case STMT_LOOP:
-///	exec_loop(interpreter, (LoopStmt *)stmt);
-///	break;
-///
-///    case STMT_ITER_LOOP:
-///	exec_iter_loop(interpreter, (IterLoopStmt *)stmt);
-///	break;
-///
-///    case STMT_IF:
-///	exec_if(interpreter, (IfStmt *)stmt);
-///	break;
-///
-///    case STMT_BLOCK:
-///	exec_block(interpreter, (BlockStmt *)stmt);
-///	break;
-///
-///    case STMT_ASSIGN:
-///	exec_assign(interpreter, (AssignStmt *)stmt);
-///	break;
-///
-///    case STMT_PIPELINE:
-///	exec_pipeline(interpreter, (PipelineStmt *)stmt);
-///	break;
-///
-///    case STMT_ASSERT:
-///	exec_assert(interpreter, (AssertStmt *)stmt);
-///	break;
-///
-///    case STMT_BINARY:
-///	exec_binary(interpreter, (BinaryStmt *)stmt);
-///	break;
-///
-///
-///    default:
-///	REPORT_RUNTIME_ERROR("Internal error: Statement type not recognized");
-///    }
-///}
-///
-///void interpreter_init(Interpreter *interpreter, int argc, char **argv)
+/// void interpreter_free(Interpreter *interpreter)
 ///{
-///    m_arena_init_dynamic(&interpreter->arena, 1, 16384);
+///     gc_collect_all(&interpreter->gc_objs);
 ///
-///    scope_init_globals(&interpreter->globals, &interpreter->arena, argc, argv);
-///    interpreter->scope = &interpreter->globals;
+///     scope_destroy(&interpreter->globals);
+///     arraylist_free(&interpreter->stream_ctx.active_fds);
+///     linkedlist_free(&interpreter->gc_objs);
+///     arraylist_free(&interpreter->gc_shadow_stack);
+///     arraylist_free(&interpreter->gc_gray_stack);
+/// }
 ///
-///    linkedlist_init(&interpreter->gc_objs, sizeof(SlashObj *));
-///    arraylist_init(&interpreter->gc_gray_stack, sizeof(SlashObj *));
-///    interpreter->obj_alloced_since_next_gc = 0;
-///    arraylist_init(&interpreter->gc_shadow_stack, sizeof(SlashObj **));
-///
-///    /* init default StreamCtx */
-///    StreamCtx stream_ctx = { .read_fd = STDIN_FILENO, .write_fd = STDOUT_FILENO };
-///    arraylist_init(&stream_ctx.active_fds, sizeof(int));
-///    interpreter->stream_ctx = stream_ctx;
-///}
-///
-///void interpreter_free(Interpreter *interpreter)
+/// static void interpreter_reset_from_err(Interpreter *interpreter)
 ///{
-///    gc_collect_all(&interpreter->gc_objs);
-///
-///    scope_destroy(&interpreter->globals);
-///    arraylist_free(&interpreter->stream_ctx.active_fds);
-///    linkedlist_free(&interpreter->gc_objs);
-///    arraylist_free(&interpreter->gc_shadow_stack);
-///    arraylist_free(&interpreter->gc_gray_stack);
-///}
-///
-///static void interpreter_reset_from_err(Interpreter *interpreter)
-///{
-///    /* free any old scopes */
-///    while (interpreter->scope != &interpreter->globals) {
+///     /* free any old scopes */
+///     while (interpreter->scope != &interpreter->globals) {
 ///	Scope *to_destroy = interpreter->scope;
 ///	interpreter->scope = interpreter->scope->enclosing;
 ///	scope_destroy(to_destroy);
-///    }
+///     }
 ///
-///    /* reset stream_ctx */
-///    arraylist_free(&interpreter->stream_ctx.active_fds);
-///    StreamCtx stream_ctx = { .read_fd = STDIN_FILENO, .write_fd = STDOUT_FILENO };
-///    arraylist_init(&stream_ctx.active_fds, sizeof(int));
-///    interpreter->stream_ctx = stream_ctx;
-///}
-///
-///int interpreter_run(Interpreter *interpreter, ArrayList *statements)
-///{
-///    if (setjmp(runtime_error_jmp) != RUNTIME_ERROR) {
-///	for (size_t i = 0; i < statements->size; i++)
-///	    exec(interpreter, *(Stmt **)arraylist_get(statements, i));
-///    } else {
-///	/* execution enters here on a runtime error, therefore we must "reset" the interpreter */
-///	interpreter_reset_from_err(interpreter);
-///	set_exit_code(interpreter, 1);
-///    }
-///
-///    return interpreter->prev_exit_code;
-///}
-///
-///int interpret(ArrayList *statements, int argc, char **argv)
-///{
-///    Interpreter interpreter = { 0 };
-///    interpreter_init(&interpreter, argc, argv);
-///    interpreter_run(&interpreter, statements);
-///    interpreter_free(&interpreter);
-///    return interpreter.prev_exit_code;
-///}
+///     /* reset stream_ctx */
+///     arraylist_free(&interpreter->stream_ctx.active_fds);
+///     StreamCtx stream_ctx = { .read_fd = STDIN_FILENO, .write_fd = STDOUT_FILENO };
+///     arraylist_init(&stream_ctx.active_fds, sizeof(int));
+///     interpreter->stream_ctx = stream_ctx;
+/// }
+
+int interpreter_run(Interpreter *interpreter, ArrayList *statements)
+{
+    if (setjmp(runtime_error_jmp) != RUNTIME_ERROR) {
+	for (size_t i = 0; i < statements->size; i++)
+	    exec(interpreter, *(Stmt **)arraylist_get(statements, i));
+    } else {
+	/* execution enters here on a runtime error, therefore we must "reset" the interpreter */
+	/// interpreter_reset_from_err(interpreter);
+	/// set_exit_code(interpreter, 1);
+    }
+
+    return interpreter->prev_exit_code;
+}
+
+int interpret(ArrayList *statements, int argc, char **argv)
+{
+    Interpreter interpreter = { 0 };
+    /// interpreter_init(&interpreter, argc, argv);
+    interpreter_run(&interpreter, statements);
+    /// interpreter_free(&interpreter);
+    return interpreter.prev_exit_code;
+}

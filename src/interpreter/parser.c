@@ -611,7 +611,7 @@ static Expr *single(Parser *parser)
 	    parser->token_pos++;
 	    return NULL;
 	}
-	///expr->as = SLASH_NUM;//token_type_to_slash_type(previous(parser)->type);
+	/// expr->as = SLASH_NUM;//token_type_to_slash_type(previous(parser)->type);
 	return (Expr *)expr;
     }
 
@@ -720,7 +720,8 @@ static Expr *number(Parser *parser)
 {
     Token *token = previous(parser);
     LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
-    expr->value = (SlashValue){ .T_info = &num_type_info, .num = str_view_to_double(token->lexeme) };
+    expr->value =
+	(SlashValue){ .T_info = &num_type_info, .num = str_view_to_double(token->lexeme) };
     return (Expr *)expr;
 }
 

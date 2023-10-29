@@ -14,33 +14,33 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-///#include <dirent.h>
-///#include <stdio.h>
-///#include <string.h>
-///#include <sys/stat.h>
+/// #include <dirent.h>
+/// #include <stdio.h>
+/// #include <string.h>
+/// #include <sys/stat.h>
 ///
-///#include "builtin/builtin.h"
-///#include "interpreter/interpreter.h"
-///#include "interpreter/types/slash_str.h"
-///#include "interpreter/types/trait.h"
-///#include "lib/str_view.h"
+/// #include "builtin/builtin.h"
+/// #include "interpreter/interpreter.h"
+/// #include "interpreter/types/slash_str.h"
+/// #include "interpreter/types/trait.h"
+/// #include "lib/str_view.h"
 ///
 ///
-///Builtin builtins[] = { { .name = "cd", .func = builtin_cd },
+/// Builtin builtins[] = { { .name = "cd", .func = builtin_cd },
 ///		       { .name = "vars", .func = builtin_vars },
 ///		       { .name = "which", .func = builtin_which },
 ///		       { .name = "exit", .func = builtin_exit } };
 ///
 ///
-///static void which_internal(WhichResult *mutable_result, char *PATH, char *command)
+/// static void which_internal(WhichResult *mutable_result, char *PATH, char *command)
 ///{
-///    /* PATH environment variable is often prefixed with 'PATH=' */
-///    size_t PATH_len = strlen(PATH) + 1;
-///    char *path_cpy = malloc(PATH_len);
-///    memcpy(path_cpy, PATH, PATH_len);
+///     /* PATH environment variable is often prefixed with 'PATH=' */
+///     size_t PATH_len = strlen(PATH) + 1;
+///     char *path_cpy = malloc(PATH_len);
+///     memcpy(path_cpy, PATH, PATH_len);
 ///
-///    char *single_path = strtok(path_cpy, ":");
-///    while (single_path != NULL) {
+///     char *single_path = strtok(path_cpy, ":");
+///     while (single_path != NULL) {
 ///	DIR *path_dir = opendir(single_path);
 ///
 ///	struct dirent *candidate_program;
@@ -66,75 +66,75 @@
 ///	if (path_dir != NULL)
 ///	    closedir(path_dir);
 ///	single_path = strtok(NULL, ":");
-///    }
+///     }
 ///
-///    free(path_cpy);
-///    mutable_result->type = WHICH_NOT_FOUND;
-///}
+///     free(path_cpy);
+///     mutable_result->type = WHICH_NOT_FOUND;
+/// }
 ///
-///int builtin_which(Interpreter *interpreter, size_t argc, SlashValue *argv)
+/// int builtin_which(Interpreter *interpreter, size_t argc, SlashValue *argv)
 ///{
-///    if (argc == 0) {
+///     if (argc == 0) {
 ///	fprintf(stderr, "which: no argument received");
 ///	return 1;
-///    }
+///     }
 ///
-///    SlashValue param = argv[0];
-///    TraitToStr to_str = trait_to_str[param.type];
-///    SlashStr *param_str = (SlashStr *)to_str(interpreter, &param).obj;
-///    ScopeAndValue path = var_get(interpreter->scope, &(StrView){ .view = "PATH", .size = 4 });
-///    if (!(path.value->type == SLASH_OBJ && path.value->obj->type == SLASH_OBJ_STR)) {
+///     SlashValue param = argv[0];
+///     TraitToStr to_str = trait_to_str[param.type];
+///     SlashStr *param_str = (SlashStr *)to_str(interpreter, &param).obj;
+///     ScopeAndValue path = var_get(interpreter->scope, &(StrView){ .view = "PATH", .size = 4 });
+///     if (!(path.value->type == SLASH_OBJ && path.value->obj->type == SLASH_OBJ_STR)) {
 ///	fprintf(stderr, "PATH variable should be type 'str' not '%s'",
 ///		SLASH_TYPE_TO_STR(path.value));
 ///	return 1;
-///    }
+///     }
 ///
-///    WhichResult which_result =
+///     WhichResult which_result =
 ///	which((StrView){ .view = param_str->p, .size = strlen(param_str->p) },
 ///	      ((SlashStr *)path.value->obj)->p);
 ///
-///    int return_code = 0;
-///    switch (which_result.type) {
-///    case WHICH_BUILTIN:
+///     int return_code = 0;
+///     switch (which_result.type) {
+///     case WHICH_BUILTIN:
 ///	printf("%s: slash builtin\n", param_str->p);
 ///	break;
-///    case WHICH_EXTERN:
+///     case WHICH_EXTERN:
 ///	printf("%s\n", which_result.path);
 ///	break;
-///    case WHICH_NOT_FOUND:
+///     case WHICH_NOT_FOUND:
 ///	printf("%s not found\n", param_str->p);
 ///	return_code = 1;
 ///	break;
-///    }
+///     }
 ///
-///    return return_code;
-///}
+///     return return_code;
+/// }
 ///
-///WhichResult which(StrView cmd, char *PATH)
+/// WhichResult which(StrView cmd, char *PATH)
 ///{
-///    char command[cmd.size + 1];
-///    str_view_to_cstr(cmd, command);
+///     char command[cmd.size + 1];
+///     str_view_to_cstr(cmd, command);
 ///
-///    WhichResult result = { 0 };
-///    /* edge case: command is a path */
-///    if (command[0] == '/') {
+///     WhichResult result = { 0 };
+///     /* edge case: command is a path */
+///     if (command[0] == '/') {
 ///	result.type = WHICH_EXTERN;
 ///	memcpy(result.path, command,
 ///	       cmd.size + 1 > PROGRAM_PATH_MAX_LEN ? PROGRAM_PATH_MAX_LEN : cmd.size + 1);
 ///	return result;
-///    }
+///     }
 ///
-///    size_t builtins_count = sizeof(builtins) / sizeof(builtins[0]);
-///    for (size_t i = 0; i < builtins_count; i++) {
+///     size_t builtins_count = sizeof(builtins) / sizeof(builtins[0]);
+///     for (size_t i = 0; i < builtins_count; i++) {
 ///	Builtin builtin = builtins[i];
 ///	if (strcmp(builtin.name, command) == 0) {
 ///	    result.type = WHICH_BUILTIN;
 ///	    result.builtin = builtin.func;
 ///	    return result;
 ///	}
-///    }
+///     }
 ///
-///    /* execution enters here means cmd is not a builtin */
-///    which_internal(&result, PATH, command);
-///    return result;
-///}
+///     /* execution enters here means cmd is not a builtin */
+///     which_internal(&result, PATH, command);
+///     return result;
+/// }

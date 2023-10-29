@@ -21,7 +21,7 @@
 
 #include "interpreter/interpreter.h"
 #include "interpreter/lexer.h"
-#include "interpreter/value/trait.h"
+#include "interpreter/value/type_funcs.h"
 #include "sac/sac.h"
 
 
@@ -38,11 +38,11 @@ typedef struct slash_obj_t {
     bool gc_managed;
 } SlashObj;
 
-/* 
+/*
  * Slash Objects.
  * Each object has the Object "head" meaning we can pass around pointers to objects
  * and achieve some sort of polymorphism similar to Expr and Stmt in the AST.
-*/
+ */
 typedef struct {
     SlashObj obj;
     ArrayList list;
@@ -70,17 +70,28 @@ typedef struct slash_type_info_t {
     char *name;
 
     /* Operator functions */
-    // ...
-    
+    OpPlus plus;
+    OpMinus minus;
+    OpMul mul;
+    OpDiv div;
+    OpIntDiv int_div;
+    OpPow pow;
+    OpMod mod;
+    OpUnaryMinus unary_minus;
+    OpUnaryNot unary_not;
+
     /* Trait functions */
     TraitPrint print;
     TraitToStr to_str;
     TraitItemGet item_get;
     TraitItemAssign item_assign;
     TraitItemIn item_in;
+
+    /* Equality and hashing functions */
     TraitTruthy truthy;
-    TraitEquals equals;
+    TraitEq eq;
     TraitCmp cmp;
+    TraitHash hash;
 
     /* Object lifetime functions */
     ObjInit init;

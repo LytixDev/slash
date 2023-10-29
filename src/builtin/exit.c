@@ -15,13 +15,13 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 ///
-///#include <unistd.h>
+/// #include <unistd.h>
 ///
-///#include "interpreter/interpreter.h"
-///#include "interpreter/types/slash_value.h"
+/// #include "interpreter/interpreter.h"
+/// #include "interpreter/types/slash_value.h"
 ///
 ///
-///int builtin_exit(Interpreter *interpreter, size_t argc, SlashValue *argv)
+/// int builtin_exit(Interpreter *interpreter, size_t argc, SlashValue *argv)
 ///{
 ///    (void)interpreter;
 ///    if (argc == 0)

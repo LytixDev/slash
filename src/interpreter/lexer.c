@@ -482,7 +482,8 @@ StateFn lex_identifier(Lexer *lexer)
     }
 
     TokenType previous = prev_token_type(lexer);
-    if (previous == t_var || previous == t_loop || previous == t_dot || previous == t_comma || previous == t_as) {
+    if (previous == t_var || previous == t_loop || previous == t_dot || previous == t_comma ||
+	previous == t_as) {
 	emit(lexer, t_ident);
 	return STATE_FN(lex_any);
     }
