@@ -117,26 +117,35 @@ typedef struct slash_value_t {
 extern SlashTypeInfo bool_type_info;
 extern SlashTypeInfo num_type_info;
 extern SlashTypeInfo range_type_info;
+extern SlashTypeInfo none_type_info;
 extern SlashTypeInfo map_type_info;
 extern SlashTypeInfo list_type_info;
 extern SlashTypeInfo tuple_type_info;
 extern SlashTypeInfo str_type_info;
 
-#define IS_BOOL(value) ((value).T_info == &bool_type_info)
-#define IS_NUM(value) ((value).T_info == &num_type_info)
-#define IS_RANGE(value) ((value).T_info == &range_type_info)
-#define IS_MAP(value) ((value).T_info == &map_type_info)
-#define IS_LIST(value) ((value).T_info == &list_type_info)
-#define IS_TUPLE(value) ((value).T_info == &tuple_type_info)
-#define IS_STR(value) ((value).T_info == &str_type_info)
-#define IS_OBJ(value) (!(IS_BOOL((value)) && IS_NUM((value)) && IS_RANGE((value))))
+extern SlashValue NoneSingleton;
 
-#define AS_MAP(value) ((SlashMap *)(value).obj)
-#define AS_LIST(value) ((SlashList *)(value).obj)
-#define AS_TUPLE(value) ((SlashTuple *)(value).obj)
-#define AS_STR(value) ((SlashStr *)(value).obj)
-#define AS_VALUE(obj) ((SlashValue){ .T_info = (obj)->T_info, .obj = (obj) })
+#define IS_BOOL(value__) ((value__).T_info == &bool_type_info)
+#define IS_NUM(value__) ((value__).T_info == &num_type_info)
+#define IS_RANGE(value__) ((value__).T_info == &range_type_info)
+#define IS_MAP(value__) ((value__).T_info == &map_type_info)
+#define IS_LIST(value__) ((value__).T_info == &list_type_info)
+#define IS_TUPLE(value__) ((value__).T_info == &tuple_type_info)
+#define IS_STR(value__) ((value__).T_info == &str_type_info)
+#define IS_OBJ(value__) (!(IS_BOOL((value__)) && IS_NUM((value__)) && IS_RANGE((value__))))
+
+#define AS_MAP(value__) ((SlashMap *)(value__).obj)
+#define AS_LIST(value__) ((SlashList *)(value__).obj)
+#define AS_TUPLE(value__) ((SlashTuple *)(value__).obj)
+#define AS_STR(value__) ((SlashStr *)(value__).obj)
+#define AS_VALUE(obj__) ((SlashValue){ .T_info = (obj__)->T_info, .obj = (obj__) })
 
 #define TYPE_EQ(a, b) ((a).T_info == (b).T_info)
+#define NUM_IS_INT(value_num__) ((value_num__).num == (int)(value_num__).num)
+
+
+/* Init functions */
+void slash_str_init_from_view(Interpreter *interpreter, SlashStr *str, StrView *view);
+void slash_str_init_from_slice(Interpreter *interpreter, SlashStr *str, char *cstr, size_t size);
 
 #endif /* SLASH_VALUE_H */

@@ -20,7 +20,10 @@
 #include <stdio.h>
 
 #include "interpreter/error.h"
+#include "interpreter/gc.h"
+#include "interpreter/interpreter.h"
 #include "interpreter/value/slash_value.h"
+
 
 /*
  * bool impl
@@ -36,6 +39,19 @@ void bool_print(SlashValue self)
     assert(IS_BOOL(self));
     printf("%s", self.boolean == true ? "true" : "false");
 }
+
+SlashValue bool_to_str(Interpreter *interpreter, SlashValue self)
+{
+    assert(IS_BOOL(self));
+    SlashObj *str = gc_new_T(interpreter, &str_type_info);
+    if (self.boolean)
+	slash_str_init_from_slice(interpreter, (SlashStr *)str, "true", 4);
+    else
+	slash_str_init_from_slice(interpreter, (SlashStr *)str, "false", 5);
+
+    return AS_VALUE(str);
+}
+
 
 bool bool_truthy(SlashValue self)
 {
@@ -139,9 +155,113 @@ void num_print(SlashValue self)
 	printf("%f", self.num);
 }
 
+SlashValue num_to_str(Interpreter *interpreter, SlashValue self)
+{
+    assert(IS_NUM(self));
+    SlashObj *str = gc_new_T(interpreter, &str_type_info);
+    char buffer[256];
+    int len = sprintf(buffer, "%f", self.num);
+    slash_str_init_from_slice(interpreter, (SlashStr *)str, buffer, len);
+    return AS_VALUE(str);
+}
+
+bool num_truthy(SlashValue self)
+{
+    assert(IS_NUM(self));
+    return self.num != 0;
+}
+
+bool num_eq(SlashValue self, SlashValue other)
+{
+    assert(IS_NUM(self) && IS_NUM(other));
+    return self.num == other.num;
+}
+
+int num_cmp(SlashValue self, SlashValue other)
+{
+    assert(IS_NUM(self) && IS_NUM(other));
+    return self.num > other.num;
+}
+
+int num_hash(SlashValue self)
+{
+    assert(IS_NUM(self));
+    if (self.num == (int)self.num)
+	return self.num;
+    /* cursed */
+    union long_or_d {
+	long l;
+	double d;
+    };
+    union long_or_d iod = { .d = self.num };
+    return (int)iod.l;
+}
+
+
 /*
  * range impl
  */
+void range_print(SlashValue self)
+{
+    assert(IS_RANGE(self));
+    printf("%d -> %d\n", self.range.start, self.range.end);
+}
+
+SlashValue range_to_str(Interpreter *interpreter, SlashValue self)
+{
+    assert(IS_RANGE(self));
+    SlashObj *str = gc_new_T(interpreter, &str_type_info);
+    char buffer[512];
+    int len = sprintf(buffer, "%d -> %d", self.range.start, self.range.end);
+    slash_str_init_from_slice(interpreter, (SlashStr *)str, buffer, len);
+    return AS_VALUE(str);
+}
+
+SlashValue range_item_get(Interpreter *interpreter, SlashValue self, SlashValue other)
+{
+    (void)interpreter;
+    assert(IS_RANGE(self));
+    if (IS_NUM(other)) {
+	if (!NUM_IS_INT(other))
+	    REPORT_RUNTIME_ERROR("Range index can not be a floating point number: '%f", other.num);
+	size_t idx = other.num;
+	size_t range_size = self.range.start - self.range.end;
+	if (idx >= range_size)
+	    REPORT_RUNTIME_ERROR(
+		"Range index out of range. Has size '%zu', tried to get item at index '%zu'",
+		range_size, idx);
+
+	int offset = self.range.start + idx;
+	return (SlashValue){ .T_info = &num_type_info, .num = offset };
+    }
+
+    REPORT_RUNTIME_ERROR("TODO: implement item get on range for type range");
+}
+
+bool range_item_in(SlashValue self, SlashValue other)
+{
+    // TODO: can we implement range_a in range_b ? Would check if a is "subset" of b.
+    assert(IS_RANGE(self));
+    if (!IS_NUM(other))
+	return false;
+    if (!NUM_IS_INT(other))
+	return false;
+
+    int offset = self.range.start + other.num;
+    return offset < self.range.end;
+}
+
+bool range_truthy(SlashValue self)
+{
+    (void)self;
+    return true;
+}
+
+bool range_eq(SlashValue self, SlashValue other)
+{
+    assert(IS_RANGE(self) && IS_RANGE(other));
+    return self.range.start == other.range.start && self.range.end == other.range.end;
+}
 
 /*
  * map impl
@@ -158,6 +278,18 @@ void num_print(SlashValue self)
 /*
  * str impl
  */
+void slash_str_init_from_view(Interpreter *interpreter, SlashStr *str, StrView *view)
+{
+    str->len = view->size;
+    str->str = gc_alloc(interpreter, str->len + 1);
+    memcpy(str->str, view->view, str->len);
+    str->str[str->len] = 0;
+}
+
+void slash_str_init_from_slice(Interpreter *interpreter, SlashStr *str, char *cstr, size_t size)
+{
+    slash_str_init_from_view(interpreter, str, &(StrView){ .view = cstr, .size = size });
+}
 
 /*
  * type infos
@@ -173,7 +305,7 @@ SlashTypeInfo bool_type_info = { .name = "bool",
 				 .unary_minus = NULL,
 				 .unary_not = bool_unary_not,
 				 .print = bool_print,
-				 .to_str = NULL,
+				 .to_str = bool_to_str,
 				 .item_get = NULL,
 				 .item_assign = NULL,
 				 .item_in = NULL,
@@ -196,14 +328,14 @@ SlashTypeInfo num_type_info = { .name = "num",
 				.unary_minus = num_unary_minus,
 				.unary_not = num_unary_not,
 				.print = num_print,
-				.to_str = NULL,
+				.to_str = num_to_str,
 				.item_get = NULL,
 				.item_assign = NULL,
 				.item_in = NULL,
-				.truthy = NULL,
-				.eq = NULL,
-				.cmp = NULL,
-				.hash = NULL,
+				.truthy = num_truthy,
+				.eq = num_eq,
+				.cmp = num_cmp,
+				.hash = num_hash,
 				.init = NULL,
 				.free = NULL,
 				.obj_size = 0 };
@@ -218,18 +350,41 @@ SlashTypeInfo range_type_info = { .name = "range",
 				  .mod = NULL,
 				  .unary_minus = NULL,
 				  .unary_not = NULL,
-				  .print = NULL,
-				  .to_str = NULL,
-				  .item_get = NULL,
+				  .print = range_print,
+				  .to_str = range_to_str,
+				  .item_get = range_item_get,
 				  .item_assign = NULL,
-				  .item_in = NULL,
-				  .truthy = NULL,
-				  .eq = NULL,
+				  .item_in = range_item_in,
+				  .truthy = range_truthy,
+				  .eq = range_eq,
 				  .cmp = NULL,
 				  .hash = NULL,
 				  .init = NULL,
 				  .free = NULL,
 				  .obj_size = 0 };
+
+SlashTypeInfo none_type_info = { .name = "none",
+				 .plus = NULL,
+				 .minus = NULL,
+				 .mul = NULL,
+				 .div = NULL,
+				 .int_div = NULL,
+				 .pow = NULL,
+				 .mod = NULL,
+				 .unary_minus = NULL,
+				 .unary_not = NULL,
+				 .print = NULL,
+				 .to_str = NULL,
+				 .item_get = NULL,
+				 .item_assign = NULL,
+				 .item_in = NULL,
+				 .truthy = NULL,
+				 .eq = NULL,
+				 .cmp = NULL,
+				 .hash = NULL,
+				 .init = NULL,
+				 .free = NULL,
+				 .obj_size = 0 };
 
 SlashTypeInfo map_type_info = { .name = "map",
 				.plus = NULL,
@@ -322,3 +477,6 @@ SlashTypeInfo str_type_info = { .name = "str",
 				.init = NULL,
 				.free = NULL,
 				.obj_size = sizeof(SlashStr) };
+
+
+SlashValue NoneSingleton = { .T_info = &none_type_info };

@@ -27,7 +27,7 @@
 #include "interpreter/gc.h"
 #include "interpreter/interpreter.h"
 #include "interpreter/lexer.h"
-/// #include "interpreter/scope.h"
+#include "interpreter/scope.h"
 /// #include "interpreter/value/cast.h"
 /// #include "interpreter/value/method.h"
 #include "interpreter/value/slash_value.h"
@@ -38,26 +38,26 @@
 
 static SlashValue eval(Interpreter *interpreter, Expr *expr);
 static void exec(Interpreter *interpreter, Stmt *stmt);
-///
-////*
-///  * helpers
-///  */
+
+/*
+ * helpers
+ */
 static void set_exit_code(Interpreter *interpreter, int exit_code)
 {
     interpreter->prev_exit_code = exit_code;
-    /// SlashValue value = { .T_info = &num_type_info , .num = interpreter->prev_exit_code };
-    /// var_assign(&(StrView){ .view = "?", .size = 1 }, &interpreter->globals, &value);
+    SlashValue value = { .T_info = &num_type_info, .num = interpreter->prev_exit_code };
+    var_assign(&(StrView){ .view = "?", .size = 1 }, &interpreter->globals, &value);
 }
-///
-/// static void exec_block_body(Interpreter *interpreter, BlockStmt *stmt)
-///{
-///     LLItem *item;
-///     ARENA_LL_FOR_EACH(stmt->statements, item)
-///     {
-///	exec(interpreter, item->value);
-///     }
-/// }
-///
+
+static void exec_block_body(Interpreter *interpreter, BlockStmt *stmt)
+{
+    LLItem *item;
+    ARENA_LL_FOR_EACH(stmt->statements, item)
+    {
+	exec(interpreter, item->value);
+    }
+}
+
 /// static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt, char *program_path)
 ///{
 ///     size_t argc = 1;
@@ -171,16 +171,16 @@ static SlashValue eval_literal(Interpreter *interpreter, LiteralExpr *expr)
     (void)interpreter;
     return expr->value;
 }
-///
-/// static SlashValue eval_access(Interpreter *interpreter, AccessExpr *expr)
-///{
-///     ScopeAndValue sv = var_get(interpreter->scope, &expr->var_name);
-///     /* If variable is not defined, then return None. Same behaviour as POSIX sh I think */
-///     if (sv.value == NULL)
-///	return (SlashValue){ .type = SLASH_NONE };
-///
-///     return *sv.value;
-/// }
+
+static SlashValue eval_access(Interpreter *interpreter, AccessExpr *expr)
+{
+    ScopeAndValue sv = var_get(interpreter->scope, &expr->var_name);
+    /* If variable is not defined, then return None. Same behaviour as POSIX sh I think */
+    if (sv.value == NULL)
+	return NoneSingleton;
+
+    return *sv.value;
+}
 ///
 /// static SlashValue eval_subscript(Interpreter *interpreter, SubscriptExpr *expr)
 ///{
@@ -378,18 +378,18 @@ static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
     // }
     putchar('\n');
 }
-///
-/// static void exec_var(Interpreter *interpreter, VarStmt *stmt)
-///{
-///    /* Make sure variable is not defined already */
-///    ScopeAndValue current = var_get(interpreter->scope, &stmt->name);
-///    if (current.scope == interpreter->scope)
-///	REPORT_RUNTIME_ERROR("Redefinition of '%s'", "X");
-///
-///    SlashValue value = eval(interpreter, stmt->initializer);
-///    var_define(interpreter->scope, &stmt->name, &value);
-///}
-///
+
+static void exec_var(Interpreter *interpreter, VarStmt *stmt)
+{
+    /* Make sure variable is not defined already */
+    ScopeAndValue current = var_get(interpreter->scope, &stmt->name);
+    if (current.scope == interpreter->scope)
+	REPORT_RUNTIME_ERROR("Redefinition of '%s'", "X");
+
+    SlashValue value = eval(interpreter, stmt->initializer);
+    var_define(interpreter->scope, &stmt->name, &value);
+}
+
 /// static void exec_seq_var(Interpreter *interpreter, SeqVarStmt *stmt)
 ///{
 ///    SequenceExpr *initializer = (SequenceExpr *)stmt->initializer;
@@ -445,32 +445,32 @@ static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
 ///    }
 ///}
 ///
-/// static void exec_if(Interpreter *interpreter, IfStmt *stmt)
-///{
-///    SlashValue r = eval(interpreter, stmt->condition);
-///    if (is_truthy(&r))
-///	exec(interpreter, stmt->then_branch);
-///    else if (stmt->else_branch != NULL)
-///	exec(interpreter, stmt->else_branch);
-///}
-///
-////*
-/// * Should not be called in a loop.
-/// * For exec'ing blocks in a loop, see exec_loop and exec_block_body
-/// */
-/// static void exec_block(Interpreter *interpreter, BlockStmt *stmt)
-///{
-///    Scope *block_scope = scope_alloc(interpreter->scope, sizeof(Scope));
-///    scope_init(block_scope, interpreter->scope);
-///    interpreter->scope = block_scope;
-///
-///    exec_block_body(interpreter, stmt);
-///
-///    interpreter->scope = block_scope->enclosing;
-///    interpreter->scope->arena_tmp.arena->offset -= sizeof(Scope);
-///    scope_destroy(block_scope);
-///}
-///
+static void exec_if(Interpreter *interpreter, IfStmt *stmt)
+{
+    SlashValue r = eval(interpreter, stmt->condition);
+    if (r.T_info->truthy(r))
+	exec(interpreter, stmt->then_branch);
+    else if (stmt->else_branch != NULL)
+	exec(interpreter, stmt->else_branch);
+}
+
+/*
+ * Should not be called in a loop.
+ * For exec'ing blocks in a loop, see exec_loop and exec_block_body
+ */
+static void exec_block(Interpreter *interpreter, BlockStmt *stmt)
+{
+    Scope *block_scope = scope_alloc(interpreter->scope, sizeof(Scope));
+    scope_init(block_scope, interpreter->scope);
+    interpreter->scope = block_scope;
+
+    exec_block_body(interpreter, stmt);
+
+    interpreter->scope = block_scope->enclosing;
+    interpreter->scope->arena_tmp.arena->offset -= sizeof(Scope);
+    scope_destroy(block_scope);
+}
+
 /// static void exec_subscript_assign(Interpreter *interpreter, AssignStmt *stmt)
 ///{
 ///    SubscriptExpr *subscript = (SubscriptExpr *)stmt->var;
@@ -864,9 +864,9 @@ static SlashValue eval(Interpreter *interpreter, Expr *expr)
     case EXPR_LITERAL:
 	return eval_literal(interpreter, (LiteralExpr *)expr);
 
-	///    case EXPR_ACCESS:
-	///	return eval_access(interpreter, (AccessExpr *)expr);
-	///
+    case EXPR_ACCESS:
+	return eval_access(interpreter, (AccessExpr *)expr);
+
 	///    case EXPR_SUBSCRIPT:
 	///	return eval_subscript(interpreter, (SubscriptExpr *)expr);
 	///
@@ -904,14 +904,13 @@ static SlashValue eval(Interpreter *interpreter, Expr *expr)
 static void exec(Interpreter *interpreter, Stmt *stmt)
 {
     switch (stmt->type) {
-	///    case STMT_VAR:
-	///	exec_var(interpreter, (VarStmt *)stmt);
-	///	break;
+    case STMT_VAR:
+	exec_var(interpreter, (VarStmt *)stmt);
+	break;
 	///
 	///    case STMT_SEQ_VAR:
 	///	exec_seq_var(interpreter, (SeqVarStmt *)stmt);
 	///	break;
-
     case STMT_EXPRESSION:
 	exec_expr(interpreter, (ExpressionStmt *)stmt);
 	break;
@@ -928,13 +927,12 @@ static void exec(Interpreter *interpreter, Stmt *stmt)
 	///	exec_iter_loop(interpreter, (IterLoopStmt *)stmt);
 	///	break;
 	///
-	///    case STMT_IF:
-	///	exec_if(interpreter, (IfStmt *)stmt);
-	///	break;
-	///
-	///    case STMT_BLOCK:
-	///	exec_block(interpreter, (BlockStmt *)stmt);
-	///	break;
+    case STMT_IF:
+	exec_if(interpreter, (IfStmt *)stmt);
+	break;
+    case STMT_BLOCK:
+	exec_block(interpreter, (BlockStmt *)stmt);
+	break;
 	///
 	///    case STMT_ASSIGN:
 	///	exec_assign(interpreter, (AssignStmt *)stmt);
@@ -962,8 +960,8 @@ void interpreter_init(Interpreter *interpreter, int argc, char **argv)
 {
     m_arena_init_dynamic(&interpreter->arena, 1, 16384);
 
-    /// scope_init_globals(&interpreter->globals, &interpreter->arena, argc, argv);
-    /// interpreter->scope = &interpreter->globals;
+    scope_init_globals(&interpreter->globals, &interpreter->arena, argc, argv);
+    interpreter->scope = &interpreter->globals;
 
     linkedlist_init(&interpreter->gc_objs, sizeof(SlashObj *));
     arraylist_init(&interpreter->gc_gray_stack, sizeof(SlashObj *));
@@ -979,8 +977,7 @@ void interpreter_init(Interpreter *interpreter, int argc, char **argv)
 void interpreter_free(Interpreter *interpreter)
 {
     gc_collect_all(&interpreter->gc_objs);
-
-    /// scope_destroy(&interpreter->globals);
+    scope_destroy(&interpreter->globals);
     arraylist_free(&interpreter->stream_ctx.active_fds);
     linkedlist_free(&interpreter->gc_objs);
     arraylist_free(&interpreter->gc_shadow_stack);
@@ -990,11 +987,11 @@ void interpreter_free(Interpreter *interpreter)
 static void interpreter_reset_from_err(Interpreter *interpreter)
 {
     /* free any old scopes */
-    /// while (interpreter->scope != &interpreter->globals) {
-    ///    Scope *to_destroy = interpreter->scope;
-    ///    interpreter->scope = interpreter->scope->enclosing;
-    ///    scope_destroy(to_destroy);
-    /// }
+    while (interpreter->scope != &interpreter->globals) {
+	Scope *to_destroy = interpreter->scope;
+	interpreter->scope = interpreter->scope->enclosing;
+	scope_destroy(to_destroy);
+    }
 
     /* reset stream_ctx */
     arraylist_free(&interpreter->stream_ctx.active_fds);

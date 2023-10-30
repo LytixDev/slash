@@ -13,7 +13,7 @@ LDFLAGS = -lm
 
 .PHONY: format clean tags bear $(OBJDIR)
 TARGET = slash
-TARGET-FUZZ = slash-asan
+TARGET-ASAN = slash-asan
 
 all: $(TARGET)
 
@@ -25,7 +25,7 @@ $(TARGET): $(OBJS)
 	@echo [LD] $@
 	@$(CC) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
-$(TARGET-FUZZ): $(OBJS)
+$(TARGET-ASAN): $(OBJS)
 	@echo [LD] $@
 	@$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
@@ -34,10 +34,10 @@ debug: $(TARGET)
 
 asan: CFLAGS += -fsanitize=address -fsanitize=undefined
 asan: LDFLAGS += -fsanitize=address -fsanitize=undefined
-asan: $(TARGET-FUZZ)
+asan: $(TARGET-ASAN)
 
 clean:
-	rm -rf $(OBJDIR) $(TARGET) $(TARGET-FUZZ)
+	rm -rf $(OBJDIR) $(TARGET) $(TARGET-ASAN)
 
 tags:
 	@ctags -R
