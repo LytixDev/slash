@@ -32,8 +32,11 @@ typedef struct {
 } SlashRange;
 
 
+typedef struct slash_type_info_t SlashTypeInfo;
+
 /* The "head" of each Object type */
 typedef struct slash_obj_t {
+    SlashTypeInfo *T_info; // TODO: not ideal ...
     bool gc_marked;
     bool gc_managed;
 } SlashObj;
@@ -93,9 +96,10 @@ typedef struct slash_type_info_t {
     TraitCmp cmp;
     TraitHash hash;
 
-    /* Object lifetime functions */
+    /* Object params */
     ObjInit init;
     ObjFree free;
+    size_t obj_size; // Size of the object in bytes
 } SlashTypeInfo;
 
 typedef struct slash_value_t {
@@ -131,6 +135,7 @@ extern SlashTypeInfo str_type_info;
 #define AS_LIST(value) ((SlashList *)(value).obj)
 #define AS_TUPLE(value) ((SlashTuple *)(value).obj)
 #define AS_STR(value) ((SlashStr *)(value).obj)
+#define AS_VALUE(obj) ((SlashValue){ .T_info = (obj)->T_info, .obj = (obj) })
 
 #define TYPE_EQ(a, b) ((a).T_info == (b).T_info)
 

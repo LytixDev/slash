@@ -24,7 +24,7 @@
 #include "interpreter/ast.h"
 #include "interpreter/error.h"
 #include "interpreter/exec.h"
-/// #include "interpreter/gc.h"
+#include "interpreter/gc.h"
 #include "interpreter/interpreter.h"
 #include "interpreter/lexer.h"
 /// #include "interpreter/scope.h"
@@ -42,12 +42,12 @@ static void exec(Interpreter *interpreter, Stmt *stmt);
 ////*
 ///  * helpers
 ///  */
-/// static void set_exit_code(Interpreter *interpreter, int exit_code)
-///{
-///     interpreter->prev_exit_code = exit_code;
-///     SlashValue value = { .type = SLASH_NUM, .num = interpreter->prev_exit_code };
-///     var_assign(&(StrView){ .view = "?", .size = 1 }, &interpreter->globals, &value);
-/// }
+static void set_exit_code(Interpreter *interpreter, int exit_code)
+{
+    interpreter->prev_exit_code = exit_code;
+    /// SlashValue value = { .T_info = &num_type_info , .num = interpreter->prev_exit_code };
+    /// var_assign(&(StrView){ .view = "?", .size = 1 }, &interpreter->globals, &value);
+}
 ///
 /// static void exec_block_body(Interpreter *interpreter, BlockStmt *stmt)
 ///{
@@ -111,15 +111,16 @@ static void exec(Interpreter *interpreter, Stmt *stmt);
 static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
 {
     SlashValue left = eval(interpreter, expr->left);
-    SlashValue right = eval(interpreter, expr->left);
+    SlashValue right = eval(interpreter, expr->right);
     if (!TYPE_EQ(left, right))
-        REPORT_RUNTIME_ERROR("Bad types");
+	REPORT_RUNTIME_ERROR("Binary operation failed: type mismatch between '%s' and '%s'",
+			     left.T_info->name, right.T_info->name);
 
     switch (expr->operator_) {
-        case t_plus:
-            return left.T_info->plus(left, right);
+    case t_plus:
+	return left.T_info->plus(left, right);
 
-        default:
+    default:
 	REPORT_RUNTIME_ERROR("Unrecognized binary operator");
     }
 }
@@ -851,11 +852,11 @@ static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
 ///	exec_redirect(interpreter, stmt);
 ///}
 ///
- static SlashValue eval(Interpreter *interpreter, Expr *expr)
+static SlashValue eval(Interpreter *interpreter, Expr *expr)
 {
     switch (expr->type) {
-///    case EXPR_UNARY:
-///	return eval_unary(interpreter, (UnaryExpr *)expr);
+	///    case EXPR_UNARY:
+	///	return eval_unary(interpreter, (UnaryExpr *)expr);
 
     case EXPR_BINARY:
 	return eval_binary(interpreter, (BinaryExpr *)expr);
@@ -863,35 +864,35 @@ static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
     case EXPR_LITERAL:
 	return eval_literal(interpreter, (LiteralExpr *)expr);
 
-///    case EXPR_ACCESS:
-///	return eval_access(interpreter, (AccessExpr *)expr);
-///
-///    case EXPR_SUBSCRIPT:
-///	return eval_subscript(interpreter, (SubscriptExpr *)expr);
-///
-///    case EXPR_SUBSHELL:
-///	return eval_subshell(interpreter, (SubshellExpr *)expr);
-///
-///    case EXPR_STR:
-///	return eval_str(interpreter, (StrExpr *)expr);
-///
-///    case EXPR_LIST:
-///	return eval_list(interpreter, (ListExpr *)expr);
-///
-///    case EXPR_MAP:
-///	return eval_map(interpreter, (MapExpr *)expr);
-///
-///    case EXPR_METHOD:
-///	return eval_method(interpreter, (MethodExpr *)expr);
-///
-///    case EXPR_SEQUENCE:
-///	return eval_tuple(interpreter, (SequenceExpr *)expr);
-///
-///    case EXPR_GROUPING:
-///	return eval_grouping(interpreter, (GroupingExpr *)expr);
-///
-///    case EXPR_CAST:
-///	return eval_cast(interpreter, (CastExpr *)expr);
+	///    case EXPR_ACCESS:
+	///	return eval_access(interpreter, (AccessExpr *)expr);
+	///
+	///    case EXPR_SUBSCRIPT:
+	///	return eval_subscript(interpreter, (SubscriptExpr *)expr);
+	///
+	///    case EXPR_SUBSHELL:
+	///	return eval_subshell(interpreter, (SubshellExpr *)expr);
+	///
+	///    case EXPR_STR:
+	///	return eval_str(interpreter, (StrExpr *)expr);
+	///
+	///    case EXPR_LIST:
+	///	return eval_list(interpreter, (ListExpr *)expr);
+	///
+	///    case EXPR_MAP:
+	///	return eval_map(interpreter, (MapExpr *)expr);
+	///
+	///    case EXPR_METHOD:
+	///	return eval_method(interpreter, (MethodExpr *)expr);
+	///
+	///    case EXPR_SEQUENCE:
+	///	return eval_tuple(interpreter, (SequenceExpr *)expr);
+	///
+	///    case EXPR_GROUPING:
+	///	return eval_grouping(interpreter, (GroupingExpr *)expr);
+	///
+	///    case EXPR_CAST:
+	///	return eval_cast(interpreter, (CastExpr *)expr);
 
     default:
 	REPORT_RUNTIME_ERROR("Internal error: expression type not recognized");
@@ -957,50 +958,50 @@ static void exec(Interpreter *interpreter, Stmt *stmt)
     }
 }
 
-/// void interpreter_init(Interpreter *interpreter, int argc, char **argv)
-///{
-///     m_arena_init_dynamic(&interpreter->arena, 1, 16384);
-///
-///     scope_init_globals(&interpreter->globals, &interpreter->arena, argc, argv);
-///     interpreter->scope = &interpreter->globals;
-///
-///     linkedlist_init(&interpreter->gc_objs, sizeof(SlashObj *));
-///     arraylist_init(&interpreter->gc_gray_stack, sizeof(SlashObj *));
-///     interpreter->obj_alloced_since_next_gc = 0;
-///     arraylist_init(&interpreter->gc_shadow_stack, sizeof(SlashObj **));
-///
-///     /* init default StreamCtx */
-///     StreamCtx stream_ctx = { .read_fd = STDIN_FILENO, .write_fd = STDOUT_FILENO };
-///     arraylist_init(&stream_ctx.active_fds, sizeof(int));
-///     interpreter->stream_ctx = stream_ctx;
-/// }
-///
-/// void interpreter_free(Interpreter *interpreter)
-///{
-///     gc_collect_all(&interpreter->gc_objs);
-///
-///     scope_destroy(&interpreter->globals);
-///     arraylist_free(&interpreter->stream_ctx.active_fds);
-///     linkedlist_free(&interpreter->gc_objs);
-///     arraylist_free(&interpreter->gc_shadow_stack);
-///     arraylist_free(&interpreter->gc_gray_stack);
-/// }
-///
-/// static void interpreter_reset_from_err(Interpreter *interpreter)
-///{
-///     /* free any old scopes */
-///     while (interpreter->scope != &interpreter->globals) {
-///	Scope *to_destroy = interpreter->scope;
-///	interpreter->scope = interpreter->scope->enclosing;
-///	scope_destroy(to_destroy);
-///     }
-///
-///     /* reset stream_ctx */
-///     arraylist_free(&interpreter->stream_ctx.active_fds);
-///     StreamCtx stream_ctx = { .read_fd = STDIN_FILENO, .write_fd = STDOUT_FILENO };
-///     arraylist_init(&stream_ctx.active_fds, sizeof(int));
-///     interpreter->stream_ctx = stream_ctx;
-/// }
+void interpreter_init(Interpreter *interpreter, int argc, char **argv)
+{
+    m_arena_init_dynamic(&interpreter->arena, 1, 16384);
+
+    /// scope_init_globals(&interpreter->globals, &interpreter->arena, argc, argv);
+    /// interpreter->scope = &interpreter->globals;
+
+    linkedlist_init(&interpreter->gc_objs, sizeof(SlashObj *));
+    arraylist_init(&interpreter->gc_gray_stack, sizeof(SlashObj *));
+    interpreter->obj_alloced_since_next_gc = 0;
+    arraylist_init(&interpreter->gc_shadow_stack, sizeof(SlashObj **));
+
+    /* init default StreamCtx */
+    StreamCtx stream_ctx = { .read_fd = STDIN_FILENO, .write_fd = STDOUT_FILENO };
+    arraylist_init(&stream_ctx.active_fds, sizeof(int));
+    interpreter->stream_ctx = stream_ctx;
+}
+
+void interpreter_free(Interpreter *interpreter)
+{
+    gc_collect_all(&interpreter->gc_objs);
+
+    /// scope_destroy(&interpreter->globals);
+    arraylist_free(&interpreter->stream_ctx.active_fds);
+    linkedlist_free(&interpreter->gc_objs);
+    arraylist_free(&interpreter->gc_shadow_stack);
+    arraylist_free(&interpreter->gc_gray_stack);
+}
+
+static void interpreter_reset_from_err(Interpreter *interpreter)
+{
+    /* free any old scopes */
+    /// while (interpreter->scope != &interpreter->globals) {
+    ///    Scope *to_destroy = interpreter->scope;
+    ///    interpreter->scope = interpreter->scope->enclosing;
+    ///    scope_destroy(to_destroy);
+    /// }
+
+    /* reset stream_ctx */
+    arraylist_free(&interpreter->stream_ctx.active_fds);
+    StreamCtx stream_ctx = { .read_fd = STDIN_FILENO, .write_fd = STDOUT_FILENO };
+    arraylist_init(&stream_ctx.active_fds, sizeof(int));
+    interpreter->stream_ctx = stream_ctx;
+}
 
 int interpreter_run(Interpreter *interpreter, ArrayList *statements)
 {
@@ -1009,8 +1010,8 @@ int interpreter_run(Interpreter *interpreter, ArrayList *statements)
 	    exec(interpreter, *(Stmt **)arraylist_get(statements, i));
     } else {
 	/* execution enters here on a runtime error, therefore we must "reset" the interpreter */
-	/// interpreter_reset_from_err(interpreter);
-	/// set_exit_code(interpreter, 1);
+	interpreter_reset_from_err(interpreter);
+	set_exit_code(interpreter, 1);
     }
 
     return interpreter->prev_exit_code;
@@ -1019,8 +1020,8 @@ int interpreter_run(Interpreter *interpreter, ArrayList *statements)
 int interpret(ArrayList *statements, int argc, char **argv)
 {
     Interpreter interpreter = { 0 };
-    /// interpreter_init(&interpreter, argc, argv);
+    interpreter_init(&interpreter, argc, argv);
     interpreter_run(&interpreter, statements);
-    /// interpreter_free(&interpreter);
+    interpreter_free(&interpreter);
     return interpreter.prev_exit_code;
 }
