@@ -14,25 +14,27 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-///
-/// #include <unistd.h>
-///
-/// #include "interpreter/error.h"
-/// #include "interpreter/interpreter.h"
-/// #include "interpreter/types/slash_str.h"
-/// #include "interpreter/types/slash_value.h"
-/// #include "interpreter/types/trait.h"
-///
-///
-/// int builtin_cd(Interpreter *interpreter, size_t argc, SlashValue *argv)
-///{
-///    if (argc == 0) {
-///	fprintf(stderr, "cd: no argument received");
-///	return 1;
-///    }
-///
-///    SlashValue param = argv[0];
-///    TraitToStr to_str = trait_to_str[param.type];
-///    SlashStr *param_str = (SlashStr *)to_str(interpreter, &param).obj;
-///    return chdir(param_str->p);
-///}
+
+#include <stdio.h>
+#include <unistd.h>
+
+#include "interpreter/interpreter.h"
+#include "interpreter/value/slash_value.h"
+
+
+int builtin_cd(Interpreter *interpreter, size_t argc, SlashValue *argv)
+{
+    if (argc == 0) {
+	fprintf(stderr, "cd: no argument received");
+	return 1;
+    }
+
+    SlashValue param = argv[0];
+    TraitToStr to_str = param.T_info->to_str;
+    if (to_str == NULL) {
+	fprintf(stderr, "cd: could not take to_str of type '%s'", param.T_info->name);
+	return 1;
+    }
+    SlashStr *param_str = AS_STR(to_str(interpreter, param));
+    return chdir(param_str->str);
+}

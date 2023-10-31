@@ -143,7 +143,7 @@ SlashValue num_unary_not(SlashValue self)
     assert(IS_NUM(self));
     TraitTruthy is_truthy = self.T_info->truthy;
     assert(is_truthy != NULL);
-    return (SlashValue){ .T_info = &num_type_info, .boolean = !is_truthy(self) };
+    return (SlashValue){ .T_info = &bool_type_info, .boolean = !is_truthy(self) };
 }
 
 void num_print(SlashValue self)
@@ -204,7 +204,7 @@ int num_hash(SlashValue self)
 void range_print(SlashValue self)
 {
     assert(IS_RANGE(self));
-    printf("%d -> %d\n", self.range.start, self.range.end);
+    printf("%d -> %d", self.range.start, self.range.end);
 }
 
 SlashValue range_to_str(Interpreter *interpreter, SlashValue self)
@@ -263,6 +263,18 @@ bool range_eq(SlashValue self, SlashValue other)
     return self.range.start == other.range.start && self.range.end == other.range.end;
 }
 
+
+/*
+ * text_lit impl
+ */
+SlashValue text_lit_to_str(Interpreter *interpreter, SlashValue self)
+{
+    assert(IS_TEXT_LIT(self));
+    SlashObj *str = gc_new_T(interpreter, &str_type_info);
+    slash_str_init_from_view(interpreter, (SlashStr *)str, &self.text_lit);
+    return AS_VALUE(str);
+}
+
 /*
  * map impl
  */
@@ -289,6 +301,30 @@ void slash_str_init_from_view(Interpreter *interpreter, SlashStr *str, StrView *
 void slash_str_init_from_slice(Interpreter *interpreter, SlashStr *str, char *cstr, size_t size)
 {
     slash_str_init_from_view(interpreter, str, &(StrView){ .view = cstr, .size = size });
+}
+
+void slash_str_init_from_alloced_cstr(SlashStr *str, char *cstr)
+{
+    str->len = strlen(cstr);
+    str->str = cstr;
+    str->obj.gc_managed = false;
+}
+
+void str_print(SlashValue self)
+{
+    assert(IS_STR(self));
+    printf("%s", AS_STR(self)->str);
+}
+
+
+/*
+ * none impl
+ */
+void none_print(SlashValue self)
+{
+    (void)self;
+    assert(IS_NONE(self));
+    printf("none");
 }
 
 /*
@@ -363,28 +399,28 @@ SlashTypeInfo range_type_info = { .name = "range",
 				  .free = NULL,
 				  .obj_size = 0 };
 
-SlashTypeInfo none_type_info = { .name = "none",
-				 .plus = NULL,
-				 .minus = NULL,
-				 .mul = NULL,
-				 .div = NULL,
-				 .int_div = NULL,
-				 .pow = NULL,
-				 .mod = NULL,
-				 .unary_minus = NULL,
-				 .unary_not = NULL,
-				 .print = NULL,
-				 .to_str = NULL,
-				 .item_get = NULL,
-				 .item_assign = NULL,
-				 .item_in = NULL,
-				 .truthy = NULL,
-				 .eq = NULL,
-				 .cmp = NULL,
-				 .hash = NULL,
-				 .init = NULL,
-				 .free = NULL,
-				 .obj_size = 0 };
+SlashTypeInfo text_lit_type_info = { .name = "text",
+				     .plus = NULL,
+				     .minus = NULL,
+				     .mul = NULL,
+				     .div = NULL,
+				     .int_div = NULL,
+				     .pow = NULL,
+				     .mod = NULL,
+				     .unary_minus = NULL,
+				     .unary_not = NULL,
+				     .print = NULL,
+				     .to_str = text_lit_to_str,
+				     .item_get = NULL,
+				     .item_assign = NULL,
+				     .item_in = NULL,
+				     .truthy = NULL,
+				     .eq = NULL,
+				     .cmp = NULL,
+				     .hash = NULL,
+				     .init = NULL,
+				     .free = NULL,
+				     .obj_size = 0 };
 
 SlashTypeInfo map_type_info = { .name = "map",
 				.plus = NULL,
@@ -465,7 +501,7 @@ SlashTypeInfo str_type_info = { .name = "str",
 				.mod = NULL,
 				.unary_minus = NULL,
 				.unary_not = NULL,
-				.print = NULL,
+				.print = str_print,
 				.to_str = NULL,
 				.item_get = NULL,
 				.item_assign = NULL,
@@ -477,6 +513,29 @@ SlashTypeInfo str_type_info = { .name = "str",
 				.init = NULL,
 				.free = NULL,
 				.obj_size = sizeof(SlashStr) };
+
+SlashTypeInfo none_type_info = { .name = "none",
+				 .plus = NULL,
+				 .minus = NULL,
+				 .mul = NULL,
+				 .div = NULL,
+				 .int_div = NULL,
+				 .pow = NULL,
+				 .mod = NULL,
+				 .unary_minus = NULL,
+				 .unary_not = NULL,
+				 .print = none_print,
+				 .to_str = NULL,
+				 .item_get = NULL,
+				 .item_assign = NULL,
+				 .item_in = NULL,
+				 .truthy = NULL,
+				 .eq = NULL,
+				 .cmp = NULL,
+				 .hash = NULL,
+				 .init = NULL,
+				 .free = NULL,
+				 .obj_size = 0 };
 
 
 SlashValue NoneSingleton = { .T_info = &none_type_info };

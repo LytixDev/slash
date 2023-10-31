@@ -38,43 +38,41 @@ static int get_char_pos(char *str, char m)
     return -1;
 }
 
-/// static void define_scope_alloced_var(Scope *scope, StrView *key, char *cstr)
-///{
-///     SlashStr *str = scope_alloc(scope, sizeof(SlashStr));
-///     str->obj.gc_managed = false;
-///     str->obj.type = SLASH_OBJ_STR;
-///     slash_str_init_from_alloced_cstr(str, cstr);
-///     SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)str };
-///     var_define(scope, key, &value);
-/// }
+static void define_scope_alloced_var(Scope *scope, StrView *key, char *cstr)
+{
+    SlashStr *str = scope_alloc(scope, sizeof(SlashStr));
+    str->obj.T_info = &str_type_info;
+    slash_str_init_from_alloced_cstr(str, cstr);
+    var_define(scope, key, &AS_VALUE((SlashObj *)str));
+}
 
-/// static void set_globals(Scope *scope)
-///{
-///     assert(scope->enclosing == NULL);
-///
-///     char *env_entry;
-///     char **environ_cpy = environ;
-///     for (env_entry = *environ_cpy; env_entry != NULL; env_entry = *(++environ_cpy)) {
-///	int pos = get_char_pos(env_entry, '=');
-///	StrView key = { .view = env_entry, .size = pos };
-///	define_scope_alloced_var(scope, &key, env_entry + pos + 1);
-///     }
-///
-///     StrView ifs_key = { .view = "IFS", .size = 3 };
-///     char *ifs_cstr = scope_alloc(scope, 3);
-///     memcpy(ifs_cstr, "\n\t ", 3);
-///     define_scope_alloced_var(scope, &ifs_key, ifs_cstr);
-/// }
+static void set_globals(Scope *scope)
+{
+    assert(scope->enclosing == NULL);
 
-/// static void scope_init_argv(Scope *scope, int argc, char **argv)
-///{
-///     for (size_t i = 0; i < (size_t)argc; i++) {
-///	char *value = argv[i];
-///	char key[32];
-///	size_t size = sprintf(key, "%zu", i);
-///	define_scope_alloced_var(scope, &(StrView){ .view = key, .size = size }, value);
-///     }
-/// }
+    char *env_entry;
+    char **environ_cpy = environ;
+    for (env_entry = *environ_cpy; env_entry != NULL; env_entry = *(++environ_cpy)) {
+	int pos = get_char_pos(env_entry, '=');
+	StrView key = { .view = env_entry, .size = pos };
+	define_scope_alloced_var(scope, &key, env_entry + pos + 1);
+    }
+
+    StrView ifs_key = { .view = "IFS", .size = 3 };
+    char *ifs_cstr = scope_alloc(scope, 3);
+    memcpy(ifs_cstr, "\n\t ", 3);
+    define_scope_alloced_var(scope, &ifs_key, ifs_cstr);
+}
+
+static void scope_init_argv(Scope *scope, int argc, char **argv)
+{
+    for (size_t i = 0; i < (size_t)argc; i++) {
+	char *value = argv[i];
+	char key[32];
+	size_t size = sprintf(key, "%zu", i);
+	define_scope_alloced_var(scope, &(StrView){ .view = key, .size = size }, value);
+    }
+}
 
 void scope_init_globals(Scope *scope, Arena *arena, int argc, char **argv)
 {
@@ -82,8 +80,8 @@ void scope_init_globals(Scope *scope, Arena *arena, int argc, char **argv)
     scope->enclosing = NULL;
     scope->depth = 0;
     hashmap_init(&scope->values);
-    /// set_globals(scope);
-    /// scope_init_argv(scope, argc, argv);
+    set_globals(scope);
+    scope_init_argv(scope, argc, argv);
     /* Define '$?' that holds the value of the previous exit code */
     SlashValue exit_code_value = { .T_info = &num_type_info, .num = 0 };
     var_define(scope, &(StrView){ .view = "?", .size = 1 }, &exit_code_value);

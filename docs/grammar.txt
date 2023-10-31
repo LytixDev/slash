@@ -46,7 +46,7 @@ pipeline_stmt   -> cmd_stmt ( "|" pipeline_stmt )* ;
 
 redirect_stmt   -> cmd_stmt ( ">" | ">>" | "<" ) expression ;
 
-cmd_stmt        -> SHIDENT expression* ;
+cmd_stmt        -> TEXT_LIT expression* ;
 
 block           -> "{" declaration* "}" ;
 

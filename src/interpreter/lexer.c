@@ -194,7 +194,7 @@ static void shell_arg_emit(Lexer *lexer)
 {
     backup(lexer);
     if (lexer->start != lexer->pos)
-	emit(lexer, t_dt_shident);
+	emit(lexer, t_dt_text_lit);
     next(lexer);
 }
 
@@ -488,7 +488,7 @@ StateFn lex_identifier(Lexer *lexer)
 	return STATE_FN(lex_any);
     }
 
-    emit(lexer, t_dt_shident);
+    emit(lexer, t_dt_text_lit);
     return STATE_FN(lex_shell_arg_list);
 }
 

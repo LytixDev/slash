@@ -265,7 +265,7 @@ static Stmt *statement(Parser *parser)
     if (match(parser, t_if))
 	return if_stmt(parser);
 
-    if (match(parser, t_dt_shident))
+    if (match(parser, t_dt_text_lit))
 	return pipeline_stmt(parser);
 
     if (match(parser, t_lbrace))
@@ -330,7 +330,7 @@ static Stmt *if_stmt(Parser *parser)
 
 static Stmt *pipeline_stmt(Parser *parser)
 {
-    /* came from t_dt_shident */
+    /* came from t_dt_text_lit */
     Stmt *left = cmd_stmt(parser);
     if (match(parser, t_greater, t_greater_greater, t_less))
 	return redirect_stmt(parser, left);
@@ -338,7 +338,7 @@ static Stmt *pipeline_stmt(Parser *parser)
     if (!match(parser, t_pipe))
 	return left;
 
-    consume(parser, t_dt_shident, "Expected shell command after pipe symbol");
+    consume(parser, t_dt_text_lit, "Expected shell command after pipe symbol");
     PipelineStmt *stmt = (PipelineStmt *)stmt_alloc(parser->ast_arena, STMT_PIPELINE);
     stmt->left = (CmdStmt *)left;
     stmt->right = pipeline_stmt(parser);
@@ -357,7 +357,7 @@ static Stmt *redirect_stmt(Parser *parser, Stmt *left)
 
 static Stmt *cmd_stmt(Parser *parser)
 {
-    /* came from t_dt_shident */
+    /* came from t_dt_text_lit */
     Token *cmd_name = previous(parser);
 
     CmdStmt *stmt = (CmdStmt *)stmt_alloc(parser->ast_arena, STMT_CMD);
@@ -580,7 +580,7 @@ static Expr *single(Parser *parser)
 {
     Expr *left;
     if (match(parser, t_lparen)) {
-	if (check(parser, t_dt_shident)) {
+	if (check(parser, t_dt_text_lit)) {
 	    left = subshell(parser);
 	} else {
 	    parser->token_pos--;
@@ -637,7 +637,7 @@ static Expr *single(Parser *parser)
 static Expr *subshell(Parser *parser)
 {
     /* came from '(' */
-    consume(parser, t_dt_shident, "Expected shell literal after '('");
+    consume(parser, t_dt_text_lit, "Expected shell literal after '('");
     SubshellExpr *expr = (SubshellExpr *)expr_alloc(parser->ast_arena, EXPR_SUBSHELL);
     expr->stmt = pipeline_stmt(parser);
     consume(parser, t_rparen, "Expected ')' after subshell");
@@ -688,16 +688,16 @@ static Expr *primary(Parser *parser)
     if (match(parser, t_lparen))
 	return grouping(parser);
 
-    if (!match(parser, t_dt_str, t_dt_shident)) {
+    if (!match(parser, t_dt_str, t_dt_text_lit)) {
 	report_parse_err(parser, "Not a valid primary type");
 	return NULL;
     }
 
     Token *token = previous(parser);
-    /* shident */
-    if (token->type == t_dt_shident) {
+    /* text_lit */
+    if (token->type == t_dt_text_lit) {
 	LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
-	expr->value = (SlashValue){ .T_info = NULL, .shident = token->lexeme };
+	expr->value = (SlashValue){ .T_info = &text_lit_type_info, .text_lit = token->lexeme };
 	return (Expr *)expr;
     }
 
@@ -729,7 +729,7 @@ static Expr *range(Parser *parser)
 {
     SlashRange range;
     Token *start_num_or_any = previous(parser);
-    if (start_num_or_any->type != t_dt_num)
+    if (start_num_or_any == NULL || start_num_or_any->type != t_dt_num)
 	range.start = 0;
     else
 	range.start = str_view_to_int(start_num_or_any->lexeme);

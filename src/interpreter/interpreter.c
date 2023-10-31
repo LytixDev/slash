@@ -58,56 +58,61 @@ static void exec_block_body(Interpreter *interpreter, BlockStmt *stmt)
     }
 }
 
-/// static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt, char *program_path)
-///{
-///     size_t argc = 1;
-///     if (stmt->arg_exprs != NULL)
-///	argc += stmt->arg_exprs->size;
-///     char *argv[argc + 1]; // + 1 because last element is NULL
-///     argv[0] = program_path;
-///
-///     size_t i = 1;
-///     if (stmt->arg_exprs != NULL) {
-///	LLItem *item;
-///	ARENA_LL_FOR_EACH(stmt->arg_exprs, item)
-///	{
-///	    SlashValue value = eval(interpreter, item->value);
-///	    TraitToStr to_str = trait_to_str[value.type];
-///	    SlashValue value_str_repr = to_str(interpreter, &value);
-///	    gc_shadow_push(&interpreter->gc_shadow_stack, value_str_repr.obj);
-///	    argv[i++] = ((SlashStr *)(value_str_repr.obj))->p;
-///	}
-///     }
-///
-///     for (size_t n = 0; n < argc - 1; n++)
-///	gc_shadow_pop(&interpreter->gc_shadow_stack);
-///
-///     argv[i] = NULL;
-///     int exit_code = exec_program(&interpreter->stream_ctx, argv);
-///     set_exit_code(interpreter, exit_code);
-/// }
-///
-///
-////*
-///  * expression evaluation functions
-///  */
-/// static SlashValue eval_unary(Interpreter *interpreter, UnaryExpr *expr)
-///{
-///     SlashValue right = eval(interpreter, expr->right);
-///     if (expr->operator_ == t_not)
-///	return (SlashValue){ .type = SLASH_BOOL, .boolean = !is_truthy(&right) };
-///     if (expr->operator_ == t_minus) {
-///	if (right.type != SLASH_NUM)
-///	    REPORT_RUNTIME_ERROR("'-' operator not defined for type '%s'",
-///				 SLASH_TYPE_TO_STR(&right));
-///	right.num = -right.num;
-///	return right;
-///     }
-///
-///     ASSERT_NOT_REACHED;
-///     return (SlashValue){ 0 };
-/// }
-///
+static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt, char *program_path)
+{
+    size_t argc = 1;
+    if (stmt->arg_exprs != NULL)
+	argc += stmt->arg_exprs->size;
+    char *argv[argc + 1]; // + 1 because last element is NULL
+    argv[0] = program_path;
+
+    size_t i = 1;
+    if (stmt->arg_exprs != NULL) {
+	LLItem *item;
+	ARENA_LL_FOR_EACH(stmt->arg_exprs, item)
+	{
+	    SlashValue value = eval(interpreter, item->value);
+	    TraitToStr to_str = value.T_info->to_str;
+	    if (to_str == NULL)
+		REPORT_RUNTIME_ERROR("Could not take to_str of type '%s'", value.T_info->name);
+	    SlashValue value_str_repr = to_str(interpreter, value);
+	    gc_shadow_push(&interpreter->gc_shadow_stack, value_str_repr.obj);
+	    argv[i++] = AS_STR(value_str_repr)->str;
+	}
+    }
+
+    for (size_t n = 0; n < argc - 1; n++)
+	gc_shadow_pop(&interpreter->gc_shadow_stack);
+
+    argv[i] = NULL;
+    int exit_code = exec_program(&interpreter->stream_ctx, argv);
+    set_exit_code(interpreter, exit_code);
+}
+
+
+/*
+ * expression evaluation functions
+ */
+static SlashValue eval_unary(Interpreter *interpreter, UnaryExpr *expr)
+{
+    SlashValue right = eval(interpreter, expr->right);
+    if (expr->operator_ == t_not) {
+	OpUnaryNot func = right.T_info->unary_not;
+	if (func == NULL)
+	    REPORT_RUNTIME_ERROR("'not' operator not defined for type '%s'", right.T_info->name);
+	return func(right);
+    } else if (expr->operator_ == t_minus) {
+	OpUnaryMinus func = right.T_info->unary_minus;
+	if (func == NULL)
+	    REPORT_RUNTIME_ERROR("Unary '-' not defined for type '%s'", right.T_info->name);
+	return func(right);
+    }
+
+    REPORT_RUNTIME_ERROR("Internal error: Unsupported unary operator parsed correctly.");
+    ASSERT_NOT_REACHED;
+    return NoneSingleton; // make the compiler happy
+}
+
 static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
 {
     SlashValue left = eval(interpreter, expr->left);
@@ -241,13 +246,13 @@ static SlashValue eval_access(Interpreter *interpreter, AccessExpr *expr)
 ///     gc_shadow_pop(&interpreter->gc_shadow_stack);
 ///     return value;
 /// }
-///
-/// static SlashValue eval_str(Interpreter *interpreter, StrExpr *expr)
-///{
-///     SlashStr *str = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
-///     slash_str_init_from_view(str, &expr->view);
-///     return (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)str };
-/// }
+
+static SlashValue eval_str(Interpreter *interpreter, StrExpr *expr)
+{
+    SlashStr *str = (SlashStr *)gc_new_T(interpreter, &str_type_info);
+    slash_str_init_from_view(interpreter, str, &expr->view);
+    return AS_VALUE((SlashObj *)str);
+}
 ///
 /// static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
 ///{
@@ -412,39 +417,39 @@ static void exec_var(Interpreter *interpreter, VarStmt *stmt)
 ///	r = r->next;
 ///    }
 ///}
-///
-/// static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
-///{
-///    ScopeAndValue path = var_get(interpreter->scope, &(StrView){ .view = "PATH", .size = 4 });
-///    if (!(path.value->type == SLASH_OBJ && path.value->obj->type == SLASH_OBJ_STR))
-///	REPORT_RUNTIME_ERROR("PATH variable should be type 'str' not '%s'",
-///			     SLASH_TYPE_TO_STR(path.value));
-///
-///    WhichResult which_result = which(stmt->cmd_name, ((SlashStr *)path.value->obj)->p);
-///    if (which_result.type == WHICH_NOT_FOUND)
-///	REPORT_RUNTIME_ERROR("Command not found");
-///
-///    if (which_result.type == WHICH_EXTERN) {
-///	exec_program_stub(interpreter, stmt, which_result.path);
-///    } else {
-///	/* builtin */
-///	if (stmt->arg_exprs == NULL) {
-///	    which_result.builtin(interpreter, 0, NULL);
-///	    return;
-///	}
-///
-///	size_t argc = stmt->arg_exprs->size;
-///	SlashValue argv[argc];
-///	LLItem *item = stmt->arg_exprs->head;
-///	for (size_t i = 0; i < argc; i++) {
-///	    SlashValue value = eval(interpreter, (Expr *)item->value);
-///	    argv[i] = value;
-///	    item = item->next;
-///	}
-///	which_result.builtin(interpreter, argc, argv);
-///    }
-///}
-///
+
+static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
+{
+    ScopeAndValue path = var_get(interpreter->scope, &(StrView){ .view = "PATH", .size = 4 });
+    if (!IS_STR(*path.value))
+	REPORT_RUNTIME_ERROR("PATH variable should be type '%s' not '%s'", str_type_info.name,
+			     path.value->T_info->name);
+
+    WhichResult which_result = which(stmt->cmd_name, AS_STR(*path.value)->str);
+    if (which_result.type == WHICH_NOT_FOUND)
+	REPORT_RUNTIME_ERROR("Command not found");
+
+    if (which_result.type == WHICH_EXTERN) {
+	exec_program_stub(interpreter, stmt, which_result.path);
+    } else {
+	/* builtin */
+	if (stmt->arg_exprs == NULL) {
+	    which_result.builtin(interpreter, 0, NULL);
+	    return;
+	}
+
+	size_t argc = stmt->arg_exprs->size;
+	SlashValue argv[argc];
+	LLItem *item = stmt->arg_exprs->head;
+	for (size_t i = 0; i < argc; i++) {
+	    SlashValue value = eval(interpreter, (Expr *)item->value);
+	    argv[i] = value;
+	    item = item->next;
+	}
+	which_result.builtin(interpreter, argc, argv);
+    }
+}
+
 static void exec_if(Interpreter *interpreter, IfStmt *stmt)
 {
     SlashValue r = eval(interpreter, stmt->condition);
@@ -855,8 +860,8 @@ static void exec_block(Interpreter *interpreter, BlockStmt *stmt)
 static SlashValue eval(Interpreter *interpreter, Expr *expr)
 {
     switch (expr->type) {
-	///    case EXPR_UNARY:
-	///	return eval_unary(interpreter, (UnaryExpr *)expr);
+    case EXPR_UNARY:
+	return eval_unary(interpreter, (UnaryExpr *)expr);
 
     case EXPR_BINARY:
 	return eval_binary(interpreter, (BinaryExpr *)expr);
@@ -873,8 +878,8 @@ static SlashValue eval(Interpreter *interpreter, Expr *expr)
 	///    case EXPR_SUBSHELL:
 	///	return eval_subshell(interpreter, (SubshellExpr *)expr);
 	///
-	///    case EXPR_STR:
-	///	return eval_str(interpreter, (StrExpr *)expr);
+    case EXPR_STR:
+	return eval_str(interpreter, (StrExpr *)expr);
 	///
 	///    case EXPR_LIST:
 	///	return eval_list(interpreter, (ListExpr *)expr);
@@ -915,9 +920,9 @@ static void exec(Interpreter *interpreter, Stmt *stmt)
 	exec_expr(interpreter, (ExpressionStmt *)stmt);
 	break;
 
-	///    case STMT_CMD:
-	///	exec_cmd(interpreter, (CmdStmt *)stmt);
-	///	break;
+    case STMT_CMD:
+	exec_cmd(interpreter, (CmdStmt *)stmt);
+	break;
 	///
 	///    case STMT_LOOP:
 	///	exec_loop(interpreter, (LoopStmt *)stmt);

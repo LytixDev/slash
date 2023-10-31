@@ -107,8 +107,8 @@ typedef struct slash_value_t {
     union {
 	bool boolean;
 	double num;
-	StrView shident;
 	SlashRange range;
+	StrView text_lit;
 	SlashObj *obj;
     };
 } SlashValue;
@@ -117,21 +117,24 @@ typedef struct slash_value_t {
 extern SlashTypeInfo bool_type_info;
 extern SlashTypeInfo num_type_info;
 extern SlashTypeInfo range_type_info;
-extern SlashTypeInfo none_type_info;
-extern SlashTypeInfo map_type_info;
+extern SlashTypeInfo text_lit_type_info;
 extern SlashTypeInfo list_type_info;
 extern SlashTypeInfo tuple_type_info;
 extern SlashTypeInfo str_type_info;
+extern SlashTypeInfo map_type_info;
+extern SlashTypeInfo none_type_info;
 
 extern SlashValue NoneSingleton;
 
 #define IS_BOOL(value__) ((value__).T_info == &bool_type_info)
 #define IS_NUM(value__) ((value__).T_info == &num_type_info)
 #define IS_RANGE(value__) ((value__).T_info == &range_type_info)
+#define IS_TEXT_LIT(value__) ((value__).T_info == &text_lit_type_info)
 #define IS_MAP(value__) ((value__).T_info == &map_type_info)
 #define IS_LIST(value__) ((value__).T_info == &list_type_info)
 #define IS_TUPLE(value__) ((value__).T_info == &tuple_type_info)
 #define IS_STR(value__) ((value__).T_info == &str_type_info)
+#define IS_NONE(value__) ((value__).T_info == &none_type_info)
 #define IS_OBJ(value__) (!(IS_BOOL((value__)) && IS_NUM((value__)) && IS_RANGE((value__))))
 
 #define AS_MAP(value__) ((SlashMap *)(value__).obj)
@@ -147,5 +150,6 @@ extern SlashValue NoneSingleton;
 /* Init functions */
 void slash_str_init_from_view(Interpreter *interpreter, SlashStr *str, StrView *view);
 void slash_str_init_from_slice(Interpreter *interpreter, SlashStr *str, char *cstr, size_t size);
+void slash_str_init_from_alloced_cstr(SlashStr *str, char *cstr);
 
 #endif /* SLASH_VALUE_H */
