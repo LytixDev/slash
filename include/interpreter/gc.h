@@ -23,10 +23,8 @@
 #include "interpreter/value/slash_value.h"
 #include "nicc/nicc.h"
 
-/*
- * Allocates
- */
 void *gc_alloc(Interpreter *interpreter, size_t size);
+void gc_free(Interpreter *interpreter, void *data, size_t size_freed);
 
 SlashObj *gc_new_T(Interpreter *interpreter, SlashTypeInfo *T);
 

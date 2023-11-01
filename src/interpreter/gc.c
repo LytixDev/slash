@@ -214,6 +214,13 @@ void *gc_alloc(Interpreter *interpreter, size_t size)
     return malloc(size);
 }
 
+void gc_free(Interpreter *interpreter, void *data, size_t size_freed)
+{
+    (void)interpreter;
+    (void)size_freed;
+    free(data);
+}
+
 SlashObj *gc_new_T(Interpreter *interpreter, SlashTypeInfo *T)
 {
     SlashObj *obj = gc_alloc(interpreter, T->obj_size);

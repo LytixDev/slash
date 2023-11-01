@@ -18,31 +18,37 @@
 #define SLASH_LIST_IMPL_H
 #endif /* SLASH_LIST_IMPL_H */
 
+#include <stdbool.h>
 #include <stdlib.h>
 
+#include "interpreter/interpreter.h"
 #include "interpreter/value/slash_value.h"
 
 /*
  * Based on the ArrayList implementation found in nicc (https://github.com/LytixDev/nicc)
  */
 
+#define SLASH_LIST_STARTING_CAP 8
+#define SLASH_LIST_GROW_CAPACITY(capacity) ((capacity) < 8 ? 8 : (capacity)*2)
+
 typedef struct {
     SlashValue *items;
-    size_t size;
+    size_t len;
     size_t cap;
 } SlashListImpl;
 
 
-void slash_list_init(SlashListImpl *list);
-void slash_list_free(SlashListImpl *list);
+void slash_list_init(Interpreter *interpreter, SlashListImpl *list);
+void slash_list_free(Interpreter *interpreter, SlashListImpl *list);
 
-bool slash_list_set(SlashListImpl *list, SlashValue val, size_t idx);
-bool slash_list_append(SlashListImpl *list, SlashValue *val);
-
-bool slash_list_rm(SlashListImpl *list, size_t idx);
-bool slash_list_rmv(SlashListImpl *list, SlashValue val);
+bool slash_list_set(Interpreter *interpreter, SlashListImpl *list, SlashValue val, size_t idx);
+bool slash_list_append(Interpreter *interpreter, SlashListImpl *list, SlashValue val);
 
 SlashValue slash_list_get(SlashListImpl *list, size_t idx);
 size_t slash_list_index_of(SlashListImpl *list, SlashValue val);
 
+bool slash_list_rm(SlashListImpl *list, size_t idx);
+bool slash_list_rmv(SlashListImpl *list, SlashValue val);
+
+// TODO: implement
 bool slash_list_sort(SlashListImpl *list);
