@@ -23,6 +23,8 @@
 #include "interpreter/gc.h"
 #include "interpreter/interpreter.h"
 #include "interpreter/value/slash_value.h"
+#include "interpreter/value/slash_list.h"
+#include "interpreter/value/slash_map.h"
 
 
 /*
@@ -80,8 +82,9 @@ int bool_hash(SlashValue self)
 /*
  * num impl
  */
-SlashValue num_plus(SlashValue self, SlashValue other)
+SlashValue num_plus(Interpreter *interpreter, SlashValue self, SlashValue other)
 {
+    (void)interpreter;
     assert(IS_NUM(self) && IS_NUM(other));
     // TODO: check for overflow and other undefined behaviour. Same for all arithmetic operators.
     return (SlashValue){ .T_info = &num_type_info, .num = self.num + other.num };
@@ -279,9 +282,123 @@ SlashValue text_lit_to_str(Interpreter *interpreter, SlashValue self)
  * map impl
  */
 
+
 /*
  * list impl
  */
+SlashValue list_plus(Interpreter *interpreter, SlashValue self, SlashValue other)
+{
+    //TODO: 1. We can prealloc the memory since we know the size
+    //      2. We can use something like memcpy to copy all data in one batch
+    assert(IS_LIST(self) && IS_LIST(self));
+    SlashList *new_list = (SlashList *)gc_new_T(interpreter, &list_type_info);
+    slash_list_init(interpreter, &new_list->list);
+
+    SlashListImpl a = AS_LIST(self)->list;
+    for (size_t i = 0; i < a.len; i++)
+        slash_list_append(interpreter, &new_list->list, a.items[i]);
+
+    SlashListImpl b = AS_LIST(other)->list;
+    for (size_t i = 0; i < b.len; i++)
+        slash_list_append(interpreter, &new_list->list, b.items[i]);
+
+    return AS_VALUE((SlashObj *)new_list);
+}
+
+SlashValue list_unary_not(SlashValue self)
+{
+    assert(IS_LIST(self));
+    return (SlashValue){ .T_info = &bool_type_info, .boolean = !self.T_info->truthy(self) };
+}
+
+void list_print(SlashValue self)
+{
+    assert(IS_LIST(self));
+    SlashListImpl underlying = AS_LIST(self)->list;
+    putchar('[');
+    for (size_t i = 0; i < underlying.len; i++) {
+        SlashValue item = underlying.items[i];
+        assert(item.T_info->print != NULL);
+        item.T_info->print(item);
+        if (i != underlying.len - 1)
+            printf(", ");
+    }
+    putchar(']');
+}
+
+//TODO: we have no easy mechanism to build a string rn.
+typedef SlashValue (*TraitToStr)(Interpreter *interpreter, SlashValue self);
+
+SlashValue list_item_get(Interpreter *interpreter, SlashValue self, SlashValue other)
+{
+    (void)interpreter;
+    assert(IS_LIST(self));
+    assert(IS_NUM(other)); //TODO: implement for range
+    if (!NUM_IS_INT(other))
+	REPORT_RUNTIME_ERROR("List index can not be a floating point number: '%f'", other.num);
+
+    SlashListImpl list = AS_LIST(self)->list;
+    int index = (int)other.num;
+    if (index < 0 || (size_t)index >= list.len)
+	REPORT_RUNTIME_ERROR("List index '%d' out of range for list with len '%zu'", index, list.len);
+
+    /* Know the index is valid */
+    return slash_list_get(&list, index);
+}
+
+void list_item_assign(Interpreter *interpreter, SlashValue self, SlashValue index, SlashValue other)
+{
+    assert(IS_LIST(self));
+    assert(IS_NUM(index)); //TODO: implement for range
+    if (!NUM_IS_INT(index))
+	REPORT_RUNTIME_ERROR("List index can not be a floating point number: '%f'", index.num);
+
+    SlashListImpl list = AS_LIST(self)->list;
+    int idx = (int)index.num;
+    if (idx < 0 || (size_t)idx >= list.len)
+	REPORT_RUNTIME_ERROR("List index '%d' out of range for list with len '%zu'", idx, list.len);
+
+    /* Know the index is valid */
+    slash_list_set(interpreter, &list, other, idx);
+}
+
+bool list_item_in(SlashValue self, SlashValue other)
+{
+    assert(IS_LIST(self));
+    return slash_list_index_of(&AS_LIST(self)->list, other) != SIZE_MAX;
+}
+
+bool list_truthy(SlashValue self)
+{
+    assert(IS_LIST(self));
+    return AS_LIST(self)->list.len != 0;
+}
+
+bool list_eq(SlashValue self, SlashValue other)
+{
+    assert(IS_LIST(self) && IS_LIST(other));
+    SlashListImpl a = AS_LIST(self)->list;
+    SlashListImpl b = AS_LIST(other)->list;
+    if (a.len != b.len)
+        return false;
+
+    /* Know the two lists have the same length */
+    for (size_t i = 0; i < a.len; i++) {
+        SlashValue A = slash_list_get(&a, i);
+        SlashValue B = slash_list_get(&a, i);
+        if (!TYPE_EQ(A, B))
+            return false;
+        /* Know A and B have the same types */
+        TraitEq item_eq = A.T_info->eq;
+        if (item_eq == NULL)
+            REPORT_RUNTIME_ERROR("Could not check if lists are equal because it contains at least one item of type '%s' where eq is not defined.", A.T_info->name)
+        if (!item_eq(A, B))
+            return false;
+    }
+
+    return true;
+}
+
 
 /*
  * tuple impl
@@ -313,7 +430,7 @@ void slash_str_init_from_alloced_cstr(SlashStr *str, char *cstr)
 void str_print(SlashValue self)
 {
     assert(IS_STR(self));
-    printf("%s", AS_STR(self)->str);
+    printf("\"%s\"", AS_STR(self)->str);
 }
 
 
@@ -446,7 +563,7 @@ SlashTypeInfo map_type_info = { .name = "map",
 				.obj_size = sizeof(SlashMap) };
 
 SlashTypeInfo list_type_info = { .name = "list",
-				 .plus = NULL,
+				 .plus = list_plus,
 				 .minus = NULL,
 				 .mul = NULL,
 				 .div = NULL,
@@ -454,14 +571,14 @@ SlashTypeInfo list_type_info = { .name = "list",
 				 .pow = NULL,
 				 .mod = NULL,
 				 .unary_minus = NULL,
-				 .unary_not = NULL,
-				 .print = NULL,
+				 .unary_not = list_unary_not,
+				 .print = list_print,
 				 .to_str = NULL,
-				 .item_get = NULL,
-				 .item_assign = NULL,
-				 .item_in = NULL,
-				 .truthy = NULL,
-				 .eq = NULL,
+				 .item_get = list_item_get,
+				 .item_assign = list_item_assign,
+				 .item_in = list_item_in,
+				 .truthy = list_truthy,
+				 .eq = list_eq,
 				 .cmp = NULL,
 				 .hash = NULL,
 				 .init = NULL,

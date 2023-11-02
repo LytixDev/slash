@@ -45,17 +45,9 @@ typedef struct slash_obj_t {
  * Slash Objects.
  * Each object has the Object "head" meaning we can pass around pointers to objects
  * and achieve some sort of polymorphism similar to Expr and Stmt in the AST.
+ *
+ * SlashMap defined in ./slash_map.h and SlashList in ./slash_list.h
  */
-typedef struct {
-    SlashObj obj;
-    ArrayList list;
-} SlashList;
-
-typedef struct {
-    SlashObj obj;
-    HashMap map;
-} SlashMap;
-
 typedef struct {
     SlashObj obj;
     size_t size;

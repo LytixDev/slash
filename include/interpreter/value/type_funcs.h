@@ -25,7 +25,7 @@ typedef struct slash_value_t SlashValue; // Forward decl
 
 
 /* Operators */
-typedef SlashValue (*OpPlus)(SlashValue self, SlashValue other);
+typedef SlashValue (*OpPlus)(Interpreter *interpreter, SlashValue self, SlashValue other);
 typedef SlashValue (*OpMinus)(SlashValue self, SlashValue other);
 typedef SlashValue (*OpMul)(SlashValue self, SlashValue other);
 typedef SlashValue (*OpDiv)(SlashValue self, SlashValue other);
@@ -39,7 +39,7 @@ typedef SlashValue (*OpUnaryNot)(SlashValue self);
 typedef void (*TraitPrint)(SlashValue self);
 typedef SlashValue (*TraitToStr)(Interpreter *interpreter, SlashValue self);
 typedef SlashValue (*TraitItemGet)(Interpreter *interpreter, SlashValue self, SlashValue other);
-typedef void (*TraitItemAssign)(SlashValue *self, SlashValue index, SlashValue other);
+typedef void (*TraitItemAssign)(Interpreter *interpreter, SlashValue self, SlashValue index, SlashValue other);
 /* Equality and hashing traits */
 typedef bool (*TraitItemIn)(SlashValue self, SlashValue other);
 typedef bool (*TraitTruthy)(SlashValue self);

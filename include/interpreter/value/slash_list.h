@@ -31,13 +31,19 @@
 #define SLASH_LIST_STARTING_CAP 8
 #define SLASH_LIST_GROW_CAPACITY(capacity) ((capacity) < 8 ? 8 : (capacity)*2)
 
-typedef struct {
+typedef struct slash_list_impl_t {
     SlashValue *items;
     size_t len;
     size_t cap;
 } SlashListImpl;
 
+typedef struct {
+    SlashObj obj;
+    SlashListImpl list;
+} SlashList;
 
+
+/* Functions */
 void slash_list_init(Interpreter *interpreter, SlashListImpl *list);
 void slash_list_free(Interpreter *interpreter, SlashListImpl *list);
 
@@ -45,6 +51,7 @@ bool slash_list_set(Interpreter *interpreter, SlashListImpl *list, SlashValue va
 bool slash_list_append(Interpreter *interpreter, SlashListImpl *list, SlashValue val);
 
 SlashValue slash_list_get(SlashListImpl *list, size_t idx);
+/* Returns SIZE_MAX if value is not found in list */
 size_t slash_list_index_of(SlashListImpl *list, SlashValue val);
 
 bool slash_list_rm(SlashListImpl *list, size_t idx);

@@ -20,6 +20,7 @@
 
 #include <stdlib.h>
 
+#include "interpreter/interpreter.h"
 #include "interpreter/value/slash_value.h"
 
 /*
@@ -56,11 +57,16 @@ typedef struct {
     size_t len; // total items stored in the hashmap
 } SlashMapImpl;
 
+typedef struct {
+    SlashObj obj;
+    HashMap map;
+} SlashMap;
 
-void slash_map_init(SlashMapImpl *map);
-void slash_map_free(SlashMapImpl *map);
+/* Functions */
+void slash_map_init(Interpreter *interpreter, SlashMapImpl *map);
+void slash_map_free(Interpreter *interpreter, SlashMapImpl *map);
 
-void slash_map_put(SlashMapImpl *map, SlashValue key, SlashValue value);
+void slash_map_put(Interpreter *interpreter, SlashMapImpl *map, SlashValue key, SlashValue value);
 SlashValue slash_map_get(SlashMapImpl *map, SlashValue key);
 
 bool slash_map_rm(SlashMapImpl *map, SlashValue key);

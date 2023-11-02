@@ -20,7 +20,7 @@
 
 #include "interpreter/error.h"
 #include "interpreter/gc.h"
-#include "interpreter/value/slash_list_impl.h"
+#include "interpreter/value/slash_list.h"
 #include "interpreter/value/slash_value.h"
 
 
@@ -40,7 +40,12 @@ static void ensure_capacity(Interpreter *interpreter, SlashListImpl *list)
 
 void slash_list_init(Interpreter *interpreter, SlashListImpl *list)
 {
+
+#ifdef SLASH_LIST_STARTING_CAP
     list->cap = SLASH_LIST_STARTING_CAP;
+#elif
+    list->cap = 8;
+#endif
     list->len = 0;
     list->items = gc_alloc(interpreter, sizeof(SlashValue) * list->cap);
 }

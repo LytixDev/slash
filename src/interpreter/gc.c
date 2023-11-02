@@ -19,6 +19,8 @@
 #include "interpreter/error.h"
 #include "interpreter/gc.h"
 #include "interpreter/value/slash_value.h"
+#include "interpreter/value/slash_list.h"
+#include "interpreter/value/slash_map.h"
 #include "nicc/nicc.h"
 
 #ifdef DEBUG_LOG_GC
@@ -34,7 +36,7 @@ static void gc_sweep_obj(SlashObj *obj)
     if (IS_MAP(value)) {
 	hashmap_free(&AS_MAP(value)->map);
     } else if (IS_LIST(value)) {
-	arraylist_free(&AS_LIST(value)->list);
+	//arraylist_free(&AS_LIST(value)->list);
     } else if (IS_TUPLE(value)) {
 	free(AS_TUPLE(value)->tuple);
     } else if (IS_STR(value)) {
@@ -133,10 +135,10 @@ static void gc_blacken_obj(Interpreter *interpreter, SlashObj *obj)
 	}
     } else if (IS_LIST(value)) {
 	SlashList *list = AS_LIST(value);
-	for (size_t i = 0; i < list->list.size; i++) {
-	    SlashValue *v = arraylist_get(&list->list, i);
-	    gc_visit_value(interpreter, v);
-	}
+	///for (size_t i = 0; i < list->list.size; i++) {
+	///    SlashValue *v = arraylist_get(&list->list, i);
+	///    gc_visit_value(interpreter, v);
+	///}
     } else if (IS_TUPLE(value)) {
 	SlashTuple *tuple = AS_TUPLE(value);
 	for (size_t i = 0; i < tuple->size; i++)

@@ -31,6 +31,8 @@
 /// #include "interpreter/value/cast.h"
 /// #include "interpreter/value/method.h"
 #include "interpreter/value/slash_value.h"
+#include "interpreter/value/slash_list.h"
+#include "interpreter/value/slash_map.h"
 #include "lib/arena_ll.h"
 #include "lib/str_view.h"
 #include "nicc/nicc.h"
@@ -123,7 +125,7 @@ static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
 
     switch (expr->operator_) {
     case t_plus:
-	return left.T_info->plus(left, right);
+	return left.T_info->plus(interpreter, left, right);
 
     default:
 	REPORT_RUNTIME_ERROR("Unrecognized binary operator");
@@ -255,28 +257,29 @@ static SlashValue eval_str(Interpreter *interpreter, StrExpr *expr)
     slash_str_init_from_view(interpreter, str, &expr->view);
     return AS_VALUE((SlashObj *)str);
 }
-///
-/// static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
-///{
-///     SlashList *list = (SlashList *)gc_alloc(interpreter, SLASH_OBJ_LIST);
-///     gc_shadow_push(&interpreter->gc_shadow_stack, &list->obj);
-///     slash_list_init(list);
-///     SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)list };
-///
-///     if (expr->exprs == NULL)
-///	return value;
-///
-///     LLItem *item;
-///     ARENA_LL_FOR_EACH(&expr->exprs->seq, item)
-///     {
-///	SlashValue element_value = eval(interpreter, item->value);
-///	slash_list_append(list, element_value);
-///     }
-///
-///     gc_shadow_pop(&interpreter->gc_shadow_stack);
-///     return value;
-/// }
-///
+
+static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
+{
+    SlashList *list = (SlashList *)gc_new_T(interpreter, &list_type_info);
+    gc_shadow_push(&interpreter->gc_shadow_stack, &list->obj);
+    slash_list_init(interpreter, &list->list);
+
+    if (expr->exprs == NULL) {
+        gc_shadow_pop(&interpreter->gc_shadow_stack);
+        return AS_VALUE((SlashObj *)list);
+    }
+
+    LLItem *item;
+    ARENA_LL_FOR_EACH(&expr->exprs->seq, item)
+    {
+        SlashValue element_value = eval(interpreter, item->value);
+        slash_list_append(interpreter, &list->list, element_value);
+    }
+
+    gc_shadow_pop(&interpreter->gc_shadow_stack);
+    return AS_VALUE((SlashObj *)list);
+}
+
 /// static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
 ///{
 ///     SlashMap *map = (SlashMap *)gc_alloc(interpreter, SLASH_OBJ_MAP);
@@ -498,7 +501,7 @@ static void exec_subscript_assign(Interpreter *interpreter, AssignStmt *stmt)
 	TraitItemAssign func = self->T_info->item_assign;
 	if (func == NULL)
 	    REPORT_RUNTIME_ERROR("Item assignment not defined for type '%s'", self->T_info->name);
-	func(self, access_index, new_value);
+	func(interpreter, *self, access_index, new_value);
 	return;
     }
 
@@ -512,7 +515,7 @@ static void exec_subscript_assign(Interpreter *interpreter, AssignStmt *stmt)
 	if (func == NULL)
 	    REPORT_RUNTIME_ERROR("'+' operator not defined for type '%s'",
 				 current_item_value.T_info->name);
-	new_value = func(current_item_value, new_value);
+	new_value = func(interpreter, current_item_value, new_value);
     } else {
 	REPORT_RUNTIME_ERROR("TODO: FIX SUBSCRIPT ASSSIGN");
     }
@@ -520,7 +523,7 @@ static void exec_subscript_assign(Interpreter *interpreter, AssignStmt *stmt)
     TraitItemAssign func = self->T_info->item_assign;
     if (func == NULL)
 	REPORT_RUNTIME_ERROR("Item assignment not defined for type '%s'", self->T_info->name);
-    func(self, access_index, new_value);
+    func(interpreter, *self, access_index, new_value);
 }
 
 static void exec_assign_unpack(Interpreter *interpreter, AssignStmt *stmt)
@@ -899,8 +902,8 @@ static SlashValue eval(Interpreter *interpreter, Expr *expr)
 	return eval_subshell(interpreter, (SubshellExpr *)expr);
     case EXPR_STR:
 	return eval_str(interpreter, (StrExpr *)expr);
-	///    case EXPR_LIST:
-	///	return eval_list(interpreter, (ListExpr *)expr);
+    case EXPR_LIST:
+	return eval_list(interpreter, (ListExpr *)expr);
 	///    case EXPR_MAP:
 	///	return eval_map(interpreter, (MapExpr *)expr);
 	///    case EXPR_METHOD:
