@@ -19,8 +19,7 @@
 
 #include "interpreter/interpreter.h"
 #include "interpreter/scope.h"
-#include "interpreter/types/slash_value.h"
-#include "interpreter/types/trait.h"
+#include "interpreter/value/slash_value.h"
 #include "nicc/nicc.h"
 
 
@@ -28,22 +27,22 @@ int builtin_vars(Interpreter *interpreter, size_t argc, SlashValue *argv)
 {
     (void)argc;
     (void)argv;
-    for (Scope *scope = interpreter->scope; scope != NULL; scope = scope->enclosing) {
-	HashMap map = scope->values;
-	char *keys[map.len];
-	SlashValue *values[map.len];
-	hashmap_get_keys(&map, (void **)keys);
-	hashmap_get_values(&map, (void **)values);
+    /// for (Scope *scope = interpreter->scope; scope != NULL; scope = scope->enclosing) {
+    ///     HashMap map = scope->values;
+    ///     char *keys[map.len];
+    ///     SlashValue *values[map.len];
+    ///     hashmap_get_keys(&map, (void **)keys);
+    ///     hashmap_get_values(&map, (void **)values);
 
-	for (size_t i = 0; i < map.len; i++) {
-	    // char *var = vars[i];
-	    SlashValue *value = values[i];
-	    putchar('=');
-	    TraitPrint print_func = trait_print[value->type];
-	    print_func(value);
-	    putchar('\n');
-	}
-    }
+    ///    for (size_t i = 0; i < map.len; i++) {
+    ///        // char *var = vars[i];
+    ///        SlashValue *value = values[i];
+    ///        putchar('=');
+    ///        TraitPrint print_func = trait_print[value->type];
+    ///        print_func(value);
+    ///        putchar('\n');
+    ///    }
+    ///}
 
     return 0;
 }

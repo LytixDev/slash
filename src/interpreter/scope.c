@@ -18,8 +18,7 @@
 #include <stdio.h>
 
 #include "interpreter/scope.h"
-#include "interpreter/types/slash_str.h"
-#include "interpreter/types/slash_value.h"
+#include "interpreter/value/slash_value.h"
 #include "lib/str_view.h"
 #include "nicc/nicc.h"
 #include "sac/sac.h"
@@ -42,13 +41,10 @@ static int get_char_pos(char *str, char m)
 static void define_scope_alloced_var(Scope *scope, StrView *key, char *cstr)
 {
     SlashStr *str = scope_alloc(scope, sizeof(SlashStr));
-    str->obj.gc_managed = false;
-    str->obj.type = SLASH_OBJ_STR;
+    str->obj.T_info = &str_type_info;
     slash_str_init_from_alloced_cstr(str, cstr);
-    SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)str };
-    var_define(scope, key, &value);
+    var_define(scope, key, &AS_VALUE((SlashObj *)str));
 }
-
 
 static void set_globals(Scope *scope)
 {
@@ -87,7 +83,7 @@ void scope_init_globals(Scope *scope, Arena *arena, int argc, char **argv)
     set_globals(scope);
     scope_init_argv(scope, argc, argv);
     /* Define '$?' that holds the value of the previous exit code */
-    SlashValue exit_code_value = { .type = SLASH_NUM, .num = 0 };
+    SlashValue exit_code_value = { .T_info = &num_type_info, .num = 0 };
     var_define(scope, &(StrView){ .view = "?", .size = 1 }, &exit_code_value);
 }
 
@@ -118,9 +114,8 @@ void *scope_alloc(Scope *scope, size_t size)
 
 void var_define(Scope *scope, StrView *key, SlashValue *value)
 {
-    /* define value to SLASH_NONE */
     if (value == NULL) {
-	SlashValue none = { .type = SLASH_NONE };
+	SlashValue none = { .T_info = &none_type_info };
 	hashmap_put(&scope->values, key->view, (uint32_t)key->size, &none, sizeof(SlashValue),
 		    true);
 	return;

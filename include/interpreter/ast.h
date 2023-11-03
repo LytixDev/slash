@@ -18,7 +18,7 @@
 #define AST_H
 
 #include "interpreter/lexer.h"
-#include "interpreter/types/slash_value.h"
+#include "interpreter/value/slash_value.h"
 #include "lib/arena_ll.h"
 #include "sac/sac.h"
 
@@ -148,7 +148,7 @@ typedef struct {
 typedef struct {
     ExprType type;
     Expr *expr;
-    SlashType as;
+    /// SlashType as;
 } CastExpr;
 
 

@@ -14,27 +14,12 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef SLASH_OBJ_H
-#define SLASH_OBJ_H
-
-#include <stdbool.h>
-
-#include "interpreter/scope.h"
-#include "interpreter/types/trait.h"
-
-typedef enum {
-    SLASH_OBJ_LIST,
-    SLASH_OBJ_TUPLE,
-    SLASH_OBJ_MAP,
-    SLASH_OBJ_STR,
-    SLASH_OBJ_TYPE_COUNT,
-} SlashObjType;
-
-struct slash_obj_t {
-    SlashObjType type;
-    bool gc_managed;
-    bool gc_marked;
-    ObjTraits *traits;
-};
-
-#endif /* SLASH_OBJ_H */
+/// #ifndef SLASH_CAST_H
+/// #define SLASH_CAST_H
+///
+/// #include "interpreter/interpreter.h"
+/// #include "interpreter/types/slash_value.h"
+///
+/// SlashValue dynamic_cast(Interpreter *interpreter, SlashValue old, SlashType new_type);
+///
+/// #endif /* SLASH_CAST_H */

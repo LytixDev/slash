@@ -50,10 +50,6 @@
     X(and)             \
     X(or)              \
     X(not )            \
-    X(str)             \
-    X(num)             \
-    X(bool)            \
-    X(none)            \
     X(assert)          \
     X(break)           \
     X(continue)
@@ -104,7 +100,7 @@
     X(percent_equal)
 #define DATA_TYPE_TOKENS \
     X(dt_str)            \
-    X(dt_num) X(dt_range) X(dt_bool) X(dt_shident) X(dt_list) X(dt_tuple) X(dt_map) X(dt_none)
+    X(dt_num) X(dt_range) X(dt_bool) X(dt_text_lit) X(dt_list) X(dt_tuple) X(dt_map) X(dt_none)
 #define REST_TOKENS \
     X(access)       \
     X(ident)        \

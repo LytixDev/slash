@@ -18,7 +18,7 @@
 #define BUILTIN_H
 
 #include "interpreter/interpreter.h"
-#include "interpreter/types/slash_value.h"
+#include "interpreter/value/slash_value.h"
 
 #define PROGRAM_PATH_MAX_LEN 512
 

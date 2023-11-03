@@ -28,14 +28,11 @@
 #include "interpreter/interpreter.h"
 #include "interpreter/lexer.h"
 #include "interpreter/scope.h"
-#include "interpreter/types/cast.h"
-#include "interpreter/types/method.h"
-#include "interpreter/types/slash_list.h"
-#include "interpreter/types/slash_map.h"
-#include "interpreter/types/slash_str.h"
-#include "interpreter/types/slash_tuple.h"
-#include "interpreter/types/slash_value.h"
-#include "interpreter/types/trait.h"
+/// #include "interpreter/value/cast.h"
+/// #include "interpreter/value/method.h"
+#include "interpreter/value/slash_value.h"
+#include "interpreter/value/slash_list.h"
+#include "interpreter/value/slash_map.h"
 #include "lib/arena_ll.h"
 #include "lib/str_view.h"
 #include "nicc/nicc.h"
@@ -50,7 +47,7 @@ static void exec(Interpreter *interpreter, Stmt *stmt);
 static void set_exit_code(Interpreter *interpreter, int exit_code)
 {
     interpreter->prev_exit_code = exit_code;
-    SlashValue value = { .type = SLASH_NUM, .num = interpreter->prev_exit_code };
+    SlashValue value = { .T_info = &num_type_info, .num = interpreter->prev_exit_code };
     var_assign(&(StrView){ .view = "?", .size = 1 }, &interpreter->globals, &value);
 }
 
@@ -77,10 +74,12 @@ static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt, char *pro
 	ARENA_LL_FOR_EACH(stmt->arg_exprs, item)
 	{
 	    SlashValue value = eval(interpreter, item->value);
-	    TraitToStr to_str = trait_to_str[value.type];
-	    SlashValue value_str_repr = to_str(interpreter, &value);
+	    TraitToStr to_str = value.T_info->to_str;
+	    if (to_str == NULL)
+		REPORT_RUNTIME_ERROR("Could not take to_str of type '%s'", value.T_info->name);
+	    SlashValue value_str_repr = to_str(interpreter, value);
 	    gc_shadow_push(&interpreter->gc_shadow_stack, value_str_repr.obj);
-	    argv[i++] = ((SlashStr *)(value_str_repr.obj))->p;
+	    argv[i++] = AS_STR(value_str_repr)->str;
 	}
     }
 
@@ -92,14 +91,6 @@ static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt, char *pro
     set_exit_code(interpreter, exit_code);
 }
 
-static void check_num_operands(SlashValue *left, SlashValue *right)
-{
-    if (!(left->type == SLASH_NUM && right->type == SLASH_NUM))
-	REPORT_RUNTIME_ERROR(
-	    "Binary operation only supported for two numbers and not '%s' and '%s'",
-	    SLASH_TYPE_TO_STR(left), SLASH_TYPE_TO_STR(right));
-}
-
 
 /*
  * expression evaluation functions
@@ -107,167 +98,81 @@ static void check_num_operands(SlashValue *left, SlashValue *right)
 static SlashValue eval_unary(Interpreter *interpreter, UnaryExpr *expr)
 {
     SlashValue right = eval(interpreter, expr->right);
-    if (expr->operator_ == t_not)
-	return (SlashValue){ .type = SLASH_BOOL, .boolean = !is_truthy(&right) };
-    if (expr->operator_ == t_minus) {
-	if (right.type != SLASH_NUM)
-	    REPORT_RUNTIME_ERROR("'-' operator not defined for type '%s'",
-				 SLASH_TYPE_TO_STR(&right));
-	right.num = -right.num;
-	return right;
+    if (expr->operator_ == t_not) {
+	OpUnaryNot func = right.T_info->unary_not;
+	if (func == NULL)
+	    REPORT_RUNTIME_ERROR("'not' operator not defined for type '%s'", right.T_info->name);
+	return func(right);
+    } else if (expr->operator_ == t_minus) {
+	OpUnaryMinus func = right.T_info->unary_minus;
+	if (func == NULL)
+	    REPORT_RUNTIME_ERROR("Unary '-' not defined for type '%s'", right.T_info->name);
+	return func(right);
     }
 
+    REPORT_RUNTIME_ERROR("Internal error: Unsupported unary operator parsed correctly.");
     ASSERT_NOT_REACHED;
-    return (SlashValue){ 0 };
-}
-
-static SlashValue cmp_binary_values(Interpreter *interpreter, SlashValue left, SlashValue right,
-				    TokenType operator)
-{
-    SlashValue result = { 0 };
-
-    switch (operator) {
-    case t_greater:
-	check_num_operands(&left, &right);
-	result = (SlashValue){ .type = SLASH_BOOL, .boolean = left.num > right.num };
-	break;
-    case t_greater_equal:
-	check_num_operands(&left, &right);
-	result = (SlashValue){ .type = SLASH_BOOL, .boolean = left.num >= right.num };
-	break;
-    case t_less:
-	check_num_operands(&left, &right);
-	result = (SlashValue){ .type = SLASH_BOOL, .boolean = left.num < right.num };
-	break;
-    case t_less_equal:
-	check_num_operands(&left, &right);
-	result = (SlashValue){ .type = SLASH_BOOL, .boolean = left.num <= right.num };
-	break;
-
-    case t_plus: {
-	if (left.type == SLASH_NUM && right.type == SLASH_NUM) {
-	    result = (SlashValue){ .type = SLASH_NUM, .num = left.num + right.num };
-	} else if (IS_OBJ(left.type) && left.obj->type == SLASH_OBJ_LIST) {
-	    if (IS_OBJ(right.type) && right.obj->type == SLASH_OBJ_LIST) {
-		slash_list_append_list((SlashList *)left.obj, (SlashList *)right.obj);
-		return left;
-	    } else if (!IS_OBJ(right.type)) {
-		slash_list_append((SlashList *)left.obj, right);
-		return left;
-	    } else {
-		REPORT_RUNTIME_ERROR("'+' operator on '%s' and '%s' not supported",
-				     SLASH_TYPE_TO_STR(&left), SLASH_TYPE_TO_STR(&right));
-	    }
-	} else if (IS_OBJ(left.type) && left.obj->type == SLASH_OBJ_STR && IS_OBJ(right.type) &&
-		   right.obj->type == SLASH_OBJ_STR) {
-	    SlashStr *str = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
-	    slash_str_init_and_concat(str, (SlashStr *)left.obj, (SlashStr *)right.obj);
-	    return (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)str };
-	} else {
-	    REPORT_RUNTIME_ERROR("'+' operator on '%s' and '%s' not supported",
-				 SLASH_TYPE_TO_STR(&left), SLASH_TYPE_TO_STR(&right));
-	}
-	break;
-    }
-
-    case t_minus:
-	check_num_operands(&left, &right);
-	result = (SlashValue){ .type = SLASH_NUM, .num = left.num - right.num };
-	break;
-
-    case t_slash: {
-	if (right.num == 0)
-	    REPORT_RUNTIME_ERROR("Division by zero error");
-	check_num_operands(&left, &right);
-	result = (SlashValue){ .type = SLASH_NUM, .num = left.num / right.num };
-	break;
-    }
-    case t_slash_slash: {
-	if (right.num == 0)
-	    REPORT_RUNTIME_ERROR("Division by zero error");
-	check_num_operands(&left, &right);
-	result = (SlashValue){ .type = SLASH_NUM, .num = (int)(left.num / right.num) };
-	break;
-    }
-
-    case t_percent: {
-	if (right.num == 0)
-	    REPORT_RUNTIME_ERROR("Modulo by zero error");
-	check_num_operands(&left, &right);
-	double m = fmod(left.num, right.num);
-	/* same behaviour as we tend to see in maths */
-	m = m < 0 && right.num > 0 ? m + right.num : m;
-	result = (SlashValue){ .type = SLASH_NUM, .num = m };
-	break;
-    }
-
-    case t_star:
-	check_num_operands(&left, &right);
-	result = (SlashValue){ .type = SLASH_NUM, .num = left.num * right.num };
-	break;
-    case t_star_star:
-	check_num_operands(&left, &right);
-	result = (SlashValue){ .type = SLASH_NUM, .num = pow(left.num, right.num) };
-	break;
-
-    case t_equal_equal:
-	result = (SlashValue){ .type = SLASH_BOOL, .boolean = slash_value_eq(&left, &right) };
-	break;
-
-    case t_bang_equal:
-	result = (SlashValue){ .type = SLASH_BOOL, .boolean = !slash_value_eq(&left, &right) };
-	break;
-
-    default:
-	REPORT_RUNTIME_ERROR("Unrecognized binary operator");
-	ASSERT_NOT_REACHED;
-	return (SlashValue){ 0 };
-    }
-
-    return result;
+    return NoneSingleton; // make the compiler happy
 }
 
 static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
 {
-    SlashValue return_value;
     SlashValue left = eval(interpreter, expr->left);
-    if (IS_OBJ(left.type))
-	gc_shadow_push(&interpreter->gc_shadow_stack, left.obj);
-
-    /* logical operators */
-    if (expr->operator_ == t_and) {
-	if (!is_truthy(&left)) {
-	    return_value = (SlashValue){ .type = SLASH_BOOL, .boolean = false };
-	    goto defer_shadow_pop;
-	}
-	SlashValue right = eval(interpreter, expr->right);
-	return_value = (SlashValue){ .type = SLASH_BOOL, .boolean = is_truthy(&right) };
-	goto defer_shadow_pop;
-    }
     SlashValue right = eval(interpreter, expr->right);
-    if (expr->operator_ == t_or) {
-	return_value =
-	    (SlashValue){ .type = SLASH_BOOL, .boolean = is_truthy(&left) || is_truthy(&right) };
-	goto defer_shadow_pop;
+    if (!TYPE_EQ(left, right))
+	REPORT_RUNTIME_ERROR("Binary operation failed: type mismatch between '%s' and '%s'",
+			     left.T_info->name, right.T_info->name);
+
+    switch (expr->operator_) {
+    case t_plus:
+	return left.T_info->plus(interpreter, left, right);
+
+    default:
+	REPORT_RUNTIME_ERROR("Unrecognized binary operator");
     }
-
-    if (expr->operator_ != t_in) {
-	return_value = cmp_binary_values(interpreter, left, right, expr->operator_);
-	goto defer_shadow_pop;
-    }
-
-    /* left "IN" right */
-    TraitItemIn func = trait_item_in[right.type];
-    bool rc = func(&right, &left);
-    return_value = (SlashValue){ .type = SLASH_BOOL, .boolean = rc };
-
-defer_shadow_pop:
-    if (IS_OBJ(left.type))
-	gc_shadow_pop(&interpreter->gc_shadow_stack);
-    return return_value;
 }
 
-
+/// static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
+///{
+///     SlashValue return_value;
+///     SlashValue left = eval(interpreter, expr->left);
+///     if (IS_OBJ(left.type))
+///	gc_shadow_push(&interpreter->gc_shadow_stack, left.obj);
+///
+///     /* logical operators */
+///     if (expr->operator_ == t_and) {
+///	if (!is_truthy(&left)) {
+///	    return_value = (SlashValue){ .type = SLASH_BOOL, .boolean = false };
+///	    goto defer_shadow_pop;
+///	}
+///	SlashValue right = eval(interpreter, expr->right);
+///	return_value = (SlashValue){ .type = SLASH_BOOL, .boolean = is_truthy(&right) };
+///	goto defer_shadow_pop;
+///     }
+///     SlashValue right = eval(interpreter, expr->right);
+///     if (expr->operator_ == t_or) {
+///	return_value =
+///	    (SlashValue){ .type = SLASH_BOOL, .boolean = is_truthy(&left) || is_truthy(&right) };
+///	goto defer_shadow_pop;
+///     }
+///
+///     if (expr->operator_ != t_in) {
+///	REPORT_RUNTIME_ERROR("TODO: add binary operator traits");
+///	goto defer_shadow_pop;
+///     }
+///
+///     /* left "IN" right */
+///     TraitItemIn func = trait_item_in[right.type];
+///     bool rc = func(&right, &left);
+///     return_value = (SlashValue){ .type = SLASH_BOOL, .boolean = rc };
+///
+/// defer_shadow_pop:
+///     if (IS_OBJ(left.type))
+///	gc_shadow_pop(&interpreter->gc_shadow_stack);
+///     return return_value;
+/// }
+///
+///
 static SlashValue eval_literal(Interpreter *interpreter, LiteralExpr *expr)
 {
     (void)interpreter;
@@ -279,7 +184,7 @@ static SlashValue eval_access(Interpreter *interpreter, AccessExpr *expr)
     ScopeAndValue sv = var_get(interpreter->scope, &expr->var_name);
     /* If variable is not defined, then return None. Same behaviour as POSIX sh I think */
     if (sv.value == NULL)
-	return (SlashValue){ .type = SLASH_NONE };
+	return NoneSingleton;
 
     return *sv.value;
 }
@@ -288,9 +193,10 @@ static SlashValue eval_subscript(Interpreter *interpreter, SubscriptExpr *expr)
 {
     SlashValue value = eval(interpreter, expr->expr);
     SlashValue access_index = eval(interpreter, expr->access_value);
-    TraitItemGet func = trait_item_get[value.type];
-    SlashValue item = func(interpreter, &value, &access_index);
-    return item;
+    TraitItemGet func = value.T_info->item_get;
+    if (func == NULL)
+	REPORT_RUNTIME_ERROR("'[]' operator not defined for type '%s'", value.T_info->name);
+    return func(interpreter, value, access_index);
 }
 
 static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
@@ -309,174 +215,177 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
     /* restore original write fd */
     stream_ctx->write_fd = original_write_fd;
 
-    // TODO: dynamic buffer coupled with SlashStr
+    // TODO: dynamic buffer
     char buffer[4096] = { 0 };
     size_t size = read(fd[0], buffer, 4096);
     if (buffer[size - 1] == '\n')
 	size--;
     close(fd[0]);
-    SlashStr *str = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
-    slash_str_init_from_slice(str, buffer, size);
-    return (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)str };
+
+    SlashStr *str = (SlashStr *)gc_new_T(interpreter, &str_type_info);
+    slash_str_init_from_slice(interpreter, str, buffer, size);
+    return AS_VALUE((SlashObj *)str);
 }
 
-static SlashValue eval_tuple(Interpreter *interpreter, SequenceExpr *expr)
-{
-    SlashTuple *tuple = (SlashTuple *)gc_alloc(interpreter, SLASH_OBJ_TUPLE);
-    gc_shadow_push(&interpreter->gc_shadow_stack, &tuple->obj);
-    SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)tuple };
-    // TODO: possible?
-    if (expr->seq.size == 0) {
-	slash_tuple_init(tuple, 0);
-	return value;
-    }
-
-    slash_tuple_init(tuple, expr->seq.size);
-    size_t i = 0;
-    LLItem *item;
-    ARENA_LL_FOR_EACH(&expr->seq, item)
-    {
-	SlashValue element_value = eval(interpreter, item->value);
-	tuple->values[i++] = element_value;
-    }
-
-    gc_shadow_pop(&interpreter->gc_shadow_stack);
-    return value;
-}
+/// static SlashValue eval_tuple(Interpreter *interpreter, SequenceExpr *expr)
+///{
+///     SlashTuple *tuple = (SlashTuple *)gc_alloc(interpreter, SLASH_OBJ_TUPLE);
+///     gc_shadow_push(&interpreter->gc_shadow_stack, &tuple->obj);
+///     SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)tuple };
+///     // TODO: possible?
+///     if (expr->seq.size == 0) {
+///	slash_tuple_init(tuple, 0);
+///	return value;
+///     }
+///
+///     slash_tuple_init(tuple, expr->seq.size);
+///     size_t i = 0;
+///     LLItem *item;
+///     ARENA_LL_FOR_EACH(&expr->seq, item)
+///     {
+///	SlashValue element_value = eval(interpreter, item->value);
+///	tuple->values[i++] = element_value;
+///     }
+///
+///     gc_shadow_pop(&interpreter->gc_shadow_stack);
+///     return value;
+/// }
 
 static SlashValue eval_str(Interpreter *interpreter, StrExpr *expr)
 {
-    SlashStr *str = (SlashStr *)gc_alloc(interpreter, SLASH_OBJ_STR);
-    slash_str_init_from_view(str, &expr->view);
-    return (SlashValue){ .type = SLASH_OBJ, .obj = (SlashObj *)str };
+    SlashStr *str = (SlashStr *)gc_new_T(interpreter, &str_type_info);
+    slash_str_init_from_view(interpreter, str, &expr->view);
+    return AS_VALUE((SlashObj *)str);
 }
 
 static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
 {
-    SlashList *list = (SlashList *)gc_alloc(interpreter, SLASH_OBJ_LIST);
+    SlashList *list = (SlashList *)gc_new_T(interpreter, &list_type_info);
     gc_shadow_push(&interpreter->gc_shadow_stack, &list->obj);
-    slash_list_init(list);
-    SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)list };
+    slash_list_init(interpreter, &list->list);
 
-    if (expr->exprs == NULL)
-	return value;
+    if (expr->exprs == NULL) {
+        gc_shadow_pop(&interpreter->gc_shadow_stack);
+        return AS_VALUE((SlashObj *)list);
+    }
 
     LLItem *item;
     ARENA_LL_FOR_EACH(&expr->exprs->seq, item)
     {
-	SlashValue element_value = eval(interpreter, item->value);
-	slash_list_append(list, element_value);
+        SlashValue element_value = eval(interpreter, item->value);
+        slash_list_append(interpreter, &list->list, element_value);
     }
 
     gc_shadow_pop(&interpreter->gc_shadow_stack);
-    return value;
+    return AS_VALUE((SlashObj *)list);
 }
 
-static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
-{
-    SlashMap *map = (SlashMap *)gc_alloc(interpreter, SLASH_OBJ_MAP);
-    gc_shadow_push(&interpreter->gc_shadow_stack, &map->obj);
-    slash_map_init(map);
-    SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)map };
-
-    if (expr->key_value_pairs == NULL)
-	return value;
-
-    LLItem *item;
-    KeyValuePair *pair;
-    ARENA_LL_FOR_EACH(expr->key_value_pairs, item)
-    {
-	pair = item->value;
-	SlashValue k = eval(interpreter, pair->key);
-	SlashValue v = eval(interpreter, pair->value);
-	value.obj->traits->item_assign(&value, &k, &v);
-    }
-
-    gc_shadow_pop(&interpreter->gc_shadow_stack);
-    return value;
-}
-
-static SlashValue eval_method(Interpreter *interpreter, MethodExpr *expr)
-{
-    SlashValue self = eval(interpreter, expr->obj);
-    if (IS_OBJ(self.type))
-	gc_shadow_push(&interpreter->gc_shadow_stack, self.obj);
-
-    // TODO: fix cursed manual conversion from str_view to cstr
-    size_t method_name_size = expr->method_name.size;
-    char method_name[method_name_size + 1];
-    memcpy(method_name, expr->method_name.view, method_name_size);
-    method_name[method_name_size] = 0;
-
-    /* get method */
-    MethodFunc method = get_method(&self, method_name);
-    if (method == NULL)
-	REPORT_RUNTIME_ERROR("Method '%s' does not exist on type '%s'", method_name,
-			     SLASH_TYPE_TO_STR(&self));
-
-    SlashValue return_value;
-    size_t shadow_push_count = 0;
-    if (expr->args == NULL) {
-	return_value = method(interpreter, &self, 0, NULL);
-    } else {
-	SlashValue argv[expr->args->seq.size];
-	size_t i = 0;
-	LLItem *item;
-	ARENA_LL_FOR_EACH(&expr->args->seq, item)
-	{
-	    SlashValue sv = eval(interpreter, item->value);
-	    if (IS_OBJ(sv.type)) {
-		gc_shadow_push(&interpreter->gc_shadow_stack, sv.obj);
-		shadow_push_count++;
-	    }
-	    argv[i++] = sv;
-	}
-
-	assert(i == expr->args->seq.size);
-	return_value = method(interpreter, &self, i, argv);
-    }
-
-    for (size_t n = 0; n < shadow_push_count; n++)
-	gc_shadow_pop(&interpreter->gc_shadow_stack);
-    if (IS_OBJ(self.type))
-	gc_shadow_pop(&interpreter->gc_shadow_stack);
-
-    return return_value;
-}
-
+/// static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
+///{
+///     SlashMap *map = (SlashMap *)gc_alloc(interpreter, SLASH_OBJ_MAP);
+///     gc_shadow_push(&interpreter->gc_shadow_stack, &map->obj);
+///     slash_map_init(map);
+///     SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)map };
+///
+///     if (expr->key_value_pairs == NULL)
+///	return value;
+///
+///     LLItem *item;
+///     KeyValuePair *pair;
+///     ARENA_LL_FOR_EACH(expr->key_value_pairs, item)
+///     {
+///	pair = item->value;
+///	SlashValue k = eval(interpreter, pair->key);
+///	SlashValue v = eval(interpreter, pair->value);
+///	value.obj->traits->item_assign(&value, &k, &v);
+///     }
+///
+///     gc_shadow_pop(&interpreter->gc_shadow_stack);
+///     return value;
+/// }
+///
+/// static SlashValue eval_method(Interpreter *interpreter, MethodExpr *expr)
+///{
+///     SlashValue self = eval(interpreter, expr->obj);
+///     if (IS_OBJ(self.type))
+///	gc_shadow_push(&interpreter->gc_shadow_stack, self.obj);
+///
+///     // TODO: fix cursed manual conversion from str_view to cstr
+///     size_t method_name_size = expr->method_name.size;
+///     char method_name[method_name_size + 1];
+///     memcpy(method_name, expr->method_name.view, method_name_size);
+///     method_name[method_name_size] = 0;
+///
+///     /* get method */
+///     MethodFunc method = get_method(&self, method_name);
+///     if (method == NULL)
+///	REPORT_RUNTIME_ERROR("Method '%s' does not exist on type '%s'", method_name,
+///			     SLASH_TYPE_TO_STR(&self));
+///
+///     SlashValue return_value;
+///     size_t shadow_push_count = 0;
+///     if (expr->args == NULL) {
+///	return_value = method(interpreter, &self, 0, NULL);
+///     } else {
+///	SlashValue argv[expr->args->seq.size];
+///	size_t i = 0;
+///	LLItem *item;
+///	ARENA_LL_FOR_EACH(&expr->args->seq, item)
+///	{
+///	    SlashValue sv = eval(interpreter, item->value);
+///	    if (IS_OBJ(sv.type)) {
+///		gc_shadow_push(&interpreter->gc_shadow_stack, sv.obj);
+///		shadow_push_count++;
+///	    }
+///	    argv[i++] = sv;
+///	}
+///
+///	assert(i == expr->args->seq.size);
+///	return_value = method(interpreter, &self, i, argv);
+///     }
+///
+///     for (size_t n = 0; n < shadow_push_count; n++)
+///	gc_shadow_pop(&interpreter->gc_shadow_stack);
+///     if (IS_OBJ(self.type))
+///	gc_shadow_pop(&interpreter->gc_shadow_stack);
+///
+///     return return_value;
+/// }
+///
 static SlashValue eval_grouping(Interpreter *interpreter, GroupingExpr *expr)
 {
     return eval(interpreter, expr->expr);
 }
-
-static SlashValue eval_cast(Interpreter *interpreter, CastExpr *expr)
-{
-    SlashValue value = eval(interpreter, expr->expr);
-    /*
-     * When LHS is a subshell and RHS is boolean then the final exit code of the subshell
-     * expression determines the boolean value.
-     */
-    if (expr->as == SLASH_BOOL && expr->expr->type == EXPR_SUBSHELL)
-	return (SlashValue){ .type = SLASH_BOOL,
-			     .boolean = interpreter->prev_exit_code == 0 ? true : false };
-    return dynamic_cast(interpreter, value, expr->as);
-}
-
-
-/*
- * statement execution functions
- */
+///
+/// static SlashValue eval_cast(Interpreter *interpreter, CastExpr *expr)
+///{
+///     SlashValue value = eval(interpreter, expr->expr);
+///     /*
+///      * When LHS is a subshell and RHS is boolean then the final exit code of the subshell
+///      * expression determines the boolean value.
+///      */
+///     if (expr->as == SLASH_BOOL && expr->expr->type == EXPR_SUBSHELL)
+///	return (SlashValue){ .type = SLASH_BOOL,
+///			     .boolean = interpreter->prev_exit_code == 0 ? true : false };
+///     return dynamic_cast(interpreter, value, expr->as);
+/// }
+///
+///
+////*
+///  * statement execution functions
+///  */
 static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
 {
     SlashValue value = eval(interpreter, stmt->expression);
-    TraitPrint print_func = trait_print[value.type];
-    print_func(&value);
-    /* edge case: if last char printed was a newline then we don't bother printing one */
-    if (value.type == SLASH_OBJ && value.obj->type == SLASH_OBJ_STR) {
-	SlashStr *str = (SlashStr *)value.obj;
-	if (slash_str_last_char(str) == '\n')
-	    return;
-    }
+    TraitPrint trait_print = value.T_info->print;
+    assert(trait_print != NULL);
+    trait_print(value);
+    ///* edge case: if last char printed was a newline then we don't bother printing one */
+    // if (value.type == SLASH_OBJ && value.obj->type == SLASH_OBJ_STR) {
+    //     SlashStr *str = (SlashStr *)value.obj;
+    //     if (slash_str_last_char(str) == '\n')
+    //         return;
+    // }
     putchar('\n');
 }
 
@@ -517,11 +426,11 @@ static void exec_seq_var(Interpreter *interpreter, SeqVarStmt *stmt)
 static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
 {
     ScopeAndValue path = var_get(interpreter->scope, &(StrView){ .view = "PATH", .size = 4 });
-    if (!(path.value->type == SLASH_OBJ && path.value->obj->type == SLASH_OBJ_STR))
-	REPORT_RUNTIME_ERROR("PATH variable should be type 'str' not '%s'",
-			     SLASH_TYPE_TO_STR(path.value));
+    if (!IS_STR(*path.value))
+	REPORT_RUNTIME_ERROR("PATH variable should be type '%s' not '%s'", str_type_info.name,
+			     path.value->T_info->name);
 
-    WhichResult which_result = which(stmt->cmd_name, ((SlashStr *)path.value->obj)->p);
+    WhichResult which_result = which(stmt->cmd_name, AS_STR(*path.value)->str);
     if (which_result.type == WHICH_NOT_FOUND)
 	REPORT_RUNTIME_ERROR("Command not found");
 
@@ -549,7 +458,7 @@ static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
 static void exec_if(Interpreter *interpreter, IfStmt *stmt)
 {
     SlashValue r = eval(interpreter, stmt->condition);
-    if (is_truthy(&r))
+    if (r.T_info->truthy(r))
 	exec(interpreter, stmt->then_branch);
     else if (stmt->else_branch != NULL)
 	exec(interpreter, stmt->else_branch);
@@ -589,8 +498,10 @@ static void exec_subscript_assign(Interpreter *interpreter, AssignStmt *stmt)
     SlashValue *self = current.value;
 
     if (stmt->assignment_op == t_equal) {
-	TraitItemAssign func = trait_item_assign[self->type];
-	func(self, &access_index, &new_value);
+	TraitItemAssign func = self->T_info->item_assign;
+	if (func == NULL)
+	    REPORT_RUNTIME_ERROR("Item assignment not defined for type '%s'", self->T_info->name);
+	func(interpreter, *self, access_index, new_value);
 	return;
     }
 
@@ -598,10 +509,21 @@ static void exec_subscript_assign(Interpreter *interpreter, AssignStmt *stmt)
     SlashValue current_item_value = eval_subscript(interpreter, subscript);
     /* convert from += to + and -= to - */
     TokenType operator= stmt->assignment_op == t_plus_equal ? t_plus : t_minus;
-    new_value = cmp_binary_values(interpreter, current_item_value, new_value, operator);
+    /* += means we eval + and then assign */
+    if (operator== t_plus_equal) {
+	OpPlus func = current_item_value.T_info->plus;
+	if (func == NULL)
+	    REPORT_RUNTIME_ERROR("'+' operator not defined for type '%s'",
+				 current_item_value.T_info->name);
+	new_value = func(interpreter, current_item_value, new_value);
+    } else {
+	REPORT_RUNTIME_ERROR("TODO: FIX SUBSCRIPT ASSSIGN");
+    }
 
-    TraitItemAssign func = trait_item_assign[self->type];
-    func(self, &access_index, &new_value);
+    TraitItemAssign func = self->T_info->item_assign;
+    if (func == NULL)
+	REPORT_RUNTIME_ERROR("Item assignment not defined for type '%s'", self->T_info->name);
+    func(interpreter, *self, access_index, new_value);
 }
 
 static void exec_assign_unpack(Interpreter *interpreter, AssignStmt *stmt)
@@ -661,41 +583,42 @@ static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
 	return;
     }
 
-    /* convert from assignment operator to correct binary operator */
-    TokenType operator_ = t_none;
-    switch (stmt->assignment_op) {
-    case t_plus_equal:
-	operator_ = t_plus;
-	break;
-    case t_minus_equal:
-	operator_ = t_minus;
-	break;
-    case t_star_equal:
-	operator_ = t_star;
-	break;
-    case t_star_star_equal:
-	operator_ = t_star_star;
-	break;
-    case t_slash_equal:
-	operator_ = t_slash;
-	break;
-    case t_slash_slash_equal:
-	operator_ = t_slash_slash;
-	break;
-    case t_percent_equal:
-	operator_ = t_percent;
-	break;
-    default:
-	REPORT_RUNTIME_ERROR("Unrecognized assignment operator");
-	ASSERT_NOT_REACHED;
-    }
-    new_value = cmp_binary_values(interpreter, *variable.value, new_value, operator_);
-    /*
-     * For dynamic types the binary compare will update the underlying object.
-     * Therefore, we only assign if the variable type is not dynamic.
-     */
-    if (!IS_OBJ(variable.value->type))
-	var_assign(&var_name, variable.scope, &new_value);
+    REPORT_RUNTIME_ERROR("TODO: FIX ASSIGN");
+    ///    /* convert from assignment operator to correct binary operator */
+    ///    TokenType operator_;
+    ///    switch (stmt->assignment_op) {
+    ///    case t_plus_equal:
+    ///	operator_ = t_plus;
+    ///	break;
+    ///    case t_minus_equal:
+    ///	operator_ = t_minus;
+    ///	break;
+    ///    case t_star_equal:
+    ///	operator_ = t_star;
+    ///	break;
+    ///    case t_star_star_equal:
+    ///	operator_ = t_star_star;
+    ///	break;
+    ///    case t_slash_equal:
+    ///	operator_ = t_slash;
+    ///	break;
+    ///    case t_slash_slash_equal:
+    ///	operator_ = t_slash_slash;
+    ///	break;
+    ///    case t_percent_equal:
+    ///	operator_ = t_percent;
+    ///	break;
+    ///    default:
+    ///	REPORT_RUNTIME_ERROR("Unrecognized assignment operator");
+    ///	ASSERT_NOT_REACHED;
+    ///    }
+    ///    // new_value = cmp_binary_values(interpreter, *variable.value, new_value, operator_);
+    ///    /*
+    ///     * For dynamic types the binary compare will update the underlying object.
+    ///     * Therefore, we only assign if the variable type is not dynamic.
+    ///     */
+    ///    if (!IS_OBJ(variable.value->type))
+    ///	var_assign(&var_name, variable.scope, &new_value);
 }
 
 static void exec_pipeline(Interpreter *interpreter, PipelineStmt *stmt)
@@ -727,7 +650,11 @@ static void exec_pipeline(Interpreter *interpreter, PipelineStmt *stmt)
 static void exec_assert(Interpreter *interpreter, AssertStmt *stmt)
 {
     SlashValue result = eval(interpreter, stmt->expr);
-    if (!is_truthy(&result))
+    TraitTruthy truthy_func = result.T_info->truthy;
+    if (truthy_func == NULL)
+	REPORT_RUNTIME_ERROR("Assertion failed because truthy trait not defined for type '%s'",
+			     result.T_info->name);
+    if (!truthy_func(result))
 	REPORT_RUNTIME_ERROR("Assertion failed");
 }
 
@@ -738,7 +665,11 @@ static void exec_loop(Interpreter *interpreter, LoopStmt *stmt)
     interpreter->scope = block_scope;
 
     SlashValue r = eval(interpreter, stmt->condition);
-    while (is_truthy(&r)) {
+    TraitTruthy truthy_func = r.T_info->truthy;
+    if (truthy_func == NULL)
+	REPORT_RUNTIME_ERROR("Executing loop failed because truthy is not defined for type '%s' ",
+			     r.T_info->name);
+    while (truthy_func(r)) {
 	exec_block_body(interpreter, stmt->body_block);
 	r = eval(interpreter, stmt->condition);
 	scope_reset(block_scope);
@@ -747,134 +678,137 @@ static void exec_loop(Interpreter *interpreter, LoopStmt *stmt)
     scope_destroy(block_scope);
 }
 
-static void exec_iter_loop_list(Interpreter *interpreter, IterLoopStmt *stmt, SlashList *iterable)
-{
-    /* define the loop variable that holds the current iterator value */
-    var_define(interpreter->scope, &stmt->var_name, NULL);
-
-    SlashValue *iterator_value;
-    for (size_t i = 0; i < iterable->underlying.size; i++) {
-	iterator_value = slash_list_get(iterable, i);
-	var_assign(&stmt->var_name, interpreter->scope, iterator_value);
-	exec_block_body(interpreter, stmt->body_block);
-	scope_reset(interpreter->scope);
-    }
-}
-
-static void exec_iter_loop_tuple(Interpreter *interpreter, IterLoopStmt *stmt, SlashTuple *iterable)
-{
-    /* define the loop variable that holds the current iterator value */
-    var_define(interpreter->scope, &stmt->var_name, NULL);
-
-    SlashValue *iterator_value;
-    for (size_t i = 0; i < iterable->size; i++) {
-	iterator_value = &iterable->values[i];
-	var_assign(&stmt->var_name, interpreter->scope, iterator_value);
-	exec_block_body(interpreter, stmt->body_block);
-	scope_reset(interpreter->scope);
-    }
-}
-
-static void exec_iter_loop_map(Interpreter *interpreter, IterLoopStmt *stmt, SlashMap *iterable)
-{
-    if (iterable->underlying.len == 0)
-	return;
-
-    SlashValue keys = slash_map_get_keys(interpreter, iterable);
-    SlashTuple *keys_tuple = (SlashTuple *)keys.obj;
-    /* define the loop variable that holds the current iterator value */
-    var_define(interpreter->scope, &stmt->var_name, NULL);
-
-    SlashValue *iterator_value;
-    for (size_t i = 0; i < keys_tuple->size; i++) {
-	iterator_value = &keys_tuple->values[i];
-	var_assign(&stmt->var_name, interpreter->scope, iterator_value);
-	exec_block_body(interpreter, stmt->body_block);
-	scope_reset(interpreter->scope);
-    }
-}
-
-static void exec_iter_loop_str(Interpreter *interpreter, IterLoopStmt *stmt, SlashStr *iterable)
-{
-    ScopeAndValue ifs_res = var_get(interpreter->scope, &(StrView){ .view = "IFS", .size = 3 });
-    if (ifs_res.value == NULL) {
-	REPORT_RUNTIME_ERROR("No IFS variable found");
-    }
-    if (!(ifs_res.value->type == SLASH_OBJ && ifs_res.value->obj->type == SLASH_OBJ_STR)) {
-	REPORT_RUNTIME_ERROR("Expeted IFS to be of type 'str' but got '%s'",
-			     SLASH_TYPE_TO_STR(ifs_res.value));
-    }
-
-    SlashStr *ifs = (SlashStr *)ifs_res.value->obj;
-    SlashList *substrings = slash_str_internal_split(interpreter, iterable, ifs->p, true);
-    gc_shadow_push(&interpreter->gc_shadow_stack, &substrings->obj);
-    exec_iter_loop_list(interpreter, stmt, substrings);
-    gc_shadow_pop(&interpreter->gc_shadow_stack);
-}
-
-static void exec_iter_loop_range(Interpreter *interpreter, IterLoopStmt *stmt, SlashRange iterable)
-{
-    if (!slash_range_is_nonzero(iterable))
-	return;
-    SlashValue iterator_value = { .type = SLASH_NUM, .num = iterable.start };
-
-    /* define the loop variable that holds the current iterator value */
-    var_define(interpreter->scope, &stmt->var_name, &iterator_value);
-
-    while (iterator_value.num != iterable.end) {
-	exec_block_body(interpreter, stmt->body_block);
-	scope_reset(interpreter->scope);
-	iterator_value.num++;
-	var_assign(&stmt->var_name, interpreter->scope, &iterator_value);
-    }
-}
-
-static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
-{
-    Scope loop_scope;
-    scope_init(&loop_scope, interpreter->scope);
-    interpreter->scope = &loop_scope;
-
-    SlashValue underlying = eval(interpreter, stmt->underlying_iterable);
-    if (IS_OBJ(underlying.type))
-	gc_shadow_push(&interpreter->gc_shadow_stack, underlying.obj);
-
-    switch (underlying.type) {
-    case SLASH_RANGE:
-	exec_iter_loop_range(interpreter, stmt, underlying.range);
-	break;
-    case SLASH_OBJ: {
-	switch (underlying.obj->type) {
-	case SLASH_OBJ_LIST:
-	    exec_iter_loop_list(interpreter, stmt, (SlashList *)underlying.obj);
-	    break;
-	case SLASH_OBJ_TUPLE:
-	    exec_iter_loop_tuple(interpreter, stmt, (SlashTuple *)underlying.obj);
-	    break;
-	case SLASH_OBJ_MAP:
-	    exec_iter_loop_map(interpreter, stmt, (SlashMap *)underlying.obj);
-	    break;
-	case SLASH_OBJ_STR:
-	    exec_iter_loop_str(interpreter, stmt, (SlashStr *)underlying.obj);
-	    break;
-	default:
-	    REPORT_RUNTIME_ERROR("Object type '%s' cannot be iterated over",
-				 SLASH_TYPE_TO_STR(&underlying));
-	    ASSERT_NOT_REACHED;
-	}
-
-    } break;
-    default:
-	REPORT_RUNTIME_ERROR("Type '%s' cannot be iterated over", SLASH_TYPE_TO_STR(&underlying));
-	ASSERT_NOT_REACHED;
-    }
-
-    if (IS_OBJ(underlying.type))
-	gc_shadow_pop(&interpreter->gc_shadow_stack);
-    interpreter->scope = loop_scope.enclosing;
-    scope_destroy(&loop_scope);
-}
-
+/// static void exec_iter_loop_list(Interpreter *interpreter, IterLoopStmt *stmt, SlashList
+/// *iterable)
+///{
+///    /* define the loop variable that holds the current iterator value */
+///    var_define(interpreter->scope, &stmt->var_name, NULL);
+///
+///    SlashValue *iterator_value;
+///    for (size_t i = 0; i < iterable->underlying.size; i++) {
+///	iterator_value = slash_list_get(iterable, i);
+///	var_assign(&stmt->var_name, interpreter->scope, iterator_value);
+///	exec_block_body(interpreter, stmt->body_block);
+///	scope_reset(interpreter->scope);
+///    }
+///}
+///
+/// static void exec_iter_loop_tuple(Interpreter *interpreter, IterLoopStmt *stmt, SlashTuple
+/// *iterable)
+///{
+///    /* define the loop variable that holds the current iterator value */
+///    var_define(interpreter->scope, &stmt->var_name, NULL);
+///
+///    SlashValue *iterator_value;
+///    for (size_t i = 0; i < iterable->size; i++) {
+///	iterator_value = &iterable->values[i];
+///	var_assign(&stmt->var_name, interpreter->scope, iterator_value);
+///	exec_block_body(interpreter, stmt->body_block);
+///	scope_reset(interpreter->scope);
+///    }
+///}
+///
+/// static void exec_iter_loop_map(Interpreter *interpreter, IterLoopStmt *stmt, SlashMap *iterable)
+///{
+///    if (iterable->underlying.len == 0)
+///	return;
+///
+///    SlashValue keys = slash_map_get_keys(interpreter, iterable);
+///    SlashTuple *keys_tuple = (SlashTuple *)keys.obj;
+///    /* define the loop variable that holds the current iterator value */
+///    var_define(interpreter->scope, &stmt->var_name, NULL);
+///
+///    SlashValue *iterator_value;
+///    for (size_t i = 0; i < keys_tuple->size; i++) {
+///	iterator_value = &keys_tuple->values[i];
+///	var_assign(&stmt->var_name, interpreter->scope, iterator_value);
+///	exec_block_body(interpreter, stmt->body_block);
+///	scope_reset(interpreter->scope);
+///    }
+///}
+///
+/// static void exec_iter_loop_str(Interpreter *interpreter, IterLoopStmt *stmt, SlashStr *iterable)
+///{
+///    ScopeAndValue ifs_res = var_get(interpreter->scope, &(StrView){ .view = "IFS", .size = 3 });
+///    if (ifs_res.value == NULL) {
+///	REPORT_RUNTIME_ERROR("No IFS variable found");
+///    }
+///    if (!(ifs_res.value->type == SLASH_OBJ && ifs_res.value->obj->type == SLASH_OBJ_STR)) {
+///	REPORT_RUNTIME_ERROR("Expeted IFS to be of type 'str' but got '%s'",
+///			     SLASH_TYPE_TO_STR(ifs_res.value));
+///    }
+///
+///    SlashStr *ifs = (SlashStr *)ifs_res.value->obj;
+///    SlashList *substrings = slash_str_internal_split(interpreter, iterable, ifs->p, true);
+///    gc_shadow_push(&interpreter->gc_shadow_stack, &substrings->obj);
+///    exec_iter_loop_list(interpreter, stmt, substrings);
+///    gc_shadow_pop(&interpreter->gc_shadow_stack);
+///}
+///
+/// static void exec_iter_loop_range(Interpreter *interpreter, IterLoopStmt *stmt, SlashRange
+/// iterable)
+///{
+///    if (!slash_range_is_nonzero(iterable))
+///	return;
+///    SlashValue iterator_value = { .type = SLASH_NUM, .num = iterable.start };
+///
+///    /* define the loop variable that holds the current iterator value */
+///    var_define(interpreter->scope, &stmt->var_name, &iterator_value);
+///
+///    while (iterator_value.num != iterable.end) {
+///	exec_block_body(interpreter, stmt->body_block);
+///	scope_reset(interpreter->scope);
+///	iterator_value.num++;
+///	var_assign(&stmt->var_name, interpreter->scope, &iterator_value);
+///    }
+///}
+///
+/// static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
+///{
+///    Scope loop_scope;
+///    scope_init(&loop_scope, interpreter->scope);
+///    interpreter->scope = &loop_scope;
+///
+///    SlashValue underlying = eval(interpreter, stmt->underlying_iterable);
+///    if (IS_OBJ(underlying.type))
+///	gc_shadow_push(&interpreter->gc_shadow_stack, underlying.obj);
+///
+///    switch (underlying.type) {
+///    case SLASH_RANGE:
+///	exec_iter_loop_range(interpreter, stmt, underlying.range);
+///	break;
+///    case SLASH_OBJ: {
+///	switch (underlying.obj->type) {
+///	case SLASH_OBJ_LIST:
+///	    exec_iter_loop_list(interpreter, stmt, (SlashList *)underlying.obj);
+///	    break;
+///	case SLASH_OBJ_TUPLE:
+///	    exec_iter_loop_tuple(interpreter, stmt, (SlashTuple *)underlying.obj);
+///	    break;
+///	case SLASH_OBJ_MAP:
+///	    exec_iter_loop_map(interpreter, stmt, (SlashMap *)underlying.obj);
+///	    break;
+///	case SLASH_OBJ_STR:
+///	    exec_iter_loop_str(interpreter, stmt, (SlashStr *)underlying.obj);
+///	    break;
+///	default:
+///	    REPORT_RUNTIME_ERROR("Object type '%s' cannot be iterated over",
+///				 SLASH_TYPE_TO_STR(&underlying));
+///	    ASSERT_NOT_REACHED;
+///	}
+///
+///    } break;
+///    default:
+///	REPORT_RUNTIME_ERROR("Type '%s' cannot be iterated over", SLASH_TYPE_TO_STR(&underlying));
+///	ASSERT_NOT_REACHED;
+///    }
+///
+///    if (IS_OBJ(underlying.type))
+///	gc_shadow_pop(&interpreter->gc_shadow_stack);
+///    interpreter->scope = loop_scope.enclosing;
+///    scope_destroy(&loop_scope);
+///}
+///
 static void exec_andor(Interpreter *interpreter, BinaryStmt *stmt)
 {
     /*
@@ -882,12 +816,15 @@ static void exec_andor(Interpreter *interpreter, BinaryStmt *stmt)
      * If L is an expression statement then we use the result of expression statement
      * instead of the previous exit code.
      */
-
     bool predicate;
     if (stmt->left->type == STMT_EXPRESSION) {
 	ExpressionStmt *left = (ExpressionStmt *)stmt->left;
 	SlashValue value = eval(interpreter, left->expression);
-	predicate = is_truthy(&value);
+	TraitTruthy truthy_func = value.T_info->truthy;
+	if (truthy_func == NULL)
+	    REPORT_RUNTIME_ERROR("&& or || failed becuase truthy is not defined for type '%s'",
+				 value.T_info->name);
+	predicate = truthy_func(value);
     } else {
 	exec(interpreter, stmt->left);
 	predicate = interpreter->prev_exit_code == 0 ? true : false;
@@ -900,14 +837,15 @@ static void exec_andor(Interpreter *interpreter, BinaryStmt *stmt)
 
 static void exec_redirect(Interpreter *interpreter, BinaryStmt *stmt)
 {
-    // TODO: here we assume the cmd_stmt can NOT mutate the stmt->right_expr, however, this may not
-    //      always be guaranteed ?.
-
+    // TODO: here we assume the cmd_stmt can NOT mutate the stmt->right_expr, however, this may
+    //       not always be guaranteed ?.
     SlashValue value = eval(interpreter, stmt->right_expr);
-    TraitToStr to_str = trait_to_str[value.type];
-    SlashStr *value_as_str = (SlashStr *)to_str(interpreter, &value).obj;
-    char *file_name = value_as_str->p;
+    TraitToStr to_str = value.T_info->to_str;
+    if (to_str == NULL)
+	REPORT_RUNTIME_ERROR("Redirection failed because to_str is not defined for type '%s'",
+			     value.T_info->name);
 
+    char *file_name = AS_STR(to_str(interpreter, value))->str;
     StreamCtx *stream_ctx = &interpreter->stream_ctx;
     int og_read = stream_ctx->read_fd;
     int og_write = stream_ctx->write_fd;
@@ -952,43 +890,30 @@ static SlashValue eval(Interpreter *interpreter, Expr *expr)
     switch (expr->type) {
     case EXPR_UNARY:
 	return eval_unary(interpreter, (UnaryExpr *)expr);
-
     case EXPR_BINARY:
 	return eval_binary(interpreter, (BinaryExpr *)expr);
-
     case EXPR_LITERAL:
 	return eval_literal(interpreter, (LiteralExpr *)expr);
-
     case EXPR_ACCESS:
 	return eval_access(interpreter, (AccessExpr *)expr);
-
     case EXPR_SUBSCRIPT:
 	return eval_subscript(interpreter, (SubscriptExpr *)expr);
-
     case EXPR_SUBSHELL:
 	return eval_subshell(interpreter, (SubshellExpr *)expr);
-
     case EXPR_STR:
 	return eval_str(interpreter, (StrExpr *)expr);
-
     case EXPR_LIST:
 	return eval_list(interpreter, (ListExpr *)expr);
-
-    case EXPR_MAP:
-	return eval_map(interpreter, (MapExpr *)expr);
-
-    case EXPR_METHOD:
-	return eval_method(interpreter, (MethodExpr *)expr);
-
-    case EXPR_SEQUENCE:
-	return eval_tuple(interpreter, (SequenceExpr *)expr);
-
+	///    case EXPR_MAP:
+	///	return eval_map(interpreter, (MapExpr *)expr);
+	///    case EXPR_METHOD:
+	///	return eval_method(interpreter, (MethodExpr *)expr);
+	///    case EXPR_SEQUENCE:
+	///	return eval_tuple(interpreter, (SequenceExpr *)expr);
     case EXPR_GROUPING:
 	return eval_grouping(interpreter, (GroupingExpr *)expr);
-
-    case EXPR_CAST:
-	return eval_cast(interpreter, (CastExpr *)expr);
-
+	///    case EXPR_CAST:
+	///	return eval_cast(interpreter, (CastExpr *)expr);
     default:
 	REPORT_RUNTIME_ERROR("Internal error: expression type not recognized");
 	/* will never happen, but lets make the compiler happy */
@@ -1002,52 +927,39 @@ static void exec(Interpreter *interpreter, Stmt *stmt)
     case STMT_VAR:
 	exec_var(interpreter, (VarStmt *)stmt);
 	break;
-
     case STMT_SEQ_VAR:
 	exec_seq_var(interpreter, (SeqVarStmt *)stmt);
 	break;
-
     case STMT_EXPRESSION:
 	exec_expr(interpreter, (ExpressionStmt *)stmt);
 	break;
-
     case STMT_CMD:
 	exec_cmd(interpreter, (CmdStmt *)stmt);
 	break;
-
     case STMT_LOOP:
 	exec_loop(interpreter, (LoopStmt *)stmt);
 	break;
-
-    case STMT_ITER_LOOP:
-	exec_iter_loop(interpreter, (IterLoopStmt *)stmt);
-	break;
-
+	///    case STMT_ITER_LOOP:
+	///	exec_iter_loop(interpreter, (IterLoopStmt *)stmt);
+	///	break;
     case STMT_IF:
 	exec_if(interpreter, (IfStmt *)stmt);
 	break;
-
     case STMT_BLOCK:
 	exec_block(interpreter, (BlockStmt *)stmt);
 	break;
-
     case STMT_ASSIGN:
 	exec_assign(interpreter, (AssignStmt *)stmt);
 	break;
-
     case STMT_PIPELINE:
 	exec_pipeline(interpreter, (PipelineStmt *)stmt);
 	break;
-
     case STMT_ASSERT:
 	exec_assert(interpreter, (AssertStmt *)stmt);
 	break;
-
     case STMT_BINARY:
 	exec_binary(interpreter, (BinaryStmt *)stmt);
 	break;
-
-
     default:
 	REPORT_RUNTIME_ERROR("Internal error: Statement type not recognized");
     }
@@ -1074,7 +986,6 @@ void interpreter_init(Interpreter *interpreter, int argc, char **argv)
 void interpreter_free(Interpreter *interpreter)
 {
     gc_collect_all(&interpreter->gc_objs);
-
     scope_destroy(&interpreter->globals);
     arraylist_free(&interpreter->stream_ctx.active_fds);
     linkedlist_free(&interpreter->gc_objs);
