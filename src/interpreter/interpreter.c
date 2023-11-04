@@ -30,9 +30,9 @@
 #include "interpreter/scope.h"
 /// #include "interpreter/value/cast.h"
 /// #include "interpreter/value/method.h"
-#include "interpreter/value/slash_value.h"
 #include "interpreter/value/slash_list.h"
 #include "interpreter/value/slash_map.h"
+#include "interpreter/value/slash_value.h"
 #include "lib/arena_ll.h"
 #include "lib/str_view.h"
 #include "nicc/nicc.h"
@@ -265,15 +265,15 @@ static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
     slash_list_init(interpreter, &list->list);
 
     if (expr->exprs == NULL) {
-        gc_shadow_pop(&interpreter->gc_shadow_stack);
-        return AS_VALUE((SlashObj *)list);
+	gc_shadow_pop(&interpreter->gc_shadow_stack);
+	return AS_VALUE((SlashObj *)list);
     }
 
     LLItem *item;
     ARENA_LL_FOR_EACH(&expr->exprs->seq, item)
     {
-        SlashValue element_value = eval(interpreter, item->value);
-        slash_list_append(interpreter, &list->list, element_value);
+	SlashValue element_value = eval(interpreter, item->value);
+	slash_list_append(interpreter, &list->list, element_value);
     }
 
     gc_shadow_pop(&interpreter->gc_shadow_stack);

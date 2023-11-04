@@ -18,6 +18,7 @@
 #define SLASH_MAP_IMPL_H
 #endif /* SLASH_MAP_IMPL_H */
 
+#include <stdint.h>
 #include <stdlib.h>
 
 #include "interpreter/interpreter.h"
@@ -43,7 +44,7 @@
 typedef struct {
     SlashValue key;
     SlashValue value;
-    bool hash_extra; // used for faster comparison
+    uint8_t hash_extra; // used for faster comparison
     bool is_occupied;
 } SlashMapEntry;
 
@@ -53,7 +54,7 @@ typedef struct {
 
 typedef struct {
     SlashMapBucket *buckets;
-    bool size_log2; //
+    size_t total_buckets_log2;
     size_t len; // total items stored in the hashmap
 } SlashMapImpl;
 

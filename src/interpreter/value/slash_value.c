@@ -22,9 +22,9 @@
 #include "interpreter/error.h"
 #include "interpreter/gc.h"
 #include "interpreter/interpreter.h"
-#include "interpreter/value/slash_value.h"
 #include "interpreter/value/slash_list.h"
 #include "interpreter/value/slash_map.h"
+#include "interpreter/value/slash_value.h"
 
 
 /*
@@ -278,9 +278,19 @@ SlashValue text_lit_to_str(Interpreter *interpreter, SlashValue self)
     return AS_VALUE(str);
 }
 
+
 /*
  * map impl
  */
+typedef SlashValue (*OpUnaryNot)(SlashValue self);
+typedef void (*TraitPrint)(SlashValue self);
+typedef SlashValue (*TraitToStr)(Interpreter *interpreter, SlashValue self);
+typedef SlashValue (*TraitItemGet)(Interpreter *interpreter, SlashValue self, SlashValue other);
+typedef void (*TraitItemAssign)(Interpreter *interpreter, SlashValue self, SlashValue index,
+				SlashValue other);
+typedef bool (*TraitItemIn)(SlashValue self, SlashValue other);
+typedef bool (*TraitTruthy)(SlashValue self);
+typedef bool (*TraitEq)(SlashValue self, SlashValue other);
 
 
 /*
@@ -288,19 +298,19 @@ SlashValue text_lit_to_str(Interpreter *interpreter, SlashValue self)
  */
 SlashValue list_plus(Interpreter *interpreter, SlashValue self, SlashValue other)
 {
-    //TODO: 1. We can prealloc the memory since we know the size
-    //      2. We can use something like memcpy to copy all data in one batch
+    // TODO: 1. We can prealloc the memory since we know the size
+    //       2. We can use something like memcpy to copy all data in one batch
     assert(IS_LIST(self) && IS_LIST(self));
     SlashList *new_list = (SlashList *)gc_new_T(interpreter, &list_type_info);
     slash_list_init(interpreter, &new_list->list);
 
     SlashListImpl a = AS_LIST(self)->list;
     for (size_t i = 0; i < a.len; i++)
-        slash_list_append(interpreter, &new_list->list, a.items[i]);
+	slash_list_append(interpreter, &new_list->list, a.items[i]);
 
     SlashListImpl b = AS_LIST(other)->list;
     for (size_t i = 0; i < b.len; i++)
-        slash_list_append(interpreter, &new_list->list, b.items[i]);
+	slash_list_append(interpreter, &new_list->list, b.items[i]);
 
     return AS_VALUE((SlashObj *)new_list);
 }
@@ -317,30 +327,31 @@ void list_print(SlashValue self)
     SlashListImpl underlying = AS_LIST(self)->list;
     putchar('[');
     for (size_t i = 0; i < underlying.len; i++) {
-        SlashValue item = underlying.items[i];
-        assert(item.T_info->print != NULL);
-        item.T_info->print(item);
-        if (i != underlying.len - 1)
-            printf(", ");
+	SlashValue item = underlying.items[i];
+	assert(item.T_info->print != NULL);
+	item.T_info->print(item);
+	if (i != underlying.len - 1)
+	    printf(", ");
     }
     putchar(']');
 }
 
-//TODO: we have no easy mechanism to build a string rn.
+// TODO: we have no easy mechanism to build a string rn.
 typedef SlashValue (*TraitToStr)(Interpreter *interpreter, SlashValue self);
 
 SlashValue list_item_get(Interpreter *interpreter, SlashValue self, SlashValue other)
 {
     (void)interpreter;
     assert(IS_LIST(self));
-    assert(IS_NUM(other)); //TODO: implement for range
+    assert(IS_NUM(other)); // TODO: implement for range
     if (!NUM_IS_INT(other))
 	REPORT_RUNTIME_ERROR("List index can not be a floating point number: '%f'", other.num);
 
     SlashListImpl list = AS_LIST(self)->list;
     int index = (int)other.num;
     if (index < 0 || (size_t)index >= list.len)
-	REPORT_RUNTIME_ERROR("List index '%d' out of range for list with len '%zu'", index, list.len);
+	REPORT_RUNTIME_ERROR("List index '%d' out of range for list with len '%zu'", index,
+			     list.len);
 
     /* Know the index is valid */
     return slash_list_get(&list, index);
@@ -349,7 +360,7 @@ SlashValue list_item_get(Interpreter *interpreter, SlashValue self, SlashValue o
 void list_item_assign(Interpreter *interpreter, SlashValue self, SlashValue index, SlashValue other)
 {
     assert(IS_LIST(self));
-    assert(IS_NUM(index)); //TODO: implement for range
+    assert(IS_NUM(index)); // TODO: implement for range
     if (!NUM_IS_INT(index))
 	REPORT_RUNTIME_ERROR("List index can not be a floating point number: '%f'", index.num);
 
@@ -380,20 +391,22 @@ bool list_eq(SlashValue self, SlashValue other)
     SlashListImpl a = AS_LIST(self)->list;
     SlashListImpl b = AS_LIST(other)->list;
     if (a.len != b.len)
-        return false;
+	return false;
 
     /* Know the two lists have the same length */
     for (size_t i = 0; i < a.len; i++) {
-        SlashValue A = slash_list_get(&a, i);
-        SlashValue B = slash_list_get(&a, i);
-        if (!TYPE_EQ(A, B))
-            return false;
-        /* Know A and B have the same types */
-        TraitEq item_eq = A.T_info->eq;
-        if (item_eq == NULL)
-            REPORT_RUNTIME_ERROR("Could not check if lists are equal because it contains at least one item of type '%s' where eq is not defined.", A.T_info->name)
-        if (!item_eq(A, B))
-            return false;
+	SlashValue A = slash_list_get(&a, i);
+	SlashValue B = slash_list_get(&a, i);
+	if (!TYPE_EQ(A, B))
+	    return false;
+	/* Know A and B have the same types */
+	TraitEq item_eq = A.T_info->eq;
+	if (item_eq == NULL)
+	    REPORT_RUNTIME_ERROR(
+		"Could not check if lists are equal because it contains at least one item of type '%s' where eq is not defined.",
+		A.T_info->name)
+	if (!item_eq(A, B))
+	    return false;
     }
 
     return true;

@@ -40,7 +40,6 @@ static void ensure_capacity(Interpreter *interpreter, SlashListImpl *list)
 
 void slash_list_init(Interpreter *interpreter, SlashListImpl *list)
 {
-
 #ifdef SLASH_LIST_STARTING_CAP
     list->cap = SLASH_LIST_STARTING_CAP;
 #elif

@@ -39,7 +39,8 @@ typedef SlashValue (*OpUnaryNot)(SlashValue self);
 typedef void (*TraitPrint)(SlashValue self);
 typedef SlashValue (*TraitToStr)(Interpreter *interpreter, SlashValue self);
 typedef SlashValue (*TraitItemGet)(Interpreter *interpreter, SlashValue self, SlashValue other);
-typedef void (*TraitItemAssign)(Interpreter *interpreter, SlashValue self, SlashValue index, SlashValue other);
+typedef void (*TraitItemAssign)(Interpreter *interpreter, SlashValue self, SlashValue index,
+				SlashValue other);
 /* Equality and hashing traits */
 typedef bool (*TraitItemIn)(SlashValue self, SlashValue other);
 typedef bool (*TraitTruthy)(SlashValue self);
