@@ -44,18 +44,18 @@ typedef struct {
 
 
 /* Functions */
-void slash_list_init(Interpreter *interpreter, SlashListImpl *list);
-void slash_list_free(Interpreter *interpreter, SlashListImpl *list);
+void slash_list_impl_init(Interpreter *interpreter, SlashListImpl *list);
+void slash_list_impl_free(Interpreter *interpreter, SlashListImpl *list);
 
-bool slash_list_set(Interpreter *interpreter, SlashListImpl *list, SlashValue val, size_t idx);
-bool slash_list_append(Interpreter *interpreter, SlashListImpl *list, SlashValue val);
+bool slash_list_impl_set(Interpreter *interpreter, SlashListImpl *list, SlashValue val, size_t idx);
+bool slash_list_impl_append(Interpreter *interpreter, SlashListImpl *list, SlashValue val);
 
-SlashValue slash_list_get(SlashListImpl *list, size_t idx);
+SlashValue slash_list_impl_get(SlashListImpl *list, size_t idx);
 /* Returns SIZE_MAX if value is not found in list */
-size_t slash_list_index_of(SlashListImpl *list, SlashValue val);
+size_t slash_list_impl_index_of(SlashListImpl *list, SlashValue val);
 
-bool slash_list_rm(SlashListImpl *list, size_t idx);
-bool slash_list_rmv(SlashListImpl *list, SlashValue val);
+bool slash_list_impl_rm(SlashListImpl *list, size_t idx);
+bool slash_list_impl_rmv(SlashListImpl *list, SlashValue val);
 
 // TODO: implement
-bool slash_list_sort(SlashListImpl *list);
+bool slash_list_impl_sort(SlashListImpl *list);

@@ -126,6 +126,8 @@ static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
     switch (expr->operator_) {
     case t_plus:
 	return left.T_info->plus(interpreter, left, right);
+    case t_equal_equal:
+	return (SlashValue){ .T_info = &bool_type_info, .boolean = left.T_info->eq(left, right) };
 
     default:
 	REPORT_RUNTIME_ERROR("Unrecognized binary operator");
@@ -262,8 +264,7 @@ static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
 {
     SlashList *list = (SlashList *)gc_new_T(interpreter, &list_type_info);
     gc_shadow_push(&interpreter->gc_shadow_stack, &list->obj);
-    slash_list_init(interpreter, &list->list);
-
+    slash_list_impl_init(interpreter, &list->list);
     if (expr->exprs == NULL) {
 	gc_shadow_pop(&interpreter->gc_shadow_stack);
 	return AS_VALUE((SlashObj *)list);
@@ -273,37 +274,37 @@ static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
     ARENA_LL_FOR_EACH(&expr->exprs->seq, item)
     {
 	SlashValue element_value = eval(interpreter, item->value);
-	slash_list_append(interpreter, &list->list, element_value);
+	slash_list_impl_append(interpreter, &list->list, element_value);
     }
 
     gc_shadow_pop(&interpreter->gc_shadow_stack);
     return AS_VALUE((SlashObj *)list);
 }
 
-/// static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
-///{
-///     SlashMap *map = (SlashMap *)gc_alloc(interpreter, SLASH_OBJ_MAP);
-///     gc_shadow_push(&interpreter->gc_shadow_stack, &map->obj);
-///     slash_map_init(map);
-///     SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)map };
-///
-///     if (expr->key_value_pairs == NULL)
-///	return value;
-///
-///     LLItem *item;
-///     KeyValuePair *pair;
-///     ARENA_LL_FOR_EACH(expr->key_value_pairs, item)
-///     {
-///	pair = item->value;
-///	SlashValue k = eval(interpreter, pair->key);
-///	SlashValue v = eval(interpreter, pair->value);
-///	value.obj->traits->item_assign(&value, &k, &v);
-///     }
-///
-///     gc_shadow_pop(&interpreter->gc_shadow_stack);
-///     return value;
-/// }
-///
+static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
+{
+    SlashMap *map = (SlashMap *)gc_new_T(interpreter, &map_type_info);
+    gc_shadow_push(&interpreter->gc_shadow_stack, &map->obj);
+    slash_map_impl_init(interpreter, &map->map);
+    if (expr->key_value_pairs == NULL) {
+	gc_shadow_pop(&interpreter->gc_shadow_stack);
+	return AS_VALUE((SlashObj *)map);
+    }
+
+    LLItem *item;
+    KeyValuePair *pair;
+    ARENA_LL_FOR_EACH(expr->key_value_pairs, item)
+    {
+	pair = item->value;
+	SlashValue k = eval(interpreter, pair->key);
+	SlashValue v = eval(interpreter, pair->value);
+	slash_map_impl_put(interpreter, &map->map, k, v);
+    }
+
+    gc_shadow_pop(&interpreter->gc_shadow_stack);
+    return AS_VALUE((SlashObj *)map);
+}
+
 /// static SlashValue eval_method(Interpreter *interpreter, MethodExpr *expr)
 ///{
 ///     SlashValue self = eval(interpreter, expr->obj);
@@ -904,9 +905,9 @@ static SlashValue eval(Interpreter *interpreter, Expr *expr)
 	return eval_str(interpreter, (StrExpr *)expr);
     case EXPR_LIST:
 	return eval_list(interpreter, (ListExpr *)expr);
-	///    case EXPR_MAP:
-	///	return eval_map(interpreter, (MapExpr *)expr);
-	///    case EXPR_METHOD:
+    case EXPR_MAP:
+	return eval_map(interpreter, (MapExpr *)expr);
+	/// case EXPR_METHOD:
 	///	return eval_method(interpreter, (MethodExpr *)expr);
 	///    case EXPR_SEQUENCE:
 	///	return eval_tuple(interpreter, (SequenceExpr *)expr);

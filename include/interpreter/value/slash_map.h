@@ -60,17 +60,20 @@ typedef struct {
 
 typedef struct {
     SlashObj obj;
-    HashMap map;
+    SlashMapImpl map;
 } SlashMap;
 
 /* Functions */
-void slash_map_init(Interpreter *interpreter, SlashMapImpl *map);
-void slash_map_free(Interpreter *interpreter, SlashMapImpl *map);
+void slash_map_impl_init(Interpreter *interpreter, SlashMapImpl *map);
+void slash_map_impl_free(Interpreter *interpreter, SlashMapImpl *map);
 
-void slash_map_put(Interpreter *interpreter, SlashMapImpl *map, SlashValue key, SlashValue value);
-SlashValue slash_map_get(SlashMapImpl *map, SlashValue key);
+void slash_map_impl_put(Interpreter *interpreter, SlashMapImpl *map, SlashValue key,
+			SlashValue value);
+SlashValue slash_map_impl_get(SlashMapImpl *map, SlashValue key);
 
-bool slash_map_rm(SlashMapImpl *map, SlashValue key);
+bool slash_map_impl_rm(SlashMapImpl *map, SlashValue key);
 
-void slash_map_get_values(SlashMapImpl *map, SlashValue *return_ptr);
-void slash_map_get_keys(SlashMapImpl *map, SlashValue *return_ptr);
+void slash_map_impl_get_values(SlashMapImpl *map, SlashValue *return_ptr);
+void slash_map_impl_get_keys(SlashMapImpl *map, SlashValue *return_ptr);
+
+void slash_map_impl_print(SlashMapImpl map);

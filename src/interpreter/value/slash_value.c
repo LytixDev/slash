@@ -283,11 +283,32 @@ SlashValue text_lit_to_str(Interpreter *interpreter, SlashValue self)
  * map impl
  */
 typedef SlashValue (*OpUnaryNot)(SlashValue self);
-typedef void (*TraitPrint)(SlashValue self);
+
+void slash_map_print(SlashValue self)
+{
+    assert(IS_MAP(self));
+    SlashMap *map = AS_MAP(self);
+    slash_map_impl_print(map->map);
+}
+
 typedef SlashValue (*TraitToStr)(Interpreter *interpreter, SlashValue self);
-typedef SlashValue (*TraitItemGet)(Interpreter *interpreter, SlashValue self, SlashValue other);
-typedef void (*TraitItemAssign)(Interpreter *interpreter, SlashValue self, SlashValue index,
-				SlashValue other);
+
+SlashValue slash_map_item_get(Interpreter *interpreter, SlashValue self, SlashValue other)
+{
+    (void)interpreter;
+    assert(IS_MAP(self));
+    SlashMap *map = AS_MAP(self);
+    return slash_map_impl_get(&map->map, other);
+}
+
+void slash_map_item_assign(Interpreter *interpreter, SlashValue self, SlashValue index,
+			   SlashValue other)
+{
+    assert(IS_MAP(self));
+    SlashMap *map = AS_MAP(self);
+    slash_map_impl_put(interpreter, &map->map, index, other);
+}
+
 typedef bool (*TraitItemIn)(SlashValue self, SlashValue other);
 typedef bool (*TraitTruthy)(SlashValue self);
 typedef bool (*TraitEq)(SlashValue self, SlashValue other);
@@ -302,15 +323,15 @@ SlashValue list_plus(Interpreter *interpreter, SlashValue self, SlashValue other
     //       2. We can use something like memcpy to copy all data in one batch
     assert(IS_LIST(self) && IS_LIST(self));
     SlashList *new_list = (SlashList *)gc_new_T(interpreter, &list_type_info);
-    slash_list_init(interpreter, &new_list->list);
+    slash_list_impl_init(interpreter, &new_list->list);
 
     SlashListImpl a = AS_LIST(self)->list;
     for (size_t i = 0; i < a.len; i++)
-	slash_list_append(interpreter, &new_list->list, a.items[i]);
+	slash_list_impl_append(interpreter, &new_list->list, a.items[i]);
 
     SlashListImpl b = AS_LIST(other)->list;
     for (size_t i = 0; i < b.len; i++)
-	slash_list_append(interpreter, &new_list->list, b.items[i]);
+	slash_list_impl_append(interpreter, &new_list->list, b.items[i]);
 
     return AS_VALUE((SlashObj *)new_list);
 }
@@ -354,7 +375,7 @@ SlashValue list_item_get(Interpreter *interpreter, SlashValue self, SlashValue o
 			     list.len);
 
     /* Know the index is valid */
-    return slash_list_get(&list, index);
+    return slash_list_impl_get(&list, index);
 }
 
 void list_item_assign(Interpreter *interpreter, SlashValue self, SlashValue index, SlashValue other)
@@ -370,13 +391,13 @@ void list_item_assign(Interpreter *interpreter, SlashValue self, SlashValue inde
 	REPORT_RUNTIME_ERROR("List index '%d' out of range for list with len '%zu'", idx, list.len);
 
     /* Know the index is valid */
-    slash_list_set(interpreter, &list, other, idx);
+    slash_list_impl_set(interpreter, &list, other, idx);
 }
 
 bool list_item_in(SlashValue self, SlashValue other)
 {
     assert(IS_LIST(self));
-    return slash_list_index_of(&AS_LIST(self)->list, other) != SIZE_MAX;
+    return slash_list_impl_index_of(&AS_LIST(self)->list, other) != SIZE_MAX;
 }
 
 bool list_truthy(SlashValue self)
@@ -395,8 +416,8 @@ bool list_eq(SlashValue self, SlashValue other)
 
     /* Know the two lists have the same length */
     for (size_t i = 0; i < a.len; i++) {
-	SlashValue A = slash_list_get(&a, i);
-	SlashValue B = slash_list_get(&a, i);
+	SlashValue A = slash_list_impl_get(&a, i);
+	SlashValue B = slash_list_impl_get(&a, i);
 	if (!TYPE_EQ(A, B))
 	    return false;
 	/* Know A and B have the same types */
@@ -444,6 +465,28 @@ void str_print(SlashValue self)
 {
     assert(IS_STR(self));
     printf("\"%s\"", AS_STR(self)->str);
+}
+
+bool str_eq(SlashValue self, SlashValue other)
+{
+    assert(IS_STR(self) && IS_STR(other));
+    // TODO: we can do better
+    SlashStr *a = AS_STR(self);
+    SlashStr *b = AS_STR(other);
+    return strcmp(a->str, b->str) == 0;
+}
+
+int str_hash(SlashValue self)
+{
+    assert(IS_STR(self));
+    SlashStr *str = AS_STR(self);
+
+    int A = 1327217885;
+    int k = 0;
+    for (size_t i = 0; i < str->len; i++)
+	k += (k << 5) + (str->str)[i];
+
+    return k * A;
 }
 
 
@@ -562,10 +605,10 @@ SlashTypeInfo map_type_info = { .name = "map",
 				.mod = NULL,
 				.unary_minus = NULL,
 				.unary_not = NULL,
-				.print = NULL,
+				.print = slash_map_print,
 				.to_str = NULL,
-				.item_get = NULL,
-				.item_assign = NULL,
+				.item_get = slash_map_item_get,
+				.item_assign = slash_map_item_assign,
 				.item_in = NULL,
 				.truthy = NULL,
 				.eq = NULL,
@@ -637,9 +680,9 @@ SlashTypeInfo str_type_info = { .name = "str",
 				.item_assign = NULL,
 				.item_in = NULL,
 				.truthy = NULL,
-				.eq = NULL,
+				.eq = str_eq,
 				.cmp = NULL,
-				.hash = NULL,
+				.hash = str_hash,
 				.init = NULL,
 				.free = NULL,
 				.obj_size = sizeof(SlashStr) };

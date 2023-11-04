@@ -25,12 +25,6 @@
 #include "interpreter/value/slash_value.h"
 #include "interpreter/value/type_funcs.h"
 
-/// typedef struct {
-///     SlashValue key;
-///     SlashValue value;
-///     bool hash_extra; // used for faster comparison
-///     bool is_occupied;
-/// } SlashMapEntry;
 
 static inline uint8_t map_hash_extra(int hash)
 {
@@ -88,7 +82,7 @@ static int map_insert(SlashMapBucket *bucket, SlashValue key, SlashValue value, 
     return override ? _HM_OVERRIDE : _HM_SUCCESS;
 }
 
-void slash_map_init(Interpreter *interpreter, SlashMapImpl *map)
+void slash_map_impl_init(Interpreter *interpreter, SlashMapImpl *map)
 {
     map->len = 0;
     map->total_buckets_log2 = HM_STARTING_BUCKETS_LOG2;
@@ -102,12 +96,13 @@ void slash_map_init(Interpreter *interpreter, SlashMapImpl *map)
     memset(map->buckets, 0, sizeof(SlashMapBucket) * n_buckets);
 }
 
-void slash_map_free(Interpreter *interpreter, SlashMapImpl *map)
+void slash_map_impl_free(Interpreter *interpreter, SlashMapImpl *map)
 {
     gc_free(interpreter, map->buckets, N_BUCKETS(map->total_buckets_log2) * sizeof(SlashMapBucket));
 }
 
-void slash_map_put(Interpreter *interpreter, SlashMapImpl *map, SlashValue key, SlashValue value)
+void slash_map_impl_put(Interpreter *interpreter, SlashMapImpl *map, SlashValue key,
+			SlashValue value)
 {
     double load_factor = (double)map->len / (N_BUCKETS(map->total_buckets_log2) * HM_BUCKET_SIZE);
     if (load_factor >= 0.75) {
@@ -126,13 +121,13 @@ void slash_map_put(Interpreter *interpreter, SlashMapImpl *map, SlashValue key, 
     int rc = map_insert(&map->buckets[bucket_idx], key, value, hash_extra);
     if (rc == _HM_FULL) {
 	assert(NULL && "Implement increase() func for map");
-	slash_map_put(interpreter, map, key, value);
+	slash_map_impl_put(interpreter, map, key, value);
     }
     if (rc == _HM_SUCCESS)
 	map->len++;
 }
 
-SlashValue slash_map_get(SlashMapImpl *map, SlashValue key)
+SlashValue slash_map_impl_get(SlashMapImpl *map, SlashValue key)
 {
     if (map->len == 0)
 	return NoneSingleton;
@@ -151,4 +146,32 @@ SlashValue slash_map_get(SlashMapImpl *map, SlashValue key)
 	return NoneSingleton;
 
     return entry->value;
+}
+
+void slash_map_impl_print(SlashMapImpl map)
+{
+    SlashValue key, value;
+    SlashMapBucket bucket;
+    SlashMapEntry entry;
+    bool first_print = true;
+
+    printf("@[");
+    for (size_t i = 0; i < N_BUCKETS(map.total_buckets_log2); i++) {
+	bucket = map.buckets[i];
+	for (size_t j = 0; j < HM_BUCKET_SIZE; j++) {
+	    entry = bucket.entries[j];
+	    if (!entry.is_occupied)
+		continue;
+	    if (!first_print)
+		printf(", ");
+	    first_print = false;
+
+	    key = entry.key;
+	    value = entry.value;
+	    key.T_info->print(key);
+	    printf(": ");
+	    value.T_info->print(value);
+	}
+    }
+    printf("]");
 }

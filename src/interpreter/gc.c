@@ -34,7 +34,7 @@ static void gc_sweep_obj(SlashObj *obj)
     //       if so then maybe all GC functions (blacken, visit, sweep) should be on SlashValueInfo
     SlashValue value = AS_VALUE(obj);
     if (IS_MAP(value)) {
-	hashmap_free(&AS_MAP(value)->map);
+	// slash_map_impl_free(AS_MAP(value)->map);
     } else if (IS_LIST(value)) {
 	// arraylist_free(&AS_LIST(value)->list);
     } else if (IS_TUPLE(value)) {
