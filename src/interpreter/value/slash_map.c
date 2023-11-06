@@ -94,12 +94,6 @@ void slash_map_impl_init(Interpreter *interpreter, SlashMap *map)
      * each entry will be set to false.
      */
     memset(map->buckets, 0, sizeof(SlashMapBucket) * n_buckets);
-    // for (size_t i = 0; i < n_buckets; i++) {
-    //     SlashMapBucket *bucket = &map->buckets[i];
-    //     for (size_t j = 0; j < HM_BUCKET_SIZE; j++) {
-    //         bucket->entries[j].is_occupied = false;
-    //     }
-    // }
 }
 
 void slash_map_impl_free(Interpreter *interpreter, SlashMap *map)
@@ -119,9 +113,9 @@ void slash_map_impl_put(Interpreter *interpreter, SlashMap *map, SlashValue key,
 	REPORT_RUNTIME_ERROR("Can not use type '%s' as key in map because type is unhashable.",
 			     key.T_info->name);
 
-    int hash = hash_func(key);
+    unsigned int hash = (unsigned int)hash_func(key);
     uint8_t hash_extra = map_hash_extra(hash);
-    int bucket_idx = hash >> (32 - map->total_buckets_log2);
+    unsigned int bucket_idx = hash >> (32 - map->total_buckets_log2);
 
     int rc = map_insert(&map->buckets[bucket_idx], key, value, hash_extra);
     if (rc == _HM_FULL) {
@@ -142,9 +136,9 @@ SlashValue slash_map_impl_get(SlashMap *map, SlashValue key)
 	REPORT_RUNTIME_ERROR("Can not use type '%s' as key in map because type is unhashable.",
 			     key.T_info->name);
 
-    int hash = hash_func(key);
+    unsigned int hash = (unsigned int)hash_func(key);
     uint8_t hash_extra = map_hash_extra(hash);
-    int bucket_idx = hash >> (32 - map->total_buckets_log2);
+    unsigned int bucket_idx = hash >> (32 - map->total_buckets_log2);
 
     SlashMapEntry *entry = get_from_bucket(map->buckets[bucket_idx], key, hash_extra);
     if (entry == NULL)
