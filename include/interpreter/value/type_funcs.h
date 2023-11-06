@@ -27,7 +27,7 @@ typedef struct slash_value_t SlashValue; // Forward decl
 /* Operators */
 typedef SlashValue (*OpPlus)(Interpreter *interpreter, SlashValue self, SlashValue other);
 typedef SlashValue (*OpMinus)(SlashValue self, SlashValue other);
-typedef SlashValue (*OpMul)(SlashValue self, SlashValue other);
+typedef SlashValue (*OpMul)(Interpreter *interpreter, SlashValue self, SlashValue other);
 typedef SlashValue (*OpDiv)(SlashValue self, SlashValue other);
 typedef SlashValue (*OpIntDiv)(SlashValue self, SlashValue other);
 typedef SlashValue (*OpPow)(SlashValue self, SlashValue other);

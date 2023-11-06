@@ -51,7 +51,7 @@ typedef struct slash_obj_t {
 typedef struct {
     SlashObj obj;
     size_t size;
-    SlashValue *tuple;
+    SlashValue *items;
 } SlashTuple;
 
 typedef struct {
@@ -148,6 +148,8 @@ extern SlashValue NoneSingleton;
 
 
 /* Init functions */
+void slash_tuple_init(Interpreter *interpreter, SlashTuple *tuple, size_t size);
+
 void slash_str_init_from_view(Interpreter *interpreter, SlashStr *str, StrView *view);
 void slash_str_init_from_slice(Interpreter *interpreter, SlashStr *str, char *cstr, size_t size);
 void slash_str_init_from_alloced_cstr(SlashStr *str, char *cstr);

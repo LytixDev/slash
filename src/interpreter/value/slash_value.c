@@ -96,8 +96,9 @@ SlashValue num_minus(SlashValue self, SlashValue other)
     return (SlashValue){ .T_info = &num_type_info, .num = self.num - other.num };
 }
 
-SlashValue num_mul(SlashValue self, SlashValue other)
+SlashValue num_mul(Interpreter *interpreter, SlashValue self, SlashValue other)
 {
+    (void)interpreter;
     assert(IS_NUM(self) && IS_NUM(other));
     return (SlashValue){ .T_info = &num_type_info, .num = self.num * other.num };
 }
@@ -475,6 +476,30 @@ bool list_eq(SlashValue self, SlashValue other)
 /*
  * tuple impl
  */
+void slash_tuple_init(Interpreter *interpreter, SlashTuple *tuple, size_t size)
+{
+    tuple->size = size;
+    if (size == 0)
+	tuple->items = NULL;
+    else
+	tuple->items = gc_alloc(interpreter, sizeof(SlashValue) * size);
+}
+
+
+typedef SlashValue (*OpPlus)(Interpreter *interpreter, SlashValue self, SlashValue other);
+typedef SlashValue (*OpMul)(SlashValue self, SlashValue other);
+typedef SlashValue (*OpUnaryNot)(SlashValue self);
+
+typedef void (*TraitPrint)(SlashValue self);
+typedef SlashValue (*TraitToStr)(Interpreter *interpreter, SlashValue self);
+typedef SlashValue (*TraitItemGet)(Interpreter *interpreter, SlashValue self, SlashValue other);
+
+typedef bool (*TraitItemIn)(SlashValue self, SlashValue other);
+typedef bool (*TraitTruthy)(SlashValue self);
+typedef bool (*TraitEq)(SlashValue self, SlashValue other);
+typedef int (*TraitCmp)(SlashValue self, SlashValue other);
+typedef int (*TraitHash)(SlashValue self);
+
 
 /*
  * str impl
