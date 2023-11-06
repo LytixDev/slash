@@ -98,22 +98,35 @@ static SlashValue eval_binary_operators(Interpreter *interpreter, SlashValue lef
     if (!TYPE_EQ(left, right))
 	REPORT_RUNTIME_ERROR("Binary operation failed: type mismatch between '%s' and '%s'",
 			     left.T_info->name, right.T_info->name);
+
+    // TODO: check if T_info->func() is not NULL
     switch (op) {
     case t_greater:
+	return (SlashValue){ .T_info = &bool_type_info,
+			     .boolean = left.T_info->cmp(left, right) > 0 };
     case t_greater_equal:
+	return (SlashValue){ .T_info = &bool_type_info,
+			     .boolean = (left.T_info->cmp(left, right) >= 0) };
     case t_less:
+	return (SlashValue){ .T_info = &bool_type_info,
+			     .boolean = (left.T_info->cmp(left, right) < 0) };
     case t_less_equal:
-	break;
-
+	return (SlashValue){ .T_info = &bool_type_info,
+			     .boolean = (left.T_info->cmp(left, right) <= 0) };
     case t_plus:
 	return left.T_info->plus(interpreter, left, right);
     case t_minus:
+	return left.T_info->minus(left, right);
     case t_slash:
+	return left.T_info->div(left, right);
     case t_slash_slash:
+	return left.T_info->int_div(left, right);
     case t_percent:
+	return left.T_info->mod(left, right);
     case t_star:
+	return left.T_info->mul(left, right);
     case t_star_star:
-	break;
+	return left.T_info->pow(left, right);
     case t_equal_equal:
 	return (SlashValue){ .T_info = &bool_type_info, .boolean = left.T_info->eq(left, right) };
     case t_bang_equal:
