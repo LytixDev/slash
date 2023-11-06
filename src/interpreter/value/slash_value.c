@@ -33,7 +33,7 @@
 SlashValue bool_unary_not(SlashValue self)
 {
     assert(IS_BOOL(self));
-    return (SlashValue){ .T_info = &bool_type_info, .boolean = !self.boolean };
+    return (SlashValue){ .T = &bool_type_info, .boolean = !self.boolean };
 }
 
 void bool_print(SlashValue self)
@@ -87,20 +87,20 @@ SlashValue num_plus(Interpreter *interpreter, SlashValue self, SlashValue other)
     (void)interpreter;
     assert(IS_NUM(self) && IS_NUM(other));
     // TODO: check for overflow and other undefined behaviour. Same for all arithmetic operators.
-    return (SlashValue){ .T_info = &num_type_info, .num = self.num + other.num };
+    return (SlashValue){ .T = &num_type_info, .num = self.num + other.num };
 }
 
 SlashValue num_minus(SlashValue self, SlashValue other)
 {
     assert(IS_NUM(self) && IS_NUM(other));
-    return (SlashValue){ .T_info = &num_type_info, .num = self.num - other.num };
+    return (SlashValue){ .T = &num_type_info, .num = self.num - other.num };
 }
 
 SlashValue num_mul(Interpreter *interpreter, SlashValue self, SlashValue other)
 {
     (void)interpreter;
     assert(IS_NUM(self) && IS_NUM(other));
-    return (SlashValue){ .T_info = &num_type_info, .num = self.num * other.num };
+    return (SlashValue){ .T = &num_type_info, .num = self.num * other.num };
 }
 
 SlashValue num_div(SlashValue self, SlashValue other)
@@ -108,7 +108,7 @@ SlashValue num_div(SlashValue self, SlashValue other)
     assert(IS_NUM(self) && IS_NUM(other));
     if (other.num == 0)
 	REPORT_RUNTIME_ERROR("Division by zero error");
-    return (SlashValue){ .T_info = &num_type_info, .num = self.num / other.num };
+    return (SlashValue){ .T = &num_type_info, .num = self.num / other.num };
 }
 
 SlashValue num_int_div(SlashValue self, SlashValue other)
@@ -116,13 +116,13 @@ SlashValue num_int_div(SlashValue self, SlashValue other)
     assert(IS_NUM(self) && IS_NUM(other));
     if (other.num == 0)
 	REPORT_RUNTIME_ERROR("Division by zero error");
-    return (SlashValue){ .T_info = &num_type_info, .num = (int)(self.num / other.num) };
+    return (SlashValue){ .T = &num_type_info, .num = (int)(self.num / other.num) };
 }
 
 SlashValue num_pow(SlashValue self, SlashValue other)
 {
     assert(IS_NUM(self) && IS_NUM(other));
-    return (SlashValue){ .T_info = &num_type_info, .num = pow(self.num, other.num) };
+    return (SlashValue){ .T = &num_type_info, .num = pow(self.num, other.num) };
 }
 
 SlashValue num_mod(SlashValue self, SlashValue other)
@@ -133,21 +133,21 @@ SlashValue num_mod(SlashValue self, SlashValue other)
     double m = fmod(self.num, other.num);
     /* same behaviour as we tend to see in maths */
     m = m < 0 && other.num > 0 ? m + other.num : m;
-    return (SlashValue){ .T_info = &num_type_info, .num = m };
+    return (SlashValue){ .T = &num_type_info, .num = m };
 }
 
 SlashValue num_unary_minus(SlashValue self)
 {
     assert(IS_NUM(self));
-    return (SlashValue){ .T_info = &num_type_info, .num = -self.num };
+    return (SlashValue){ .T = &num_type_info, .num = -self.num };
 }
 
 SlashValue num_unary_not(SlashValue self)
 {
     assert(IS_NUM(self));
-    TraitTruthy is_truthy = self.T_info->truthy;
+    TraitTruthy is_truthy = self.T->truthy;
     assert(is_truthy != NULL);
-    return (SlashValue){ .T_info = &bool_type_info, .boolean = !is_truthy(self) };
+    return (SlashValue){ .T = &bool_type_info, .boolean = !is_truthy(self) };
 }
 
 void num_print(SlashValue self)
@@ -240,7 +240,7 @@ SlashValue range_item_get(Interpreter *interpreter, SlashValue self, SlashValue 
 		range_size, idx);
 
 	int offset = self.range.start + idx;
-	return (SlashValue){ .T_info = &num_type_info, .num = offset };
+	return (SlashValue){ .T = &num_type_info, .num = offset };
     }
 
     REPORT_RUNTIME_ERROR("TODO: implement item get on range for type range");
@@ -290,7 +290,7 @@ SlashValue text_lit_to_str(Interpreter *interpreter, SlashValue self)
 SlashValue map_unary_not(SlashValue self)
 {
     assert(IS_MAP(self));
-    return (SlashValue){ .T_info = &bool_type_info, .boolean = !self.T_info->truthy(self) };
+    return (SlashValue){ .T = &bool_type_info, .boolean = !self.T->truthy(self) };
 }
 
 void map_print(SlashValue self)
@@ -317,7 +317,7 @@ void map_item_assign(Interpreter *interpreter, SlashValue self, SlashValue index
 bool map_item_in(SlashValue self, SlashValue other)
 {
     assert(IS_MAP(self));
-    return slash_map_impl_get(AS_MAP(self), other).T_info != &none_type_info;
+    return slash_map_impl_get(AS_MAP(self), other).T != &none_type_info;
 }
 
 bool map_truthy(SlashValue self)
@@ -342,13 +342,7 @@ bool map_eq(SlashValue self, SlashValue other)
 	SlashValue entry_b = slash_map_impl_get(b, keys[i]);
 	if (!TYPE_EQ(entry_a, entry_b))
 	    return false;
-
-	TraitEq item_eq = entry_a.T_info->eq;
-	if (item_eq == NULL)
-	    REPORT_RUNTIME_ERROR(
-		"Could not check if maps are equal because both maps contain value of type '%s' where eq is not defined.",
-		entry_a.T_info->name)
-	if (!item_eq(entry_a, entry_b))
+	if (!entry_a.T->eq(entry_a, entry_b))
 	    return false;
     }
 
@@ -383,7 +377,7 @@ SlashValue list_plus(Interpreter *interpreter, SlashValue self, SlashValue other
 SlashValue list_unary_not(SlashValue self)
 {
     assert(IS_LIST(self));
-    return (SlashValue){ .T_info = &bool_type_info, .boolean = !self.T_info->truthy(self) };
+    return (SlashValue){ .T = &bool_type_info, .boolean = !self.T->truthy(self) };
 }
 
 void list_print(SlashValue self)
@@ -393,8 +387,8 @@ void list_print(SlashValue self)
     putchar('[');
     for (size_t i = 0; i < underlying->len; i++) {
 	SlashValue item = underlying->items[i];
-	assert(item.T_info->print != NULL);
-	item.T_info->print(item);
+	assert(item.T->print != NULL);
+	item.T->print(item);
 	if (i != underlying->len - 1)
 	    printf(", ");
     }
@@ -466,11 +460,7 @@ bool list_eq(SlashValue self, SlashValue other)
 	if (!TYPE_EQ(A, B))
 	    return false;
 	/* Know A and B have the same types */
-	TraitEq item_eq = A.T_info->eq;
-	if (item_eq == NULL)
-	    REPORT_RUNTIME_ERROR(
-		"Could not check if lists are equal because it contains at least one item of type '%s' where eq is not defined.",
-		A.T_info->name)
+	TraitEq item_eq = A.T->eq;
 	if (!item_eq(A, B))
 	    return false;
     }
@@ -511,7 +501,7 @@ SlashValue tuple_plus(Interpreter *interpreter, SlashValue self, SlashValue othe
 SlashValue tuple_unary_not(SlashValue self)
 {
     assert(IS_TUPLE(self));
-    return (SlashValue){ .T_info = &bool_type_info, .boolean = !self.T_info->truthy(self) };
+    return (SlashValue){ .T = &bool_type_info, .boolean = !self.T->truthy(self) };
 }
 
 void tuple_print(SlashValue self)
@@ -521,7 +511,7 @@ void tuple_print(SlashValue self)
     putchar('(');
     for (size_t i = 0; i < tuple->len; i++) {
 	SlashValue this = tuple->items[i];
-	this.T_info->print(this);
+	this.T->print(this);
 	if (i != tuple->len - 1 || i == 0)
 	    printf(", ");
     }
@@ -556,7 +546,7 @@ bool tuple_item_in(SlashValue self, SlashValue other)
 	SlashValue this = tuple->items[i];
 	if (!TYPE_EQ(this, other))
 	    continue;
-	if (this.T_info->eq(this, other))
+	if (this.T->eq(this, other))
 	    return true;
     }
     return false;
@@ -579,7 +569,7 @@ bool tuple_eq(SlashValue self, SlashValue other)
     for (size_t i = 0; i < a->len; i++) {
 	if (!TYPE_EQ(a->items[i], b->items[i]))
 	    return false;
-	if (!(a->items[i].T_info->eq(a->items[i], b->items[i])))
+	if (!(a->items[i].T->eq(a->items[i], b->items[i])))
 	    return false;
     }
 
@@ -593,8 +583,8 @@ int tuple_hash(SlashValue self)
     int hash = 5381;
     for (size_t i = 0; i < tuple->len; i++) {
 	SlashValue this = tuple->items[i];
-	// TODO: check if hashable
-	hash += ((hash << 5) + hash) + this.T_info->hash(this);
+	VERIFY_TRAIT_IMPL(hash, this, "Unhashable type '%s'", this.T->name);
+	hash += ((hash << 5) + hash) + this.T->hash(this);
     }
 
     return hash;
@@ -874,4 +864,4 @@ SlashTypeInfo none_type_info = { .name = "none",
 				 .obj_size = 0 };
 
 
-SlashValue NoneSingleton = { .T_info = &none_type_info };
+SlashValue NoneSingleton = { .T = &none_type_info };

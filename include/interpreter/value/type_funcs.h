@@ -17,6 +17,7 @@
 #ifndef SLASH_TYPE_FUNC_H
 #define SLASH_TYPE_FUNC_H
 
+#include "interpreter/error.h"
 #include "interpreter/interpreter.h"
 
 typedef struct slash_type_info_t SlashTypeInfo; // Forward decl
@@ -51,5 +52,12 @@ typedef int (*TraitHash)(SlashValue self);
 /* Object lifetime */
 typedef void (*ObjInit)(SlashObj *obj);
 typedef void (*ObjFree)(SlashObj *obj);
+
+
+#define VERIFY_TRAIT_IMPL(trait_func_name, value, ...) \
+    do {                                               \
+	if ((value).T->trait_func_name == NULL)        \
+	    REPORT_RUNTIME_ERROR(__VA_ARGS__);         \
+    } while (0);
 
 #endif /* SLASH_TYPE_FUNC_H */

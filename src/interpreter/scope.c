@@ -41,7 +41,7 @@ static int get_char_pos(char *str, char m)
 static void define_scope_alloced_var(Scope *scope, StrView *key, char *cstr)
 {
     SlashStr *str = scope_alloc(scope, sizeof(SlashStr));
-    str->obj.T_info = &str_type_info;
+    str->obj.T = &str_type_info;
     slash_str_init_from_alloced_cstr(str, cstr);
     var_define(scope, key, &AS_VALUE(str));
 }
@@ -83,7 +83,7 @@ void scope_init_globals(Scope *scope, Arena *arena, int argc, char **argv)
     set_globals(scope);
     scope_init_argv(scope, argc, argv);
     /* Define '$?' that holds the value of the previous exit code */
-    SlashValue exit_code_value = { .T_info = &num_type_info, .num = 0 };
+    SlashValue exit_code_value = { .T = &num_type_info, .num = 0 };
     var_define(scope, &(StrView){ .view = "?", .size = 1 }, &exit_code_value);
 }
 
@@ -115,7 +115,7 @@ void *scope_alloc(Scope *scope, size_t size)
 void var_define(Scope *scope, StrView *key, SlashValue *value)
 {
     if (value == NULL) {
-	SlashValue none = { .T_info = &none_type_info };
+	SlashValue none = { .T = &none_type_info };
 	hashmap_put(&scope->values, key->view, (uint32_t)key->size, &none, sizeof(SlashValue),
 		    true);
 	return;

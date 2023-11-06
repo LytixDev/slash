@@ -58,7 +58,7 @@ static void gc_sweep(LinkedList *gc_objs)
 	if (!obj->gc_marked && obj->gc_managed) {
 #ifdef DEBUG_LOG_GC
 	    printf("%p sweep ", (void *)obj);
-	    TraitPrint print_func = obj->T_info->print;
+	    TraitPrint print_func = obj->T->print;
 	    assert(print_func != NULL);
 	    SlashValue value = AS_VALUE(obj);
 	    print_func(value);
@@ -95,7 +95,7 @@ static void gc_visit_obj(Interpreter *interpreter, SlashObj *obj)
 
 #ifdef DEBUG_LOG_GC
     printf("%p mark ", (void *)obj);
-    TraitPrint print_func = obj->T_info->print;
+    TraitPrint print_func = obj->T->print;
     assert(print_func != NULL);
     SlashValue value = AS_VALUE(obj);
     print_func(value);
@@ -115,7 +115,7 @@ static void gc_blacken_obj(Interpreter *interpreter, SlashObj *obj)
 
 #ifdef DEBUG_LOG_GC
     printf("%p blacken ", (void *)obj);
-    TraitPrint print_func = obj->T_info->print;
+    TraitPrint print_func = obj->T->print;
     assert(print_func != NULL);
     print_func(value);
     putchar('\n');
@@ -234,7 +234,7 @@ void gc_free(Interpreter *interpreter, void *data, size_t size_freed)
 SlashObj *gc_new_T(Interpreter *interpreter, SlashTypeInfo *T)
 {
     SlashObj *obj = gc_alloc(interpreter, T->obj_size);
-    obj->T_info = T;
+    obj->T = T;
     obj->gc_marked = true;
     obj->gc_managed = true;
     gc_register(&interpreter->gc_objs, obj);
@@ -245,7 +245,7 @@ void gc_shadow_push(ArrayList *gc_shadow_stack, SlashObj *obj)
 {
 #ifdef DEBUG_LOG_GC
     printf("%p push to shadow stack ", (void *)obj);
-    TraitPrint print_func = obj->T_info->print;
+    TraitPrint print_func = obj->T->print;
     assert(print_func != NULL);
     SlashValue value = AS_VALUE(obj);
     print_func(value);
@@ -260,7 +260,7 @@ void gc_shadow_pop(ArrayList *gc_shadow_stack)
     SlashObj **obj_ptr = arraylist_get(gc_shadow_stack, gc_shadow_stack->size - 1);
     SlashObj *obj = *obj_ptr;
     printf("%p pop shadow stack", (void *)obj);
-    TraitPrint print_func = obj->T_info->print;
+    TraitPrint print_func = obj->T->print;
     assert(print_func != NULL);
     SlashValue value = AS_VALUE(obj);
     print_func(value);

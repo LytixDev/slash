@@ -37,7 +37,7 @@ static SlashMapEntry *map_get_from_bucket(SlashMapBucket bucket, SlashValue key,
     for (size_t i = 0; i < HM_BUCKET_SIZE; i++) {
 	entry = &bucket.entries[i];
 	if (entry->is_occupied && entry->hash_extra == hash_extra && TYPE_EQ(key, entry->key)) {
-	    if (key.T_info->eq(key, entry->key))
+	    if (key.T->eq(key, entry->key))
 		return entry;
 	}
     }
@@ -61,7 +61,7 @@ static int map_insert(SlashMapBucket *bucket, SlashValue key, SlashValue value, 
 	SlashMapEntry *entry = &bucket->entries[i];
 	/* Check if entry's key is equal to new key */
 	if (entry->is_occupied && entry->hash_extra == hash_extra && TYPE_EQ(entry->key, key)) {
-	    if (key.T_info->eq(key, entry->key)) {
+	    if (key.T->eq(key, entry->key)) {
 		found = entry;
 		override = true;
 		break;
@@ -104,8 +104,7 @@ static void map_increase_capacity(Interpreter *interpreter, SlashMap *map)
 	for (int j = 0; j < HM_BUCKET_SIZE; j++) {
 	    SlashMapEntry entry = bucket->entries[j];
 	    if (entry.is_occupied) {
-		TraitHash hash_func = entry.key.T_info->hash;
-		unsigned int hash = (unsigned int)hash_func(entry.key);
+		unsigned int hash = (unsigned int)entry.key.T->hash(entry.key);
 		uint8_t hash_extra = map_hash_extra(hash);
 		unsigned int bucket_idx = hash >> (32 - map->total_buckets_log2);
 		map_insert(&new_buckets[bucket_idx], entry.key, entry.value, hash_extra);
@@ -142,12 +141,9 @@ void slash_map_impl_put(Interpreter *interpreter, SlashMap *map, SlashValue key,
     if (load_factor >= SLASH_MAP_LOAD_FACTOR_THRESHOLD)
 	map_increase_capacity(interpreter, map);
 
-    TraitHash hash_func = key.T_info->hash;
-    if (hash_func == NULL)
-	REPORT_RUNTIME_ERROR("Can not use type '%s' as key in map because type is unhashable.",
-			     key.T_info->name);
-
-    unsigned int hash = (unsigned int)hash_func(key);
+    VERIFY_TRAIT_IMPL(hash, key, "Can not use type '%s' as key in map because type is unhashable.",
+		      key.T->name);
+    unsigned int hash = (unsigned int)key.T->hash(key);
     uint8_t hash_extra = map_hash_extra(hash);
     unsigned int bucket_idx = hash >> (32 - map->total_buckets_log2);
 
@@ -165,12 +161,9 @@ SlashValue slash_map_impl_get(SlashMap *map, SlashValue key)
     if (map->len == 0)
 	return NoneSingleton;
 
-    TraitHash hash_func = key.T_info->hash;
-    if (hash_func == NULL)
-	REPORT_RUNTIME_ERROR("Can not use type '%s' as key in map because type is unhashable.",
-			     key.T_info->name);
-
-    unsigned int hash = (unsigned int)hash_func(key);
+    VERIFY_TRAIT_IMPL(hash, key, "Can not use type '%s' as key in map because type is unhashable.",
+		      key.T->name);
+    unsigned int hash = (unsigned int)key.T->hash(key);
     uint8_t hash_extra = map_hash_extra(hash);
     unsigned int bucket_idx = hash >> (32 - map->total_buckets_log2);
 
@@ -234,9 +227,9 @@ void slash_map_impl_print(SlashMap map)
 	    key = entry.key;
 	    value = entry.value;
 
-	    key.T_info->print(key);
+	    key.T->print(key);
 	    printf(": ");
-	    value.T_info->print(value);
+	    value.T->print(value);
 	    if (entries_found == map.len)
 		break;
 	    printf(", ");
