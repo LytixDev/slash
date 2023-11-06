@@ -37,8 +37,12 @@
 #define HM_STARTING_BUCKETS_LOG2 3 // the amount of starting buckets
 #define HM_BUCKET_SIZE 6
 #define HM_OVERFLOW_SIZE 4
-#define N_BUCKETS(log2) (1 << (log2))
 #endif /* NICC_HASHMAP_IMPLEMENTATION */
+
+#ifdef N_BUCKETS
+#undef N_BUCKETS
+#define N_BUCKETS(log2) (size_t)(1 << (log2))
+#endif
 
 
 typedef struct {

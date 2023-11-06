@@ -282,13 +282,16 @@ SlashValue text_lit_to_str(Interpreter *interpreter, SlashValue self)
 /*
  * map impl
  */
-typedef SlashValue (*OpUnaryNot)(SlashValue self);
+SlashValue map_unary_not(SlashValue self)
+{
+    assert(IS_MAP(self));
+    return (SlashValue){ .T_info = &bool_type_info, .boolean = !self.T_info->truthy(self) };
+}
 
 void map_print(SlashValue self)
 {
     assert(IS_MAP(self));
-    SlashMap *map = AS_MAP(self);
-    slash_map_impl_print(*map);
+    slash_map_impl_print(*AS_MAP(self));
 }
 
 typedef SlashValue (*TraitToStr)(Interpreter *interpreter, SlashValue self);
@@ -297,20 +300,55 @@ SlashValue map_item_get(Interpreter *interpreter, SlashValue self, SlashValue ot
 {
     (void)interpreter;
     assert(IS_MAP(self));
-    SlashMap *map = AS_MAP(self);
-    return slash_map_impl_get(map, other);
+    return slash_map_impl_get(AS_MAP(self), other);
 }
 
 void map_item_assign(Interpreter *interpreter, SlashValue self, SlashValue index, SlashValue other)
 {
     assert(IS_MAP(self));
-    SlashMap *map = AS_MAP(self);
-    slash_map_impl_put(interpreter, map, index, other);
+    slash_map_impl_put(interpreter, AS_MAP(self), index, other);
 }
 
-typedef bool (*TraitItemIn)(SlashValue self, SlashValue other);
-typedef bool (*TraitTruthy)(SlashValue self);
-typedef bool (*TraitEq)(SlashValue self, SlashValue other);
+bool map_item_in(SlashValue self, SlashValue other)
+{
+    assert(IS_MAP(self));
+    return slash_map_impl_get(AS_MAP(self), other).T_info != &none_type_info;
+}
+
+bool map_truthy(SlashValue self)
+{
+    assert(IS_MAP(self));
+    return AS_MAP(self)->len != 0;
+}
+
+bool map_eq(SlashValue self, SlashValue other)
+{
+    assert(IS_MAP(self) && IS_MAP(other));
+    SlashMap *a = AS_MAP(self);
+    SlashMap *b = AS_MAP(other);
+    if (a->len != b->len)
+	return false;
+
+    // TODO: VLA bad
+    SlashValue keys[a->len];
+    slash_map_impl_get_keys(a, keys);
+    for (size_t i = 0; i < a->len; i++) {
+	SlashValue entry_a = slash_map_impl_get(a, keys[i]);
+	SlashValue entry_b = slash_map_impl_get(b, keys[i]);
+	if (!TYPE_EQ(entry_a, entry_b))
+	    return false;
+
+	TraitEq item_eq = entry_a.T_info->eq;
+	if (item_eq == NULL)
+	    REPORT_RUNTIME_ERROR(
+		"Could not check if maps are equal because both maps contain value of type '%s' where eq is not defined.",
+		entry_a.T_info->name)
+	if (!item_eq(entry_a, entry_b))
+	    return false;
+    }
+
+    return true;
+}
 
 
 /*
@@ -604,14 +642,14 @@ SlashTypeInfo map_type_info = { .name = "map",
 				.pow = NULL,
 				.mod = NULL,
 				.unary_minus = NULL,
-				.unary_not = NULL,
+				.unary_not = map_unary_not,
 				.print = map_print,
 				.to_str = NULL,
 				.item_get = map_item_get,
 				.item_assign = map_item_assign,
-				.item_in = NULL,
-				.truthy = NULL,
-				.eq = NULL,
+				.item_in = map_item_in,
+				.truthy = map_truthy,
+				.eq = map_eq,
 				.cmp = NULL,
 				.hash = NULL,
 				.init = NULL,

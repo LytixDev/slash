@@ -147,6 +147,40 @@ SlashValue slash_map_impl_get(SlashMap *map, SlashValue key)
     return entry->value;
 }
 
+void slash_map_impl_get_values(SlashMap *map, SlashValue *return_ptr)
+{
+    size_t count = 0;
+    for (size_t i = 0; i < N_BUCKETS(map->total_buckets_log2); i++) {
+	SlashMapBucket *bucket = &map->buckets[i];
+	for (int j = 0; j < HM_BUCKET_SIZE; j++) {
+	    SlashMapEntry entry = bucket->entries[j];
+	    if (!entry.is_occupied)
+		continue;
+
+	    return_ptr[count++] = entry.value;
+	    if (count == map->len)
+		return;
+	}
+    }
+}
+
+void slash_map_impl_get_keys(SlashMap *map, SlashValue *return_ptr)
+{
+    size_t count = 0;
+    for (size_t i = 0; i < N_BUCKETS(map->total_buckets_log2); i++) {
+	SlashMapBucket *bucket = &map->buckets[i];
+	for (int j = 0; j < HM_BUCKET_SIZE; j++) {
+	    SlashMapEntry entry = bucket->entries[j];
+	    if (!entry.is_occupied)
+		continue;
+
+	    return_ptr[count++] = entry.key;
+	    if (count == map->len)
+		return;
+	}
+    }
+}
+
 void slash_map_impl_print(SlashMap map)
 {
     SlashValue key, value;
