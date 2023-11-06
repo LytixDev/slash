@@ -82,7 +82,7 @@ static int map_insert(SlashMapBucket *bucket, SlashValue key, SlashValue value, 
     return override ? _HM_OVERRIDE : _HM_SUCCESS;
 }
 
-void slash_map_impl_init(Interpreter *interpreter, SlashMapImpl *map)
+void slash_map_impl_init(Interpreter *interpreter, SlashMap *map)
 {
     map->len = 0;
     map->total_buckets_log2 = HM_STARTING_BUCKETS_LOG2;
@@ -94,15 +94,20 @@ void slash_map_impl_init(Interpreter *interpreter, SlashMapImpl *map)
      * each entry will be set to false.
      */
     memset(map->buckets, 0, sizeof(SlashMapBucket) * n_buckets);
+    // for (size_t i = 0; i < n_buckets; i++) {
+    //     SlashMapBucket *bucket = &map->buckets[i];
+    //     for (size_t j = 0; j < HM_BUCKET_SIZE; j++) {
+    //         bucket->entries[j].is_occupied = false;
+    //     }
+    // }
 }
 
-void slash_map_impl_free(Interpreter *interpreter, SlashMapImpl *map)
+void slash_map_impl_free(Interpreter *interpreter, SlashMap *map)
 {
     gc_free(interpreter, map->buckets, N_BUCKETS(map->total_buckets_log2) * sizeof(SlashMapBucket));
 }
 
-void slash_map_impl_put(Interpreter *interpreter, SlashMapImpl *map, SlashValue key,
-			SlashValue value)
+void slash_map_impl_put(Interpreter *interpreter, SlashMap *map, SlashValue key, SlashValue value)
 {
     double load_factor = (double)map->len / (N_BUCKETS(map->total_buckets_log2) * HM_BUCKET_SIZE);
     if (load_factor >= 0.75) {
@@ -127,7 +132,7 @@ void slash_map_impl_put(Interpreter *interpreter, SlashMapImpl *map, SlashValue 
 	map->len++;
 }
 
-SlashValue slash_map_impl_get(SlashMapImpl *map, SlashValue key)
+SlashValue slash_map_impl_get(SlashMap *map, SlashValue key)
 {
     if (map->len == 0)
 	return NoneSingleton;
@@ -148,12 +153,12 @@ SlashValue slash_map_impl_get(SlashMapImpl *map, SlashValue key)
     return entry->value;
 }
 
-void slash_map_impl_print(SlashMapImpl map)
+void slash_map_impl_print(SlashMap map)
 {
     SlashValue key, value;
     SlashMapBucket bucket;
     SlashMapEntry entry;
-    bool first_print = true;
+    size_t entries_found = 0;
 
     printf("@[");
     for (size_t i = 0; i < N_BUCKETS(map.total_buckets_log2); i++) {
@@ -162,15 +167,17 @@ void slash_map_impl_print(SlashMapImpl map)
 	    entry = bucket.entries[j];
 	    if (!entry.is_occupied)
 		continue;
-	    if (!first_print)
-		printf(", ");
-	    first_print = false;
 
+	    entries_found++;
 	    key = entry.key;
 	    value = entry.value;
+
 	    key.T_info->print(key);
 	    printf(": ");
 	    value.T_info->print(value);
+	    if (entries_found == map.len)
+		break;
+	    printf(", ");
 	}
     }
     printf("]");

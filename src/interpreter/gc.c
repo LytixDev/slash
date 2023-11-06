@@ -122,17 +122,17 @@ static void gc_blacken_obj(Interpreter *interpreter, SlashObj *obj)
 #endif
 
     if (IS_MAP(value)) {
-	SlashMap *map = AS_MAP(value);
-	if (map->map.len == 0)
-	    return;
-	SlashValue *keys[map->map.len];
-	hashmap_get_keys(&map->map, (void **)keys);
-	for (size_t i = 0; i < map->map.len; i++) {
-	    gc_visit_value(interpreter, keys[i]);
-	    SlashValue *v = hashmap_get(&map->map, keys[i], sizeof(SlashValue));
-	    assert(v != NULL);
-	    gc_visit_value(interpreter, v);
-	}
+	// SlashMap *map = AS_MAP(value);
+	// if (map->map.len == 0)
+	//     return;
+	// SlashValue *keys[map->map.len];
+	// hashmap_get_keys(&map->map, (void **)keys);
+	// for (size_t i = 0; i < map->map.len; i++) {
+	//     gc_visit_value(interpreter, keys[i]);
+	//     SlashValue *v = hashmap_get(&map->map, keys[i], sizeof(SlashValue));
+	//     assert(v != NULL);
+	//     gc_visit_value(interpreter, v);
+	// }
     } else if (IS_LIST(value)) {
 	SlashList *list = AS_LIST(value);
 	/// for (size_t i = 0; i < list->list.size; i++) {
@@ -214,6 +214,14 @@ void *gc_alloc(Interpreter *interpreter, size_t size)
     (void)interpreter;
     // TODO: add size to GC
     return malloc(size);
+}
+
+void *gc_realloc(Interpreter *interpreter, void *p, size_t old_size, size_t new_size)
+{
+    (void)interpreter;
+    (void)old_size;
+    // TODO: add size to GC
+    return realloc(p, new_size);
 }
 
 void gc_free(Interpreter *interpreter, void *data, size_t size_freed)

@@ -53,27 +53,22 @@ typedef struct {
 } SlashMapBucket;
 
 typedef struct {
+    SlashObj obj;
     SlashMapBucket *buckets;
     size_t total_buckets_log2;
     size_t len; // total items stored in the hashmap
-} SlashMapImpl;
-
-typedef struct {
-    SlashObj obj;
-    SlashMapImpl map;
 } SlashMap;
 
 /* Functions */
-void slash_map_impl_init(Interpreter *interpreter, SlashMapImpl *map);
-void slash_map_impl_free(Interpreter *interpreter, SlashMapImpl *map);
+void slash_map_impl_init(Interpreter *interpreter, SlashMap *map);
+void slash_map_impl_free(Interpreter *interpreter, SlashMap *map);
 
-void slash_map_impl_put(Interpreter *interpreter, SlashMapImpl *map, SlashValue key,
-			SlashValue value);
-SlashValue slash_map_impl_get(SlashMapImpl *map, SlashValue key);
+void slash_map_impl_put(Interpreter *interpreter, SlashMap *map, SlashValue key, SlashValue value);
+SlashValue slash_map_impl_get(SlashMap *map, SlashValue key);
 
-bool slash_map_impl_rm(SlashMapImpl *map, SlashValue key);
+bool slash_map_impl_rm(SlashMap *map, SlashValue key);
 
-void slash_map_impl_get_values(SlashMapImpl *map, SlashValue *return_ptr);
-void slash_map_impl_get_keys(SlashMapImpl *map, SlashValue *return_ptr);
+void slash_map_impl_get_values(SlashMap *map, SlashValue *return_ptr);
+void slash_map_impl_get_keys(SlashMap *map, SlashValue *return_ptr);
 
-void slash_map_impl_print(SlashMapImpl map);
+void slash_map_impl_print(SlashMap map);

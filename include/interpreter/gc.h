@@ -24,6 +24,7 @@
 #include "nicc/nicc.h"
 
 void *gc_alloc(Interpreter *interpreter, size_t size);
+void *gc_realloc(Interpreter *interpreter, void *p, size_t old_size, size_t new_size);
 void gc_free(Interpreter *interpreter, void *data, size_t size_freed);
 
 SlashObj *gc_new_T(Interpreter *interpreter, SlashTypeInfo *T);

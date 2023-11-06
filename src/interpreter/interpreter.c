@@ -264,7 +264,7 @@ static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
 {
     SlashList *list = (SlashList *)gc_new_T(interpreter, &list_type_info);
     gc_shadow_push(&interpreter->gc_shadow_stack, &list->obj);
-    slash_list_impl_init(interpreter, &list->list);
+    slash_list_impl_init(interpreter, list);
     if (expr->exprs == NULL) {
 	gc_shadow_pop(&interpreter->gc_shadow_stack);
 	return AS_VALUE((SlashObj *)list);
@@ -274,7 +274,7 @@ static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
     ARENA_LL_FOR_EACH(&expr->exprs->seq, item)
     {
 	SlashValue element_value = eval(interpreter, item->value);
-	slash_list_impl_append(interpreter, &list->list, element_value);
+	slash_list_impl_append(interpreter, list, element_value);
     }
 
     gc_shadow_pop(&interpreter->gc_shadow_stack);
@@ -285,7 +285,7 @@ static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
 {
     SlashMap *map = (SlashMap *)gc_new_T(interpreter, &map_type_info);
     gc_shadow_push(&interpreter->gc_shadow_stack, &map->obj);
-    slash_map_impl_init(interpreter, &map->map);
+    slash_map_impl_init(interpreter, map);
     if (expr->key_value_pairs == NULL) {
 	gc_shadow_pop(&interpreter->gc_shadow_stack);
 	return AS_VALUE((SlashObj *)map);
@@ -298,7 +298,7 @@ static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
 	pair = item->value;
 	SlashValue k = eval(interpreter, pair->key);
 	SlashValue v = eval(interpreter, pair->value);
-	slash_map_impl_put(interpreter, &map->map, k, v);
+	slash_map_impl_put(interpreter, map, k, v);
     }
 
     gc_shadow_pop(&interpreter->gc_shadow_stack);
