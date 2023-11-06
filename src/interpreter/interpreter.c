@@ -226,7 +226,7 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
 
     SlashStr *str = (SlashStr *)gc_new_T(interpreter, &str_type_info);
     slash_str_init_from_slice(interpreter, str, buffer, size);
-    return AS_VALUE((SlashObj *)str);
+    return AS_VALUE(str);
 }
 
 /// static SlashValue eval_tuple(Interpreter *interpreter, SequenceExpr *expr)
@@ -257,7 +257,7 @@ static SlashValue eval_str(Interpreter *interpreter, StrExpr *expr)
 {
     SlashStr *str = (SlashStr *)gc_new_T(interpreter, &str_type_info);
     slash_str_init_from_view(interpreter, str, &expr->view);
-    return AS_VALUE((SlashObj *)str);
+    return AS_VALUE(str);
 }
 
 static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
@@ -267,7 +267,7 @@ static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
     slash_list_impl_init(interpreter, list);
     if (expr->exprs == NULL) {
 	gc_shadow_pop(&interpreter->gc_shadow_stack);
-	return AS_VALUE((SlashObj *)list);
+	return AS_VALUE(list);
     }
 
     LLItem *item;
@@ -278,7 +278,7 @@ static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
     }
 
     gc_shadow_pop(&interpreter->gc_shadow_stack);
-    return AS_VALUE((SlashObj *)list);
+    return AS_VALUE(list);
 }
 
 static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
@@ -288,7 +288,7 @@ static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
     slash_map_impl_init(interpreter, map);
     if (expr->key_value_pairs == NULL) {
 	gc_shadow_pop(&interpreter->gc_shadow_stack);
-	return AS_VALUE((SlashObj *)map);
+	return AS_VALUE(map);
     }
 
     LLItem *item;
@@ -302,7 +302,7 @@ static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
     }
 
     gc_shadow_pop(&interpreter->gc_shadow_stack);
-    return AS_VALUE((SlashObj *)map);
+    return AS_VALUE(map);
 }
 
 /// static SlashValue eval_method(Interpreter *interpreter, MethodExpr *expr)

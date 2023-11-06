@@ -370,7 +370,7 @@ SlashValue list_plus(Interpreter *interpreter, SlashValue self, SlashValue other
     for (size_t i = 0; i < b->len; i++)
 	slash_list_impl_append(interpreter, new_list, b->items[i]);
 
-    return AS_VALUE((SlashObj *)new_list);
+    return AS_VALUE(new_list);
 }
 
 SlashValue list_unary_not(SlashValue self)
