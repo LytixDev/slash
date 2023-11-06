@@ -31,7 +31,7 @@ static inline uint8_t map_hash_extra(int hash)
     return (uint8_t)(hash & ((1 << 8) - 1));
 }
 
-static SlashMapEntry *get_from_bucket(SlashMapBucket bucket, SlashValue key, uint8_t hash_extra)
+static SlashMapEntry *map_get_from_bucket(SlashMapBucket bucket, SlashValue key, uint8_t hash_extra)
 {
     SlashMapEntry *entry = NULL;
     for (size_t i = 0; i < HM_BUCKET_SIZE; i++) {
@@ -82,10 +82,45 @@ static int map_insert(SlashMapBucket *bucket, SlashValue key, SlashValue value, 
     return override ? _HM_OVERRIDE : _HM_SUCCESS;
 }
 
+static void map_increase_capacity(Interpreter *interpreter, SlashMap *map)
+{
+    map->total_buckets_log2++;
+    assert(map->total_buckets_log2 < 32);
+
+    /*
+     * The strategy here is to create more buckets and move each entry into one of the new buckets.
+     * This causes a small freeze in execution. Could be improved by partially moving entries
+     * sequentially. So far the added complexity is not worth it.
+     */
+    size_t n_buckets = N_BUCKETS(map->total_buckets_log2);
+    SlashMapBucket *new_buckets = gc_alloc(interpreter, sizeof(SlashMapBucket) * n_buckets);
+    /* Sets all entries' is_occupied field to false (0) */
+    memset(new_buckets, 0, sizeof(SlashMapBucket) * n_buckets);
+
+    /* Move all entries into the new buckets */
+    size_t old_n_buckets = N_BUCKETS(map->total_buckets_log2 - 1);
+    for (size_t i = 0; i < old_n_buckets; i++) {
+	SlashMapBucket *bucket = &map->buckets[i];
+	for (int j = 0; j < HM_BUCKET_SIZE; j++) {
+	    SlashMapEntry entry = bucket->entries[j];
+	    if (entry.is_occupied) {
+		TraitHash hash_func = entry.key.T_info->hash;
+		unsigned int hash = (unsigned int)hash_func(entry.key);
+		uint8_t hash_extra = map_hash_extra(hash);
+		unsigned int bucket_idx = hash >> (32 - map->total_buckets_log2);
+		map_insert(&new_buckets[bucket_idx], entry.key, entry.value, hash_extra);
+	    }
+	}
+    }
+
+    gc_free(interpreter, map->buckets, sizeof(SlashMapBucket) * old_n_buckets);
+    map->buckets = new_buckets;
+}
+
 void slash_map_impl_init(Interpreter *interpreter, SlashMap *map)
 {
     map->len = 0;
-    map->total_buckets_log2 = HM_STARTING_BUCKETS_LOG2;
+    map->total_buckets_log2 = SLASH_MAP_STARTING_BUCKETS_LOG2;
     size_t n_buckets = N_BUCKETS(map->total_buckets_log2);
     // TODO: should we have a gc_calloc() function ?
     map->buckets = gc_alloc(interpreter, sizeof(SlashMapBucket) * n_buckets);
@@ -104,9 +139,8 @@ void slash_map_impl_free(Interpreter *interpreter, SlashMap *map)
 void slash_map_impl_put(Interpreter *interpreter, SlashMap *map, SlashValue key, SlashValue value)
 {
     double load_factor = (double)map->len / (N_BUCKETS(map->total_buckets_log2) * HM_BUCKET_SIZE);
-    if (load_factor >= 0.75) {
-	assert(NULL && "Implement increase() func for map");
-    }
+    if (load_factor >= SLASH_MAP_LOAD_FACTOR_THRESHOLD)
+	map_increase_capacity(interpreter, map);
 
     TraitHash hash_func = key.T_info->hash;
     if (hash_func == NULL)
@@ -119,7 +153,7 @@ void slash_map_impl_put(Interpreter *interpreter, SlashMap *map, SlashValue key,
 
     int rc = map_insert(&map->buckets[bucket_idx], key, value, hash_extra);
     if (rc == _HM_FULL) {
-	assert(NULL && "Implement increase() func for map");
+	map_increase_capacity(interpreter, map);
 	slash_map_impl_put(interpreter, map, key, value);
     }
     if (rc == _HM_SUCCESS)
@@ -140,7 +174,7 @@ SlashValue slash_map_impl_get(SlashMap *map, SlashValue key)
     uint8_t hash_extra = map_hash_extra(hash);
     unsigned int bucket_idx = hash >> (32 - map->total_buckets_log2);
 
-    SlashMapEntry *entry = get_from_bucket(map->buckets[bucket_idx], key, hash_extra);
+    SlashMapEntry *entry = map_get_from_bucket(map->buckets[bucket_idx], key, hash_extra);
     if (entry == NULL)
 	return NoneSingleton;
 

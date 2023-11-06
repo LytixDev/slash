@@ -520,9 +520,9 @@ int str_hash(SlashValue self)
     SlashStr *str = AS_STR(self);
 
     int A = 1327217885;
-    int k = 0;
+    int k = 5381;
     for (size_t i = 0; i < str->len; i++)
-	k += (k << 5) + (str->str)[i];
+	k += ((k << 5) + k) + (str->str)[i];
 
     return k * A;
 }

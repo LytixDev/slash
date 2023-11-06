@@ -33,16 +33,21 @@
 #define _HM_FULL 1
 #define _HM_OVERRIDE 2
 #define _HM_SUCCESS 3
-
-#define HM_STARTING_BUCKETS_LOG2 3 // the amount of starting buckets
-#define HM_BUCKET_SIZE 6
-#define HM_OVERFLOW_SIZE 4
 #endif /* NICC_HASHMAP_IMPLEMENTATION */
+
+#define SLASH_MAP_STARTING_BUCKETS_LOG2 3
+/*
+ * sizeof(SlashValue) == 24.
+ * 24 * 8 = 192, which is divisible by 32, meaning we have no extra padding.
+ * */
+#define SLASH_MAP_BUCKET_SIZE 8
 
 #ifdef N_BUCKETS
 #undef N_BUCKETS
 #define N_BUCKETS(log2) (size_t)(1 << (log2))
 #endif
+
+#define SLASH_MAP_LOAD_FACTOR_THRESHOLD 0.75
 
 
 typedef struct {
@@ -53,7 +58,7 @@ typedef struct {
 } SlashMapEntry;
 
 typedef struct {
-    SlashMapEntry entries[HM_BUCKET_SIZE];
+    SlashMapEntry entries[SLASH_MAP_BUCKET_SIZE];
 } SlashMapBucket;
 
 typedef struct {
