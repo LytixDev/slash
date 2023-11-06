@@ -183,7 +183,11 @@ bool num_eq(SlashValue self, SlashValue other)
 int num_cmp(SlashValue self, SlashValue other)
 {
     assert(IS_NUM(self) && IS_NUM(other));
-    return self.num > other.num;
+    if (self.num > other.num)
+	return 1;
+    if (self.num < other.num)
+	return -1;
+    return 0;
 }
 
 int num_hash(SlashValue self)

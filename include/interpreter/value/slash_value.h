@@ -64,7 +64,10 @@ typedef struct {
 typedef struct slash_type_info_t {
     char *name;
 
-    /* Operator functions */
+    /*
+     * Operator functions.
+     * If operator takes multiple operand then all operands must be of the same type.
+     */
     OpPlus plus;
     OpMinus minus;
     OpMul mul;
@@ -82,7 +85,11 @@ typedef struct slash_type_info_t {
     TraitItemAssign item_assign;
     TraitItemIn item_in;
 
-    /* Equality and hashing functions */
+    /*
+     * Equality and hashing functions.
+     * If trait function takes multiple SlashValue arguments then each argument must be of the
+     * same type as the `self` argument.
+     */
     TraitTruthy truthy;
     TraitEq eq;
     TraitCmp cmp;
