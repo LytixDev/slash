@@ -91,6 +91,42 @@ static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt, char *pro
     set_exit_code(interpreter, exit_code);
 }
 
+static SlashValue eval_binary_operators(Interpreter *interpreter, SlashValue left, SlashValue right,
+					TokenType op)
+{
+    /* Binary operators */
+    if (!TYPE_EQ(left, right))
+	REPORT_RUNTIME_ERROR("Binary operation failed: type mismatch between '%s' and '%s'",
+			     left.T_info->name, right.T_info->name);
+    switch (op) {
+    case t_greater:
+    case t_greater_equal:
+    case t_less:
+    case t_less_equal:
+	break;
+
+    case t_plus:
+	return left.T_info->plus(interpreter, left, right);
+    case t_minus:
+    case t_slash:
+    case t_slash_slash:
+    case t_percent:
+    case t_star:
+    case t_star_star:
+	break;
+    case t_equal_equal:
+	return (SlashValue){ .T_info = &bool_type_info, .boolean = left.T_info->eq(left, right) };
+    case t_bang_equal:
+	return (SlashValue){ .T_info = &bool_type_info, .boolean = !left.T_info->eq(left, right) };
+
+    default:
+	REPORT_RUNTIME_ERROR("Unrecognized binary operator");
+    }
+
+    ASSERT_NOT_REACHED;
+    return NoneSingleton;
+}
+
 
 /*
  * expression evaluation functions
@@ -118,63 +154,49 @@ static SlashValue eval_unary(Interpreter *interpreter, UnaryExpr *expr)
 static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
 {
     SlashValue left = eval(interpreter, expr->left);
-    SlashValue right = eval(interpreter, expr->right);
-    if (!TYPE_EQ(left, right))
-	REPORT_RUNTIME_ERROR("Binary operation failed: type mismatch between '%s' and '%s'",
-			     left.T_info->name, right.T_info->name);
+    if (IS_OBJ(left))
+	gc_shadow_push(&interpreter->gc_shadow_stack, left.obj);
+    SlashValue right;
+    SlashValue return_value;
 
-    switch (expr->operator_) {
-    case t_plus:
-	return left.T_info->plus(interpreter, left, right);
-    case t_equal_equal:
-	return (SlashValue){ .T_info = &bool_type_info, .boolean = left.T_info->eq(left, right) };
-
-    default:
-	REPORT_RUNTIME_ERROR("Unrecognized binary operator");
+    /* logical operators */
+    if (expr->operator_ == t_and) {
+	if (!left.T_info->truthy(left)) {
+	    return_value = (SlashValue){ .T_info = &bool_type_info, .boolean = false };
+	    goto defer_shadow_pop;
+	}
+	right = eval(interpreter, expr->right);
+	return_value =
+	    (SlashValue){ .T_info = &bool_type_info, .boolean = right.T_info->truthy(right) };
+	goto defer_shadow_pop;
     }
+    right = eval(interpreter, expr->right);
+    if (expr->operator_ == t_or) {
+	bool truthy = left.T_info->truthy(left) || right.T_info->truthy(right);
+	return_value = (SlashValue){ .T_info = &bool_type_info, .boolean = truthy };
+	goto defer_shadow_pop;
+    }
+
+    /* binary operators */
+    if (expr->operator_ != t_in) {
+	return_value = eval_binary_operators(interpreter, left, right, expr->operator_);
+	goto defer_shadow_pop;
+    }
+
+    /* left "IN" right */
+    TraitItemIn in_func = right.T_info->item_in;
+    if (in_func == NULL)
+	REPORT_RUNTIME_ERROR("'in' operator not defined for type '%s'", right.T_info->name);
+    bool rc = in_func(right, left);
+    return_value = (SlashValue){ .T_info = &bool_type_info, .boolean = rc };
+
+
+defer_shadow_pop:
+    if (IS_OBJ(left))
+	gc_shadow_pop(&interpreter->gc_shadow_stack);
+    return return_value;
 }
 
-/// static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
-///{
-///     SlashValue return_value;
-///     SlashValue left = eval(interpreter, expr->left);
-///     if (IS_OBJ(left.type))
-///	gc_shadow_push(&interpreter->gc_shadow_stack, left.obj);
-///
-///     /* logical operators */
-///     if (expr->operator_ == t_and) {
-///	if (!is_truthy(&left)) {
-///	    return_value = (SlashValue){ .type = SLASH_BOOL, .boolean = false };
-///	    goto defer_shadow_pop;
-///	}
-///	SlashValue right = eval(interpreter, expr->right);
-///	return_value = (SlashValue){ .type = SLASH_BOOL, .boolean = is_truthy(&right) };
-///	goto defer_shadow_pop;
-///     }
-///     SlashValue right = eval(interpreter, expr->right);
-///     if (expr->operator_ == t_or) {
-///	return_value =
-///	    (SlashValue){ .type = SLASH_BOOL, .boolean = is_truthy(&left) || is_truthy(&right) };
-///	goto defer_shadow_pop;
-///     }
-///
-///     if (expr->operator_ != t_in) {
-///	REPORT_RUNTIME_ERROR("TODO: add binary operator traits");
-///	goto defer_shadow_pop;
-///     }
-///
-///     /* left "IN" right */
-///     TraitItemIn func = trait_item_in[right.type];
-///     bool rc = func(&right, &left);
-///     return_value = (SlashValue){ .type = SLASH_BOOL, .boolean = rc };
-///
-/// defer_shadow_pop:
-///     if (IS_OBJ(left.type))
-///	gc_shadow_pop(&interpreter->gc_shadow_stack);
-///     return return_value;
-/// }
-///
-///
 static SlashValue eval_literal(Interpreter *interpreter, LiteralExpr *expr)
 {
     (void)interpreter;
