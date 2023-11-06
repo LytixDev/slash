@@ -50,7 +50,7 @@ typedef struct slash_obj_t {
  */
 typedef struct {
     SlashObj obj;
-    size_t size;
+    size_t len;
     SlashValue *items;
 } SlashTuple;
 
