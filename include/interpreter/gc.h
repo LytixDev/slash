@@ -20,32 +20,46 @@
 // #define DEBUG_STRESS_GC
 // #define DEBUG_LOG_GC
 
-#include "interpreter/value/slash_value.h"
 #include "nicc/nicc.h"
 
-void *gc_alloc(Interpreter *interpreter, size_t size);
-void *gc_realloc(Interpreter *interpreter, void *p, size_t old_size, size_t new_size);
-void gc_free(Interpreter *interpreter, void *data, size_t size_freed);
+typedef struct slash_type_info_t SlashTypeInfo; // Forward decl
+typedef struct slash_obj_t SlashObj; // Forward decl
+typedef struct slash_value_t SlashValue; // Forward decl
 
-SlashObj *gc_new_T(Interpreter *interpreter, SlashTypeInfo *T);
+typedef struct {
+    LinkedList gc_objs; // objects managed by the GC
+    ArrayList gray_stack;
+    ArrayList shadow_stack; // list of objects that are always always marked during gc run.
+    size_t bytes_managing;
+    size_t next_run; // how many bytes allocated until we run the GC again
+} GC;
+
+
+void gc_ctx_init(GC *gc);
+void gc_ctx_free(GC *gc);
+
+void *gc_alloc(GC *gc, size_t size);
+void *gc_realloc(GC *gc, void *p, size_t old_size, size_t new_size);
+void gc_free(GC *gc, void *data, size_t size_freed);
+SlashObj *gc_new_T(GC *gc, SlashTypeInfo *T);
 
 /*
  * Runs the garbage collector.
  * Finds all unreachable objects and frees them.
  */
-void gc_run(Interpreter *interpreter);
+void gc_run(GC *gc);
 
 /*
  * Free all uncollected objects regardless of if they are reachable or not.
  * Used on exit.
  */
-void gc_collect_all(LinkedList *gc_objs);
+void gc_collect_all(GC *gc);
 
 /*
  * Useful when allocating a collection that can not be marked until every element of the
  * initializtion is allocated.
  */
-void gc_shadow_push(ArrayList *gc_shadow_stack, SlashObj *obj);
-void gc_shadow_pop(ArrayList *gc_shadow_stack);
+void gc_shadow_push(GC *gc, SlashObj *obj);
+void gc_shadow_pop(GC *gc);
 
 #endif /* GC_H */

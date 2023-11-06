@@ -991,10 +991,7 @@ void interpreter_init(Interpreter *interpreter, int argc, char **argv)
     scope_init_globals(&interpreter->globals, &interpreter->arena, argc, argv);
     interpreter->scope = &interpreter->globals;
 
-    linkedlist_init(&interpreter->gc_objs, sizeof(SlashObj *));
-    arraylist_init(&interpreter->gc_gray_stack, sizeof(SlashObj *));
-    interpreter->obj_alloced_since_next_gc = 0;
-    arraylist_init(&interpreter->gc_shadow_stack, sizeof(SlashObj **));
+    gc_ctx_init(&interpreter->gc);
 
     /* init default StreamCtx */
     StreamCtx stream_ctx = { .read_fd = STDIN_FILENO, .write_fd = STDOUT_FILENO };
@@ -1004,12 +1001,10 @@ void interpreter_init(Interpreter *interpreter, int argc, char **argv)
 
 void interpreter_free(Interpreter *interpreter)
 {
-    gc_collect_all(&interpreter->gc_objs);
+    gc_collect_all(&interpreter->gc);
+    gc_ctx_free(&interpreter->gc);
     scope_destroy(&interpreter->globals);
     arraylist_free(&interpreter->stream_ctx.active_fds);
-    linkedlist_free(&interpreter->gc_objs);
-    arraylist_free(&interpreter->gc_shadow_stack);
-    arraylist_free(&interpreter->gc_gray_stack);
 }
 
 static void interpreter_reset_from_err(Interpreter *interpreter)
