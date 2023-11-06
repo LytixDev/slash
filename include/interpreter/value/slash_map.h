@@ -18,6 +18,7 @@
 #define SLASH_MAP_IMPL_H
 #endif /* SLASH_MAP_IMPL_H */
 
+#include <stdint.h>
 #include <stdlib.h>
 
 #include "interpreter/interpreter.h"
@@ -32,44 +33,51 @@
 #define _HM_FULL 1
 #define _HM_OVERRIDE 2
 #define _HM_SUCCESS 3
-
-#define HM_STARTING_BUCKETS_LOG2 3 // the amount of starting buckets
-#define HM_BUCKET_SIZE 6
-#define HM_OVERFLOW_SIZE 4
-#define N_BUCKETS(log2) (1 << (log2))
 #endif /* NICC_HASHMAP_IMPLEMENTATION */
+
+#define SLASH_MAP_STARTING_BUCKETS_LOG2 3
+/*
+ * sizeof(SlashValue) == 24.
+ * 24 * 8 = 192, which is divisible by 32, meaning we have no extra padding.
+ * */
+#define SLASH_MAP_BUCKET_SIZE 8
+
+#ifdef N_BUCKETS
+#undef N_BUCKETS
+#define N_BUCKETS(log2) (size_t)(1 << (log2))
+#endif
+
+#define SLASH_MAP_LOAD_FACTOR_THRESHOLD 0.75
 
 
 typedef struct {
     SlashValue key;
     SlashValue value;
-    bool hash_extra; // used for faster comparison
+    uint8_t hash_extra; // used for faster comparison
     bool is_occupied;
 } SlashMapEntry;
 
 typedef struct {
-    SlashMapEntry entries[HM_BUCKET_SIZE];
+    SlashMapEntry entries[SLASH_MAP_BUCKET_SIZE];
 } SlashMapBucket;
 
 typedef struct {
-    SlashMapBucket *buckets;
-    bool size_log2; //
-    size_t len; // total items stored in the hashmap
-} SlashMapImpl;
-
-typedef struct {
     SlashObj obj;
-    HashMap map;
+    SlashMapBucket *buckets;
+    size_t total_buckets_log2;
+    size_t len; // total items stored in the hashmap
 } SlashMap;
 
 /* Functions */
-void slash_map_init(Interpreter *interpreter, SlashMapImpl *map);
-void slash_map_free(Interpreter *interpreter, SlashMapImpl *map);
+void slash_map_impl_init(Interpreter *interpreter, SlashMap *map);
+void slash_map_impl_free(Interpreter *interpreter, SlashMap *map);
 
-void slash_map_put(Interpreter *interpreter, SlashMapImpl *map, SlashValue key, SlashValue value);
-SlashValue slash_map_get(SlashMapImpl *map, SlashValue key);
+void slash_map_impl_put(Interpreter *interpreter, SlashMap *map, SlashValue key, SlashValue value);
+SlashValue slash_map_impl_get(SlashMap *map, SlashValue key);
 
-bool slash_map_rm(SlashMapImpl *map, SlashValue key);
+bool slash_map_impl_rm(SlashMap *map, SlashValue key);
 
-void slash_map_get_values(SlashMapImpl *map, SlashValue *return_ptr);
-void slash_map_get_keys(SlashMapImpl *map, SlashValue *return_ptr);
+void slash_map_impl_get_values(SlashMap *map, SlashValue *return_ptr);
+void slash_map_impl_get_keys(SlashMap *map, SlashValue *return_ptr);
+
+void slash_map_impl_print(SlashMap map);

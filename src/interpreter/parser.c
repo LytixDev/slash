@@ -763,6 +763,12 @@ static Expr *map(Parser *parser)
 {
     /* came from '@[' */
     MapExpr *expr = (MapExpr *)expr_alloc(parser->ast_arena, EXPR_MAP);
+    /* Case where initializer is empty */
+    if (match(parser, t_rbracket)) {
+	expr->key_value_pairs = NULL;
+	return (Expr *)expr;
+    }
+
     expr->key_value_pairs = arena_ll_alloc(parser->ast_arena);
 
     do {

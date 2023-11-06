@@ -28,19 +28,19 @@
  * Allocates more memory if len (total items) >= capacity.
  * This ensures we have space to add at least one new item after the function is called.
  */
-static void ensure_capacity(Interpreter *interpreter, SlashListImpl *list)
+static void ensure_capacity(Interpreter *interpreter, SlashList *list)
 {
     (void)interpreter;
     if (list->len >= list->cap) {
+	size_t old_size = sizeof(SlashValue) * list->cap;
 	list->cap = SLASH_LIST_GROW_CAPACITY(list->cap);
-	// TODO: gc_realloc!
-	list->items = realloc(list->items, sizeof(SlashValue) * list->cap);
+	size_t new_size = sizeof(SlashValue) * list->cap;
+	list->items = gc_realloc(interpreter, list->items, old_size, new_size);
     }
 }
 
-void slash_list_init(Interpreter *interpreter, SlashListImpl *list)
+void slash_list_impl_init(Interpreter *interpreter, SlashList *list)
 {
-
 #ifdef SLASH_LIST_STARTING_CAP
     list->cap = SLASH_LIST_STARTING_CAP;
 #elif
@@ -50,12 +50,12 @@ void slash_list_init(Interpreter *interpreter, SlashListImpl *list)
     list->items = gc_alloc(interpreter, sizeof(SlashValue) * list->cap);
 }
 
-void slash_list_free(Interpreter *interpreter, SlashListImpl *list)
+void slash_list_impl_free(Interpreter *interpreter, SlashList *list)
 {
     gc_free(interpreter, list->items, sizeof(SlashValue) * list->cap);
 }
 
-bool slash_list_set(Interpreter *interpreter, SlashListImpl *list, SlashValue val, size_t idx)
+bool slash_list_impl_set(Interpreter *interpreter, SlashList *list, SlashValue val, size_t idx)
 {
     /* Not possible to set a value at a position greater than the current len */
     if (idx > list->len)
@@ -69,29 +69,29 @@ bool slash_list_set(Interpreter *interpreter, SlashListImpl *list, SlashValue va
     return true;
 }
 
-bool slash_list_append(Interpreter *interpreter, SlashListImpl *list, SlashValue val)
+bool slash_list_impl_append(Interpreter *interpreter, SlashList *list, SlashValue val)
 {
-    return slash_list_set(interpreter, list, val, list->len);
+    return slash_list_impl_set(interpreter, list, val, list->len);
 }
 
-SlashValue slash_list_get(SlashListImpl *list, size_t idx)
+SlashValue slash_list_impl_get(SlashList *list, size_t idx)
 {
     /* This should be checked and reported as a runtime error before this function is called */
     assert(idx < list->len);
     return list->items[idx];
 }
 
-size_t slash_list_index_of(SlashListImpl *list, SlashValue val)
+size_t slash_list_impl_index_of(SlashList *list, SlashValue val)
 {
     for (size_t i = 0; i < list->len; i++) {
 	SlashValue other = list->items[i];
 	if (TYPE_EQ(val, other) && val.T_info->eq(val, other))
-	    return slash_list_rm(list, i);
+	    return slash_list_impl_rm(list, i);
     }
     return SIZE_MAX;
 }
 
-bool slash_list_rm(SlashListImpl *list, size_t idx)
+bool slash_list_impl_rm(SlashList *list, size_t idx)
 {
     if (idx > list->len)
 	return false;
@@ -104,7 +104,7 @@ bool slash_list_rm(SlashListImpl *list, size_t idx)
     return true;
 }
 
-bool slash_list_rmv(SlashListImpl *list, SlashValue val)
+bool slash_list_impl_rmv(SlashList *list, SlashValue val)
 {
     if (val.T_info->eq == NULL)
 	REPORT_RUNTIME_ERROR(
@@ -112,8 +112,8 @@ bool slash_list_rmv(SlashListImpl *list, SlashValue val)
 	    val.T_info->name);
 
     /* Find index of value */
-    size_t idx = slash_list_index_of(list, val);
+    size_t idx = slash_list_impl_index_of(list, val);
     if (idx == SIZE_MAX)
 	return false;
-    return slash_list_rm(list, idx);
+    return slash_list_impl_rm(list, idx);
 }

@@ -7,7 +7,7 @@ DIRS := $(shell find $(SRC) -type d)
 SRCS := $(shell find $(SRC) -type f -name "*.c")
 OBJS := $(SRCS:%.c=$(OBJDIR)/%.o)
 
-CFLAGS = -Iinclude -Wall -Wpedantic -Wextra -Wshadow -std=gnu11
+CFLAGS = -Iinclude -Wall -Wpedantic -Wextra -Wshadow -std=gnu11 -O2
 CFLAGS += -DNDEBUG
 LDFLAGS = -lm
 
