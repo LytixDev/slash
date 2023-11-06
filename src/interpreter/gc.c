@@ -38,7 +38,7 @@ static void gc_sweep_obj(SlashObj *obj)
     } else if (IS_LIST(value)) {
 	// arraylist_free(&AS_LIST(value)->list);
     } else if (IS_TUPLE(value)) {
-	free(AS_TUPLE(value)->tuple);
+	// free(AS_TUPLE(value)->tuple);
     } else if (IS_STR(value)) {
 	free(AS_STR(value)->str);
     } else {
@@ -140,9 +140,9 @@ static void gc_blacken_obj(Interpreter *interpreter, SlashObj *obj)
 	///     gc_visit_value(interpreter, v);
 	/// }
     } else if (IS_TUPLE(value)) {
-	SlashTuple *tuple = AS_TUPLE(value);
-	for (size_t i = 0; i < tuple->size; i++)
-	    gc_visit_value(interpreter, &tuple->tuple[i]);
+	/// SlashTuple *tuple = AS_TUPLE(value);
+	/// for (size_t i = 0; i < tuple->size; i++)
+	///     gc_visit_value(interpreter, &tuple->tuple[i]);
     } else if (IS_STR(value)) {
 	return;
     } else {

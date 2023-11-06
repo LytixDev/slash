@@ -50,8 +50,8 @@ typedef struct slash_obj_t {
  */
 typedef struct {
     SlashObj obj;
-    size_t size;
-    SlashValue *tuple;
+    size_t len;
+    SlashValue *items;
 } SlashTuple;
 
 typedef struct {
@@ -140,13 +140,16 @@ extern SlashValue NoneSingleton;
 #define AS_LIST(value__) ((SlashList *)(value__).obj)
 #define AS_TUPLE(value__) ((SlashTuple *)(value__).obj)
 #define AS_STR(value__) ((SlashStr *)(value__).obj)
-#define AS_VALUE(obj__) ((SlashValue){ .T_info = (obj__)->T_info, .obj = (obj__) })
+#define AS_VALUE(obj__) \
+    ((SlashValue){ .T_info = ((SlashObj *)(obj__))->T_info, .obj = (SlashObj *)(obj__) })
 
 #define TYPE_EQ(a, b) ((a).T_info == (b).T_info)
 #define NUM_IS_INT(value_num__) ((value_num__).num == (int)(value_num__).num)
 
 
 /* Init functions */
+void slash_tuple_init(Interpreter *interpreter, SlashTuple *tuple, size_t size);
+
 void slash_str_init_from_view(Interpreter *interpreter, SlashStr *str, StrView *view);
 void slash_str_init_from_slice(Interpreter *interpreter, SlashStr *str, char *cstr, size_t size);
 void slash_str_init_from_alloced_cstr(SlashStr *str, char *cstr);

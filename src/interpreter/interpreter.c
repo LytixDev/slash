@@ -124,7 +124,7 @@ static SlashValue eval_binary_operators(Interpreter *interpreter, SlashValue lef
     case t_percent:
 	return left.T_info->mod(left, right);
     case t_star:
-	return left.T_info->mul(left, right);
+	return left.T_info->mul(interpreter, left, right);
     case t_star_star:
 	return left.T_info->pow(left, right);
     case t_equal_equal:
@@ -261,38 +261,36 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
 
     SlashStr *str = (SlashStr *)gc_new_T(interpreter, &str_type_info);
     slash_str_init_from_slice(interpreter, str, buffer, size);
-    return AS_VALUE((SlashObj *)str);
+    return AS_VALUE(str);
 }
 
-/// static SlashValue eval_tuple(Interpreter *interpreter, SequenceExpr *expr)
-///{
-///     SlashTuple *tuple = (SlashTuple *)gc_alloc(interpreter, SLASH_OBJ_TUPLE);
-///     gc_shadow_push(&interpreter->gc_shadow_stack, &tuple->obj);
-///     SlashValue value = { .type = SLASH_OBJ, .obj = (SlashObj *)tuple };
-///     // TODO: possible?
-///     if (expr->seq.size == 0) {
-///	slash_tuple_init(tuple, 0);
-///	return value;
-///     }
-///
-///     slash_tuple_init(tuple, expr->seq.size);
-///     size_t i = 0;
-///     LLItem *item;
-///     ARENA_LL_FOR_EACH(&expr->seq, item)
-///     {
-///	SlashValue element_value = eval(interpreter, item->value);
-///	tuple->values[i++] = element_value;
-///     }
-///
-///     gc_shadow_pop(&interpreter->gc_shadow_stack);
-///     return value;
-/// }
+static SlashValue eval_tuple(Interpreter *interpreter, SequenceExpr *expr)
+{
+    SlashTuple *tuple = (SlashTuple *)gc_new_T(interpreter, &tuple_type_info);
+    gc_shadow_push(&interpreter->gc_shadow_stack, &tuple->obj);
+    slash_tuple_init(interpreter, tuple, expr->seq.size);
+    if (expr->seq.size == 0) {
+	gc_shadow_pop(&interpreter->gc_shadow_stack);
+	return AS_VALUE(tuple);
+    }
+
+    size_t i = 0;
+    LLItem *item;
+    ARENA_LL_FOR_EACH(&expr->seq, item)
+    {
+	SlashValue element_value = eval(interpreter, item->value);
+	tuple->items[i++] = element_value;
+    }
+
+    gc_shadow_pop(&interpreter->gc_shadow_stack);
+    return AS_VALUE(tuple);
+}
 
 static SlashValue eval_str(Interpreter *interpreter, StrExpr *expr)
 {
     SlashStr *str = (SlashStr *)gc_new_T(interpreter, &str_type_info);
     slash_str_init_from_view(interpreter, str, &expr->view);
-    return AS_VALUE((SlashObj *)str);
+    return AS_VALUE(str);
 }
 
 static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
@@ -302,7 +300,7 @@ static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
     slash_list_impl_init(interpreter, list);
     if (expr->exprs == NULL) {
 	gc_shadow_pop(&interpreter->gc_shadow_stack);
-	return AS_VALUE((SlashObj *)list);
+	return AS_VALUE(list);
     }
 
     LLItem *item;
@@ -313,7 +311,7 @@ static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
     }
 
     gc_shadow_pop(&interpreter->gc_shadow_stack);
-    return AS_VALUE((SlashObj *)list);
+    return AS_VALUE(list);
 }
 
 static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
@@ -323,7 +321,7 @@ static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
     slash_map_impl_init(interpreter, map);
     if (expr->key_value_pairs == NULL) {
 	gc_shadow_pop(&interpreter->gc_shadow_stack);
-	return AS_VALUE((SlashObj *)map);
+	return AS_VALUE(map);
     }
 
     LLItem *item;
@@ -337,7 +335,7 @@ static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
     }
 
     gc_shadow_pop(&interpreter->gc_shadow_stack);
-    return AS_VALUE((SlashObj *)map);
+    return AS_VALUE(map);
 }
 
 /// static SlashValue eval_method(Interpreter *interpreter, MethodExpr *expr)
@@ -944,8 +942,8 @@ static SlashValue eval(Interpreter *interpreter, Expr *expr)
 	return eval_map(interpreter, (MapExpr *)expr);
 	/// case EXPR_METHOD:
 	///	return eval_method(interpreter, (MethodExpr *)expr);
-	///    case EXPR_SEQUENCE:
-	///	return eval_tuple(interpreter, (SequenceExpr *)expr);
+    case EXPR_SEQUENCE:
+	return eval_tuple(interpreter, (SequenceExpr *)expr);
     case EXPR_GROUPING:
 	return eval_grouping(interpreter, (GroupingExpr *)expr);
 	///    case EXPR_CAST:

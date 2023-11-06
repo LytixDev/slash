@@ -96,8 +96,9 @@ SlashValue num_minus(SlashValue self, SlashValue other)
     return (SlashValue){ .T_info = &num_type_info, .num = self.num - other.num };
 }
 
-SlashValue num_mul(SlashValue self, SlashValue other)
+SlashValue num_mul(Interpreter *interpreter, SlashValue self, SlashValue other)
 {
+    (void)interpreter;
     assert(IS_NUM(self) && IS_NUM(other));
     return (SlashValue){ .T_info = &num_type_info, .num = self.num * other.num };
 }
@@ -364,6 +365,7 @@ SlashValue list_plus(Interpreter *interpreter, SlashValue self, SlashValue other
     //       2. We can use something like memcpy to copy all data in one batch
     assert(IS_LIST(self) && IS_LIST(self));
     SlashList *new_list = (SlashList *)gc_new_T(interpreter, &list_type_info);
+    gc_shadow_push(&interpreter->gc_shadow_stack, &new_list->obj);
     slash_list_impl_init(interpreter, new_list);
 
     SlashList *a = AS_LIST(self);
@@ -374,7 +376,8 @@ SlashValue list_plus(Interpreter *interpreter, SlashValue self, SlashValue other
     for (size_t i = 0; i < b->len; i++)
 	slash_list_impl_append(interpreter, new_list, b->items[i]);
 
-    return AS_VALUE((SlashObj *)new_list);
+    gc_shadow_pop(&interpreter->gc_shadow_stack);
+    return AS_VALUE(new_list);
 }
 
 SlashValue list_unary_not(SlashValue self)
@@ -479,6 +482,124 @@ bool list_eq(SlashValue self, SlashValue other)
 /*
  * tuple impl
  */
+void slash_tuple_init(Interpreter *interpreter, SlashTuple *tuple, size_t size)
+{
+    tuple->len = size;
+    if (size == 0)
+	tuple->items = NULL;
+    else
+	tuple->items = gc_alloc(interpreter, sizeof(SlashValue) * size);
+}
+
+SlashValue tuple_plus(Interpreter *interpreter, SlashValue self, SlashValue other)
+{
+    assert(IS_TUPLE(self) && IS_TUPLE(other));
+    SlashTuple *a = AS_TUPLE(self);
+    SlashTuple *b = AS_TUPLE(other);
+    SlashTuple *new_tuple = (SlashTuple *)gc_new_T(interpreter, &tuple_type_info);
+    slash_tuple_init(interpreter, new_tuple, a->len + b->len);
+
+    for (size_t i = 0; i < a->len; i++)
+	new_tuple->items[i] = a->items[i];
+
+    for (size_t i = 0; i < b->len; i++)
+	new_tuple->items[a->len + i] = b->items[i];
+
+    return AS_VALUE(new_tuple);
+}
+
+SlashValue tuple_unary_not(SlashValue self)
+{
+    assert(IS_TUPLE(self));
+    return (SlashValue){ .T_info = &bool_type_info, .boolean = !self.T_info->truthy(self) };
+}
+
+void tuple_print(SlashValue self)
+{
+    assert(IS_TUPLE(self));
+    SlashTuple *tuple = AS_TUPLE(self);
+    putchar('(');
+    for (size_t i = 0; i < tuple->len; i++) {
+	SlashValue this = tuple->items[i];
+	this.T_info->print(this);
+	if (i != tuple->len - 1 || i == 0)
+	    printf(", ");
+    }
+    putchar(')');
+}
+
+typedef SlashValue (*TraitToStr)(Interpreter *interpreter, SlashValue self);
+
+SlashValue tuple_item_get(Interpreter *interpreter, SlashValue self, SlashValue other)
+{
+    (void)interpreter;
+    assert(IS_TUPLE(self));
+    assert(IS_NUM(other)); // TODO: implement for range
+    if (!NUM_IS_INT(other))
+	REPORT_RUNTIME_ERROR("Tuple index can not be a floating point number: '%f'", other.num);
+
+    SlashTuple *tuple = AS_TUPLE(self);
+    int index = (int)other.num;
+    if (index < 0 || (size_t)index >= tuple->len)
+	REPORT_RUNTIME_ERROR("Tuple index '%d' out of range for list with len '%zu'", index,
+			     tuple->len);
+
+    /* Know the index is valid */
+    return tuple->items[index];
+}
+
+bool tuple_item_in(SlashValue self, SlashValue other)
+{
+    assert(IS_TUPLE(self));
+    SlashTuple *tuple = AS_TUPLE(self);
+    for (size_t i = 0; i < tuple->len; i++) {
+	SlashValue this = tuple->items[i];
+	if (!TYPE_EQ(this, other))
+	    continue;
+	if (this.T_info->eq(this, other))
+	    return true;
+    }
+    return false;
+}
+
+bool tuple_truthy(SlashValue self)
+{
+    assert(IS_TUPLE(self));
+    return AS_TUPLE(self)->len != 0;
+}
+
+bool tuple_eq(SlashValue self, SlashValue other)
+{
+    assert(IS_TUPLE(self) && IS_TUPLE(other));
+    SlashTuple *a = AS_TUPLE(self);
+    SlashTuple *b = AS_TUPLE(other);
+    if (a->len != b->len)
+	return false;
+
+    for (size_t i = 0; i < a->len; i++) {
+	if (!TYPE_EQ(a->items[i], b->items[i]))
+	    return false;
+	if (!(a->items[i].T_info->eq(a->items[i], b->items[i])))
+	    return false;
+    }
+
+    return true;
+}
+
+int tuple_hash(SlashValue self)
+{
+    assert(IS_TUPLE(self));
+    SlashTuple *tuple = AS_TUPLE(self);
+    int hash = 5381;
+    for (size_t i = 0; i < tuple->len; i++) {
+	SlashValue this = tuple->items[i];
+	// TODO: check if hashable
+	hash += ((hash << 5) + hash) + this.T_info->hash(this);
+    }
+
+    return hash;
+}
+
 
 /*
  * str impl
@@ -684,7 +805,7 @@ SlashTypeInfo list_type_info = { .name = "list",
 				 .obj_size = sizeof(SlashList) };
 
 SlashTypeInfo tuple_type_info = { .name = "tuple",
-				  .plus = NULL,
+				  .plus = tuple_plus,
 				  .minus = NULL,
 				  .mul = NULL,
 				  .div = NULL,
@@ -692,16 +813,16 @@ SlashTypeInfo tuple_type_info = { .name = "tuple",
 				  .pow = NULL,
 				  .mod = NULL,
 				  .unary_minus = NULL,
-				  .unary_not = NULL,
-				  .print = NULL,
+				  .unary_not = tuple_unary_not,
+				  .print = tuple_print,
 				  .to_str = NULL,
-				  .item_get = NULL,
+				  .item_get = tuple_item_get,
 				  .item_assign = NULL,
-				  .item_in = NULL,
-				  .truthy = NULL,
-				  .eq = NULL,
+				  .item_in = tuple_item_in,
+				  .truthy = tuple_truthy,
+				  .eq = tuple_eq,
 				  .cmp = NULL,
-				  .hash = NULL,
+				  .hash = tuple_hash,
 				  .init = NULL,
 				  .free = NULL,
 				  .obj_size = sizeof(SlashTuple) };

@@ -43,7 +43,7 @@ static void define_scope_alloced_var(Scope *scope, StrView *key, char *cstr)
     SlashStr *str = scope_alloc(scope, sizeof(SlashStr));
     str->obj.T_info = &str_type_info;
     slash_str_init_from_alloced_cstr(str, cstr);
-    var_define(scope, key, &AS_VALUE((SlashObj *)str));
+    var_define(scope, key, &AS_VALUE(str));
 }
 
 static void set_globals(Scope *scope)
