@@ -28,155 +28,135 @@
 #endif /* DEBUG_LOG_GC */
 
 
-///static void gc_sweep_obj(SlashObj *obj)
-///{
-///    // TODO: should this be a function on SlashValueInfo ?
-///    //       if so then maybe all GC functions (blacken, visit, sweep) should be on SlashValueInfo
-///    SlashValue value = AS_VALUE(obj);
-///    if (IS_MAP(value)) {
-///	// slash_map_impl_free(AS_MAP(value)->map);
-///    } else if (IS_LIST(value)) {
-///	// arraylist_free(&AS_LIST(value)->list);
-///    } else if (IS_TUPLE(value)) {
-///	// free(AS_TUPLE(value)->tuple);
-///    } else if (IS_STR(value)) {
-///	free(AS_STR(value)->str);
-///    } else {
-///	REPORT_RUNTIME_ERROR("Sweep not implemented for this obj");
-///    }
-///
-///    free(obj);
-///}
-///
-///static void gc_sweep(LinkedList *gc_objs)
-///{
-///    LinkedListItem *to_remove = NULL;
-///    LinkedListItem *current = gc_objs->head;
-///
-///    while (current != NULL) {
-///	SlashObj *obj = current->data;
-///	if (!obj->gc_marked && obj->gc_managed) {
-///#ifdef DEBUG_LOG_GC
-///	    printf("%p sweep ", (void *)obj);
-///	    TraitPrint print_func = obj->T->print;
-///	    assert(print_func != NULL);
-///	    SlashValue value = AS_VALUE(obj);
-///	    print_func(value);
-///	    putchar('\n');
-///#endif
-///	    gc_sweep_obj(obj);
-///	    to_remove = current;
-///	    current = current->next;
-///	    linkedlist_remove_item(gc_objs, to_remove);
-///	    continue;
-///	}
-///
-///	current = current->next;
-///    }
-///}
-///
-///static void gc_reset(GC *gc)
-///{
-///    for (LinkedListItem *item = interpreter->gc_objs.head; item != NULL; item = item->next) {
-///	SlashObj *obj = item->data;
-///	obj->gc_marked = false;
-///    }
-///
-///    interpreter->obj_alloced_since_next_gc = 0;
-///}
-///
-///static void gc_visit_obj(GC *gc, SlashObj *obj)
-///{
-///    assert(obj != NULL);
-///    if (obj->gc_marked)
-///	return;
-///    obj->gc_marked = true;
-///    arraylist_append(&interpreter->gc_gray_stack, &obj);
-///
-///#ifdef DEBUG_LOG_GC
-///    printf("%p mark ", (void *)obj);
-///    TraitPrint print_func = obj->T->print;
-///    assert(print_func != NULL);
-///    SlashValue value = AS_VALUE(obj);
-///    print_func(value);
-///    putchar('\n');
-///#endif
-///}
-///
-///static void gc_visit_value(GC *gc, SlashValue *value)
-///{
-///    if (IS_OBJ(*value) && value->obj->gc_managed)
-///	gc_visit_obj(interpreter, value->obj);
-///}
-///
-///static void gc_blacken_obj(GC *gc, SlashObj *obj)
-///{
-///    SlashValue value = AS_VALUE(obj);
-///
-///#ifdef DEBUG_LOG_GC
-///    printf("%p blacken ", (void *)obj);
-///    TraitPrint print_func = obj->T->print;
-///    assert(print_func != NULL);
-///    print_func(value);
-///    putchar('\n');
-///#endif
-///
-///    if (IS_MAP(value)) {
-///	// SlashMap *map = AS_MAP(value);
-///	// if (map->map.len == 0)
-///	//     return;
-///	// SlashValue *keys[map->map.len];
-///	// hashmap_get_keys(&map->map, (void **)keys);
-///	// for (size_t i = 0; i < map->map.len; i++) {
-///	//     gc_visit_value(interpreter, keys[i]);
-///	//     SlashValue *v = hashmap_get(&map->map, keys[i], sizeof(SlashValue));
-///	//     assert(v != NULL);
-///	//     gc_visit_value(interpreter, v);
-///	// }
-///    } else if (IS_LIST(value)) {
-///	SlashList *list = AS_LIST(value);
-///	/// for (size_t i = 0; i < list->list.size; i++) {
-///	///     SlashValue *v = arraylist_get(&list->list, i);
-///	///     gc_visit_value(interpreter, v);
-///	/// }
-///    } else if (IS_TUPLE(value)) {
-///	/// SlashTuple *tuple = AS_TUPLE(value);
-///	/// for (size_t i = 0; i < tuple->size; i++)
-///	///     gc_visit_value(interpreter, &tuple->tuple[i]);
-///    } else if (IS_STR(value)) {
-///	return;
-///    } else {
-///	REPORT_RUNTIME_ERROR("gc blacken not implemented for this object type");
-///    }
-///}
-///
-///static void gc_mark_roots(GC *gc)
-///{
-///    for (size_t i = 0; i < interpreter->gc_shadow_stack.size; i++)
-///	gc_visit_obj(interpreter, *(SlashObj **)arraylist_get(&interpreter->gc_shadow_stack, i));
-///
-///    /* mark all reachable objects */
-///    for (Scope *scope = interpreter->scope; scope != NULL; scope = scope->enclosing) {
-///	/* loop over all values */
-///	if (scope->values.len == 0)
-///	    continue;
-///	// TODO: VLA bad
-///	SlashValue *values[scope->values.len];
-///	hashmap_get_values(&scope->values, (void **)values);
-///
-///	for (size_t i = 0; i < scope->values.len; i++)
-///	    gc_visit_value(interpreter, values[i]);
-///    }
-///}
-///
-///static void gc_trace_references(GC *gc)
-///{
-///    SlashObj *obj;
-///    while (interpreter->gc_gray_stack.size != 0) {
-///	arraylist_pop_and_copy(&interpreter->gc_gray_stack, &obj);
-///	gc_blacken_obj(interpreter, obj);
-///    }
-///}
+static void gc_sweep_obj(SlashObj *obj)
+{
+    /// SlashValue value = AS_VALUE(obj);
+    /// if (IS_MAP(value)) {
+    ///     // slash_map_impl_free(AS_MAP(value)->map);
+    /// } else if (IS_LIST(value)) {
+    ///     // arraylist_free(&AS_LIST(value)->list);
+    /// } else if (IS_TUPLE(value)) {
+    ///     // free(AS_TUPLE(value)->tuple);
+    /// } else if (IS_STR(value)) {
+    ///     free(AS_STR(value)->str);
+    /// } else {
+    ///     REPORT_RUNTIME_ERROR("Sweep not implemented for this obj");
+    /// }
+
+    free(obj);
+}
+
+static void gc_sweep(GC *gc)
+{
+    LinkedListItem *to_remove = NULL;
+    LinkedListItem *current = gc->gc_objs.head;
+
+    while (current != NULL) {
+	SlashObj *obj = current->data;
+	if (!obj->gc_marked && obj->gc_managed) {
+#ifdef DEBUG_LOG_GC
+	    printf("%p sweep ", (void *)obj);
+	    TraitPrint print_func = obj->T->print;
+	    assert(print_func != NULL);
+	    SlashValue value = AS_VALUE(obj);
+	    print_func(value);
+	    putchar('\n');
+#endif
+	    gc_sweep_obj(obj);
+	    to_remove = current;
+	    current = current->next;
+	    linkedlist_remove_item(&gc->gc_objs, to_remove);
+	    continue;
+	}
+
+	current = current->next;
+    }
+}
+
+static void gc_reset(GC *gc)
+{
+    for (LinkedListItem *item = gc->gc_objs.head; item != NULL; item = item->next) {
+	SlashObj *obj = item->data;
+	obj->gc_marked = false;
+    }
+}
+
+static void gc_visit_obj(GC *gc, SlashObj *obj)
+{
+    assert(obj != NULL);
+    if (obj->gc_marked)
+	return;
+    obj->gc_marked = true;
+    arraylist_append(&gc->gray_stack, &obj);
+
+#ifdef DEBUG_LOG_GC
+    printf("%p mark ", (void *)obj);
+    TraitPrint print_func = obj->T->print;
+    assert(print_func != NULL);
+    SlashValue value = AS_VALUE(obj);
+    print_func(value);
+    putchar('\n');
+#endif
+}
+
+static void gc_visit_value(GC *gc, SlashValue *value)
+{
+    if (IS_OBJ(*value) && value->obj->gc_managed)
+	gc_visit_obj(gc, value->obj);
+}
+
+static void gc_blacken_obj(GC *gc, SlashObj *obj)
+{
+    SlashValue value = AS_VALUE(obj);
+    (void)gc;
+    (void)value;
+
+#ifdef DEBUG_LOG_GC
+    printf("%p blacken ", (void *)obj);
+    TraitPrint print_func = obj->T->print;
+    assert(print_func != NULL);
+    print_func(value);
+    putchar('\n');
+#endif
+
+    /// if (IS_MAP(value)) {
+    /// } else if (IS_LIST(value)) {
+    /// } else if (IS_TUPLE(value)) {
+    /// } else if (IS_STR(value)) {
+    /// } else {
+    ///     REPORT_RUNTIME_ERROR("gc blacken not implemented for this object type");
+    /// }
+}
+
+static void gc_mark_roots(Interpreter *interpreter)
+{
+    GC *gc = &interpreter->gc;
+    /* Mark all objects in shadow stack */
+    for (size_t i = 0; i < gc->shadow_stack.size; i++)
+	gc_visit_obj(gc, *(SlashObj **)arraylist_get(&gc->shadow_stack, i));
+
+    /* mark all reachable objects */
+    for (Scope *scope = interpreter->scope; scope != NULL; scope = scope->enclosing) {
+	/* loop over all values */
+	if (scope->values.len == 0)
+	    continue;
+	// TODO: VLA bad
+	SlashValue *values[scope->values.len];
+	hashmap_get_values(&scope->values, (void **)values);
+
+	for (size_t i = 0; i < scope->values.len; i++)
+	    gc_visit_value(gc, values[i]);
+    }
+}
+
+static void gc_trace_references(GC *gc)
+{
+    SlashObj *obj;
+    while (gc->gray_stack.size != 0) {
+	arraylist_pop_and_copy(&gc->gray_stack, &obj);
+	gc_blacken_obj(gc, obj);
+    }
+}
 
 static void gc_register(GC *gc, SlashObj *obj)
 {
@@ -227,32 +207,32 @@ SlashObj *gc_new_T(GC *gc, SlashTypeInfo *T)
     gc_register(gc, obj);
     return obj;
 }
-///
-///void gc_run(GC *gc)
-///{
-///#ifdef DEBUG_LOG_GC
-///    printf("-- gc begin\n");
-///#endif
-///    gc_mark_roots(interpreter);
-///    gc_trace_references(interpreter);
-///#ifdef DEBUG_LOG_GC
-///    printf("-- gc sweep\n");
-///#endif
-///    gc_sweep(&interpreter->gc_objs);
-///    gc_reset(interpreter);
-///
-///#ifdef DEBUG_LOG_GC
-///    printf("-- gc end\n");
-///#endif
-///}
-///
-///void gc_collect_all(LinkedList *gc_objs)
-///{
-///    for (LinkedListItem *item = gc_objs->head; item != NULL; item = item->next) {
-///	SlashObj *obj = item->data;
-///	gc_sweep_obj(obj);
-///    }
-///}
+
+void gc_run(Interpreter *interpreter)
+{
+#ifdef DEBUG_LOG_GC
+    printf("-- gc begin\n");
+#endif
+    gc_mark_roots(interpreter);
+    gc_trace_references(&interpreter->gc);
+#ifdef DEBUG_LOG_GC
+    printf("-- gc sweep\n");
+#endif
+    gc_sweep(&interpreter->gc);
+    gc_reset(&interpreter->gc);
+
+#ifdef DEBUG_LOG_GC
+    printf("-- gc end\n");
+#endif
+}
+
+void gc_collect_all(Interpreter *interpreter)
+{
+    for (LinkedListItem *item = interpreter->gc.gc_objs.head; item != NULL; item = item->next) {
+	SlashObj *obj = item->data;
+	gc_sweep_obj(obj);
+    }
+}
 
 void gc_shadow_push(GC *gc, SlashObj *obj)
 {

@@ -76,13 +76,13 @@ static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt, char *pro
 	    SlashValue value = eval(interpreter, item->value);
 	    VERIFY_TRAIT_IMPL(to_str, value, "Could not take 'to_str' of type '%s'", value.T->name);
 	    SlashValue value_str_repr = value.T->to_str(interpreter, value);
-	    gc_shadow_push(&interpreter->gc_shadow_stack, value_str_repr.obj);
+	    gc_shadow_push(&interpreter->gc, value_str_repr.obj);
 	    argv[i++] = AS_STR(value_str_repr)->str;
 	}
     }
 
     for (size_t n = 0; n < argc - 1; n++)
-	gc_shadow_pop(&interpreter->gc_shadow_stack);
+	gc_shadow_pop(&interpreter->gc);
 
     argv[i] = NULL;
     int exit_code = exec_program(&interpreter->stream_ctx, argv);
@@ -169,7 +169,7 @@ static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
 {
     SlashValue left = eval(interpreter, expr->left);
     if (IS_OBJ(left))
-	gc_shadow_push(&interpreter->gc_shadow_stack, left.obj);
+	gc_shadow_push(&interpreter->gc, left.obj);
     SlashValue right;
     SlashValue return_value;
 
@@ -204,7 +204,7 @@ static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
 
 defer_shadow_pop:
     if (IS_OBJ(left))
-	gc_shadow_pop(&interpreter->gc_shadow_stack);
+	gc_shadow_pop(&interpreter->gc);
     return return_value;
 }
 
@@ -255,18 +255,18 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
 	size--;
     close(fd[0]);
 
-    SlashStr *str = (SlashStr *)gc_new_T(interpreter, &str_type_info);
+    SlashStr *str = (SlashStr *)gc_new_T(&interpreter->gc, &str_type_info);
     slash_str_init_from_slice(interpreter, str, buffer, size);
     return AS_VALUE(str);
 }
 
 static SlashValue eval_tuple(Interpreter *interpreter, SequenceExpr *expr)
 {
-    SlashTuple *tuple = (SlashTuple *)gc_new_T(interpreter, &tuple_type_info);
-    gc_shadow_push(&interpreter->gc_shadow_stack, &tuple->obj);
+    SlashTuple *tuple = (SlashTuple *)gc_new_T(&interpreter->gc, &tuple_type_info);
+    gc_shadow_push(&interpreter->gc, &tuple->obj);
     slash_tuple_init(interpreter, tuple, expr->seq.size);
     if (expr->seq.size == 0) {
-	gc_shadow_pop(&interpreter->gc_shadow_stack);
+	gc_shadow_pop(&interpreter->gc);
 	return AS_VALUE(tuple);
     }
 
@@ -278,24 +278,24 @@ static SlashValue eval_tuple(Interpreter *interpreter, SequenceExpr *expr)
 	tuple->items[i++] = element_value;
     }
 
-    gc_shadow_pop(&interpreter->gc_shadow_stack);
+    gc_shadow_pop(&interpreter->gc);
     return AS_VALUE(tuple);
 }
 
 static SlashValue eval_str(Interpreter *interpreter, StrExpr *expr)
 {
-    SlashStr *str = (SlashStr *)gc_new_T(interpreter, &str_type_info);
+    SlashStr *str = (SlashStr *)gc_new_T(&interpreter->gc, &str_type_info);
     slash_str_init_from_view(interpreter, str, &expr->view);
     return AS_VALUE(str);
 }
 
 static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
 {
-    SlashList *list = (SlashList *)gc_new_T(interpreter, &list_type_info);
-    gc_shadow_push(&interpreter->gc_shadow_stack, &list->obj);
+    SlashList *list = (SlashList *)gc_new_T(&interpreter->gc, &list_type_info);
+    gc_shadow_push(&interpreter->gc, &list->obj);
     slash_list_impl_init(interpreter, list);
     if (expr->exprs == NULL) {
-	gc_shadow_pop(&interpreter->gc_shadow_stack);
+	gc_shadow_pop(&interpreter->gc);
 	return AS_VALUE(list);
     }
 
@@ -306,17 +306,17 @@ static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
 	slash_list_impl_append(interpreter, list, element_value);
     }
 
-    gc_shadow_pop(&interpreter->gc_shadow_stack);
+    gc_shadow_pop(&interpreter->gc);
     return AS_VALUE(list);
 }
 
 static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
 {
-    SlashMap *map = (SlashMap *)gc_new_T(interpreter, &map_type_info);
-    gc_shadow_push(&interpreter->gc_shadow_stack, &map->obj);
+    SlashMap *map = (SlashMap *)gc_new_T(&interpreter->gc, &map_type_info);
+    gc_shadow_push(&interpreter->gc, &map->obj);
     slash_map_impl_init(interpreter, map);
     if (expr->key_value_pairs == NULL) {
-	gc_shadow_pop(&interpreter->gc_shadow_stack);
+	gc_shadow_pop(&interpreter->gc);
 	return AS_VALUE(map);
     }
 
@@ -330,7 +330,7 @@ static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
 	slash_map_impl_put(interpreter, map, k, v);
     }
 
-    gc_shadow_pop(&interpreter->gc_shadow_stack);
+    gc_shadow_pop(&interpreter->gc);
     return AS_VALUE(map);
 }
 
@@ -1001,7 +1001,7 @@ void interpreter_init(Interpreter *interpreter, int argc, char **argv)
 
 void interpreter_free(Interpreter *interpreter)
 {
-    gc_collect_all(&interpreter->gc);
+    gc_collect_all(interpreter);
     gc_ctx_free(&interpreter->gc);
     scope_destroy(&interpreter->globals);
     arraylist_free(&interpreter->stream_ctx.active_fds);

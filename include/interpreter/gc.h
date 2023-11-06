@@ -25,6 +25,7 @@
 typedef struct slash_type_info_t SlashTypeInfo; // Forward decl
 typedef struct slash_obj_t SlashObj; // Forward decl
 typedef struct slash_value_t SlashValue; // Forward decl
+typedef struct interpreter_t Interpreter; // Forward decl
 
 typedef struct {
     LinkedList gc_objs; // objects managed by the GC
@@ -47,13 +48,13 @@ SlashObj *gc_new_T(GC *gc, SlashTypeInfo *T);
  * Runs the garbage collector.
  * Finds all unreachable objects and frees them.
  */
-void gc_run(GC *gc);
+void gc_run(Interpreter *interpreter);
 
 /*
  * Free all uncollected objects regardless of if they are reachable or not.
  * Used on exit.
  */
-void gc_collect_all(GC *gc);
+void gc_collect_all(Interpreter *interpreter);
 
 /*
  * Useful when allocating a collection that can not be marked until every element of the
