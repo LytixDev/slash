@@ -35,7 +35,7 @@ static void ensure_capacity(Interpreter *interpreter, SlashList *list)
 	size_t old_size = sizeof(SlashValue) * list->cap;
 	list->cap = SLASH_LIST_GROW_CAPACITY(list->cap);
 	size_t new_size = sizeof(SlashValue) * list->cap;
-	list->items = gc_realloc(interpreter, list->items, old_size, new_size);
+	list->items = gc_realloc(&interpreter->gc, list->items, old_size, new_size);
     }
 }
 
@@ -47,12 +47,12 @@ void slash_list_impl_init(Interpreter *interpreter, SlashList *list)
     list->cap = 8;
 #endif
     list->len = 0;
-    list->items = gc_alloc(interpreter, sizeof(SlashValue) * list->cap);
+    list->items = gc_alloc(&interpreter->gc, sizeof(SlashValue) * list->cap);
 }
 
 void slash_list_impl_free(Interpreter *interpreter, SlashList *list)
 {
-    gc_free(interpreter, list->items, sizeof(SlashValue) * list->cap);
+    gc_free(&interpreter->gc, list->items, sizeof(SlashValue) * list->cap);
 }
 
 bool slash_list_impl_set(Interpreter *interpreter, SlashList *list, SlashValue val, size_t idx)

@@ -112,7 +112,7 @@ static void map_increase_capacity(Interpreter *interpreter, SlashMap *map)
 	}
     }
 
-    gc_free(interpreter, map->buckets, sizeof(SlashMapBucket) * old_n_buckets);
+    gc_free(&interpreter->gc, map->buckets, sizeof(SlashMapBucket) * old_n_buckets);
     map->buckets = new_buckets;
 }
 
@@ -122,7 +122,7 @@ void slash_map_impl_init(Interpreter *interpreter, SlashMap *map)
     map->total_buckets_log2 = SLASH_MAP_STARTING_BUCKETS_LOG2;
     size_t n_buckets = N_BUCKETS(map->total_buckets_log2);
     // TODO: should we have a gc_calloc() function ?
-    map->buckets = gc_alloc(interpreter, sizeof(SlashMapBucket) * n_buckets);
+    map->buckets = gc_alloc(&interpreter->gc, sizeof(SlashMapBucket) * n_buckets);
     /*
      * Since we memset each bucket and therefore each entry to 0 the is_occupied field on
      * each entry will be set to false.
@@ -132,7 +132,7 @@ void slash_map_impl_init(Interpreter *interpreter, SlashMap *map)
 
 void slash_map_impl_free(Interpreter *interpreter, SlashMap *map)
 {
-    gc_free(interpreter, map->buckets, N_BUCKETS(map->total_buckets_log2) * sizeof(SlashMapBucket));
+    gc_free(&interpreter->gc, map->buckets, N_BUCKETS(map->total_buckets_log2) * sizeof(SlashMapBucket));
 }
 
 void slash_map_impl_put(Interpreter *interpreter, SlashMap *map, SlashValue key, SlashValue value)
