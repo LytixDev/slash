@@ -147,9 +147,10 @@ extern SlashValue NoneSingleton;
 #define NUM_IS_INT(value_num__) ((value_num__).num == (int)(value_num__).num)
 
 
-/* Init functions */
+/* Tuple functions */
 void slash_tuple_init(Interpreter *interpreter, SlashTuple *tuple, size_t size);
 
+/* Str functions */
 void slash_str_init_from_view(Interpreter *interpreter, SlashStr *str, StrView *view);
 void slash_str_init_from_slice(Interpreter *interpreter, SlashStr *str, char *cstr, size_t size);
 void slash_str_init_from_alloced_cstr(SlashStr *str, char *cstr);

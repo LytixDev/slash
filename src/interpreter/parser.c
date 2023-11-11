@@ -736,7 +736,8 @@ static Expr *range(Parser *parser)
     consume(parser, t_dot_dot, "This error should be unreachable");
     consume(parser, t_dt_num, "Expected second number after '..' in range expression");
     Token *end_num = previous(parser);
-    range.end = str_view_to_int(end_num->lexeme);
+    // TODO: we can not use atoi() because it does not recognize '_'
+    range.end = (int)str_view_to_double(end_num->lexeme);
 
     LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
     expr->value = (SlashValue){ .T = &range_type_info, .range = range };

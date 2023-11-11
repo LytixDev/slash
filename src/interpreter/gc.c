@@ -224,6 +224,8 @@ void *gc_realloc(Interpreter *interpreter, void *p, size_t old_size, size_t new_
     printf("gc_realloc diff of %zu bytes\n", new_size - old_size);
 #endif
     interpreter->gc.bytes_managing += new_size - old_size;
+    if (interpreter->gc.bytes_managing > interpreter->gc.next_run)
+	gc_run(interpreter);
     return realloc(p, new_size);
 }
 
