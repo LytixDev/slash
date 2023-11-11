@@ -697,7 +697,7 @@ static Expr *primary(Parser *parser)
     /* text_lit */
     if (token->type == t_dt_text_lit) {
 	LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
-	expr->value = (SlashValue){ .T_info = &text_lit_type_info, .text_lit = token->lexeme };
+	expr->value = (SlashValue){ .T = &text_lit_type_info, .text_lit = token->lexeme };
 	return (Expr *)expr;
     }
 
@@ -712,7 +712,7 @@ static Expr *bool_lit(Parser *parser)
     Token *token = previous(parser);
     LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
     expr->value =
-	(SlashValue){ .T_info = &bool_type_info, .boolean = token->type == t_true ? true : false };
+	(SlashValue){ .T = &bool_type_info, .boolean = token->type == t_true ? true : false };
     return (Expr *)expr;
 }
 
@@ -720,8 +720,7 @@ static Expr *number(Parser *parser)
 {
     Token *token = previous(parser);
     LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
-    expr->value =
-	(SlashValue){ .T_info = &num_type_info, .num = str_view_to_double(token->lexeme) };
+    expr->value = (SlashValue){ .T = &num_type_info, .num = str_view_to_double(token->lexeme) };
     return (Expr *)expr;
 }
 
@@ -740,7 +739,7 @@ static Expr *range(Parser *parser)
     range.end = str_view_to_int(end_num->lexeme);
 
     LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
-    expr->value = (SlashValue){ .T_info = &range_type_info, .range = range };
+    expr->value = (SlashValue){ .T = &range_type_info, .range = range };
     return (Expr *)expr;
 }
 

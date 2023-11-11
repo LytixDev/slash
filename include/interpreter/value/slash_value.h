@@ -36,7 +36,7 @@ typedef struct slash_type_info_t SlashTypeInfo;
 
 /* The "head" of each Object type */
 typedef struct slash_obj_t {
-    SlashTypeInfo *T_info; // TODO: not ideal ...
+    SlashTypeInfo *T; // TODO: not ideal ...
     bool gc_marked;
     bool gc_managed;
 } SlashObj;
@@ -79,7 +79,7 @@ typedef struct slash_type_info_t {
     OpUnaryNot unary_not;
 
     /* Trait functions */
-    TraitPrint print;
+    TraitPrint print; // Must be implemented
     TraitToStr to_str;
     TraitItemGet item_get;
     TraitItemAssign item_assign;
@@ -90,8 +90,8 @@ typedef struct slash_type_info_t {
      * If trait function takes multiple SlashValue arguments then each argument must be of the
      * same type as the `self` argument.
      */
-    TraitTruthy truthy;
-    TraitEq eq;
+    TraitTruthy truthy; // Must be implemented
+    TraitEq eq; // Must be implemented
     TraitCmp cmp;
     TraitHash hash;
 
@@ -102,7 +102,7 @@ typedef struct slash_type_info_t {
 } SlashTypeInfo;
 
 typedef struct slash_value_t {
-    SlashTypeInfo *T_info;
+    SlashTypeInfo *T;
     union {
 	bool boolean;
 	double num;
@@ -125,25 +125,25 @@ extern SlashTypeInfo none_type_info;
 
 extern SlashValue NoneSingleton;
 
-#define IS_BOOL(value__) ((value__).T_info == &bool_type_info)
-#define IS_NUM(value__) ((value__).T_info == &num_type_info)
-#define IS_RANGE(value__) ((value__).T_info == &range_type_info)
-#define IS_TEXT_LIT(value__) ((value__).T_info == &text_lit_type_info)
-#define IS_MAP(value__) ((value__).T_info == &map_type_info)
-#define IS_LIST(value__) ((value__).T_info == &list_type_info)
-#define IS_TUPLE(value__) ((value__).T_info == &tuple_type_info)
-#define IS_STR(value__) ((value__).T_info == &str_type_info)
-#define IS_NONE(value__) ((value__).T_info == &none_type_info)
-#define IS_OBJ(value__) (!(IS_BOOL((value__)) && IS_NUM((value__)) && IS_RANGE((value__))))
+#define IS_BOOL(value__) ((value__).T == &bool_type_info)
+#define IS_NUM(value__) ((value__).T == &num_type_info)
+#define IS_RANGE(value__) ((value__).T == &range_type_info)
+#define IS_TEXT_LIT(value__) ((value__).T == &text_lit_type_info)
+#define IS_MAP(value__) ((value__).T == &map_type_info)
+#define IS_LIST(value__) ((value__).T == &list_type_info)
+#define IS_TUPLE(value__) ((value__).T == &tuple_type_info)
+#define IS_STR(value__) ((value__).T == &str_type_info)
+#define IS_NONE(value__) ((value__).T == &none_type_info)
+#define IS_OBJ(value__) \
+    (IS_MAP((value__)) || IS_LIST((value__)) || IS_TUPLE((value__)) || IS_STR((value__)))
 
 #define AS_MAP(value__) ((SlashMap *)(value__).obj)
 #define AS_LIST(value__) ((SlashList *)(value__).obj)
 #define AS_TUPLE(value__) ((SlashTuple *)(value__).obj)
 #define AS_STR(value__) ((SlashStr *)(value__).obj)
-#define AS_VALUE(obj__) \
-    ((SlashValue){ .T_info = ((SlashObj *)(obj__))->T_info, .obj = (SlashObj *)(obj__) })
+#define AS_VALUE(obj__) ((SlashValue){ .T = ((SlashObj *)(obj__))->T, .obj = (SlashObj *)(obj__) })
 
-#define TYPE_EQ(a, b) ((a).T_info == (b).T_info)
+#define TYPE_EQ(a, b) ((a).T == (b).T)
 #define NUM_IS_INT(value_num__) ((value_num__).num == (int)(value_num__).num)
 
 

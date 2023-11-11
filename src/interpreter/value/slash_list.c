@@ -30,7 +30,6 @@
  */
 static void ensure_capacity(Interpreter *interpreter, SlashList *list)
 {
-    (void)interpreter;
     if (list->len >= list->cap) {
 	size_t old_size = sizeof(SlashValue) * list->cap;
 	list->cap = SLASH_LIST_GROW_CAPACITY(list->cap);
@@ -85,7 +84,7 @@ size_t slash_list_impl_index_of(SlashList *list, SlashValue val)
 {
     for (size_t i = 0; i < list->len; i++) {
 	SlashValue other = list->items[i];
-	if (TYPE_EQ(val, other) && val.T_info->eq(val, other))
+	if (TYPE_EQ(val, other) && val.T->eq(val, other))
 	    return slash_list_impl_rm(list, i);
     }
     return SIZE_MAX;
@@ -106,11 +105,6 @@ bool slash_list_impl_rm(SlashList *list, size_t idx)
 
 bool slash_list_impl_rmv(SlashList *list, SlashValue val)
 {
-    if (val.T_info->eq == NULL)
-	REPORT_RUNTIME_ERROR(
-	    "Can not remove type '%s' from list as equality is not defined on this type",
-	    val.T_info->name);
-
     /* Find index of value */
     size_t idx = slash_list_impl_index_of(list, val);
     if (idx == SIZE_MAX)

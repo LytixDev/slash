@@ -47,7 +47,7 @@ static void exec(Interpreter *interpreter, Stmt *stmt);
 static void set_exit_code(Interpreter *interpreter, int exit_code)
 {
     interpreter->prev_exit_code = exit_code;
-    SlashValue value = { .T_info = &num_type_info, .num = interpreter->prev_exit_code };
+    SlashValue value = { .T = &num_type_info, .num = interpreter->prev_exit_code };
     var_assign(&(StrView){ .view = "?", .size = 1 }, &interpreter->globals, &value);
 }
 
@@ -74,17 +74,15 @@ static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt, char *pro
 	ARENA_LL_FOR_EACH(stmt->arg_exprs, item)
 	{
 	    SlashValue value = eval(interpreter, item->value);
-	    TraitToStr to_str = value.T_info->to_str;
-	    if (to_str == NULL)
-		REPORT_RUNTIME_ERROR("Could not take to_str of type '%s'", value.T_info->name);
-	    SlashValue value_str_repr = to_str(interpreter, value);
-	    gc_shadow_push(&interpreter->gc_shadow_stack, value_str_repr.obj);
+	    VERIFY_TRAIT_IMPL(to_str, value, "Could not take 'to_str' of type '%s'", value.T->name);
+	    SlashValue value_str_repr = value.T->to_str(interpreter, value);
+	    gc_shadow_push(&interpreter->gc, value_str_repr.obj);
 	    argv[i++] = AS_STR(value_str_repr)->str;
 	}
     }
 
     for (size_t n = 0; n < argc - 1; n++)
-	gc_shadow_pop(&interpreter->gc_shadow_stack);
+	gc_shadow_pop(&interpreter->gc);
 
     argv[i] = NULL;
     int exit_code = exec_program(&interpreter->stream_ctx, argv);
@@ -97,40 +95,46 @@ static SlashValue eval_binary_operators(Interpreter *interpreter, SlashValue lef
     /* Binary operators */
     if (!TYPE_EQ(left, right))
 	REPORT_RUNTIME_ERROR("Binary operation failed: type mismatch between '%s' and '%s'",
-			     left.T_info->name, right.T_info->name);
+			     left.T->name, right.T->name);
 
-    // TODO: check if T_info->func() is not NULL
     switch (op) {
     case t_greater:
-	return (SlashValue){ .T_info = &bool_type_info,
-			     .boolean = left.T_info->cmp(left, right) > 0 };
+	VERIFY_TRAIT_IMPL(cmp, left, "'>' operator not defined for type '%s'", right.T->name);
+	return (SlashValue){ .T = &bool_type_info, .boolean = left.T->cmp(left, right) > 0 };
     case t_greater_equal:
-	return (SlashValue){ .T_info = &bool_type_info,
-			     .boolean = (left.T_info->cmp(left, right) >= 0) };
+	VERIFY_TRAIT_IMPL(cmp, left, "'>=' operator not defined for type '%s'", right.T->name);
+	return (SlashValue){ .T = &bool_type_info, .boolean = (left.T->cmp(left, right) >= 0) };
     case t_less:
-	return (SlashValue){ .T_info = &bool_type_info,
-			     .boolean = (left.T_info->cmp(left, right) < 0) };
+	VERIFY_TRAIT_IMPL(cmp, left, "'<' operator not defined for type '%s'", right.T->name);
+	return (SlashValue){ .T = &bool_type_info, .boolean = (left.T->cmp(left, right) < 0) };
     case t_less_equal:
-	return (SlashValue){ .T_info = &bool_type_info,
-			     .boolean = (left.T_info->cmp(left, right) <= 0) };
+	VERIFY_TRAIT_IMPL(cmp, left, "'<=' operator not defined for type '%s'", right.T->name);
+	return (SlashValue){ .T = &bool_type_info, .boolean = (left.T->cmp(left, right) <= 0) };
     case t_plus:
-	return left.T_info->plus(interpreter, left, right);
+	VERIFY_TRAIT_IMPL(plus, left, "'+' operator not defined for type '%s'", right.T->name);
+	return left.T->plus(interpreter, left, right);
     case t_minus:
-	return left.T_info->minus(left, right);
+	VERIFY_TRAIT_IMPL(minus, left, "'-' operator not defined for type '%s'", right.T->name);
+	return left.T->minus(left, right);
     case t_slash:
-	return left.T_info->div(left, right);
+	VERIFY_TRAIT_IMPL(div, left, "'/' operator not defined for type '%s'", right.T->name);
+	return left.T->div(left, right);
     case t_slash_slash:
-	return left.T_info->int_div(left, right);
+	VERIFY_TRAIT_IMPL(int_div, left, "'//' operator not defined for type '%s'", right.T->name);
+	return left.T->int_div(left, right);
     case t_percent:
-	return left.T_info->mod(left, right);
+	VERIFY_TRAIT_IMPL(mod, left, "'%%' operator not defined for type '%s'", right.T->name);
+	return left.T->mod(left, right);
     case t_star:
-	return left.T_info->mul(interpreter, left, right);
+	VERIFY_TRAIT_IMPL(mul, left, "'*' operator not defined for type '%s'", right.T->name);
+	return left.T->mul(interpreter, left, right);
     case t_star_star:
-	return left.T_info->pow(left, right);
+	VERIFY_TRAIT_IMPL(mul, left, "'**' operator not defined for type '%s'", right.T->name);
+	return left.T->pow(left, right);
     case t_equal_equal:
-	return (SlashValue){ .T_info = &bool_type_info, .boolean = left.T_info->eq(left, right) };
+	return (SlashValue){ .T = &bool_type_info, .boolean = left.T->eq(left, right) };
     case t_bang_equal:
-	return (SlashValue){ .T_info = &bool_type_info, .boolean = !left.T_info->eq(left, right) };
+	return (SlashValue){ .T = &bool_type_info, .boolean = !left.T->eq(left, right) };
 
     default:
 	REPORT_RUNTIME_ERROR("Unrecognized binary operator");
@@ -148,15 +152,12 @@ static SlashValue eval_unary(Interpreter *interpreter, UnaryExpr *expr)
 {
     SlashValue right = eval(interpreter, expr->right);
     if (expr->operator_ == t_not) {
-	OpUnaryNot func = right.T_info->unary_not;
-	if (func == NULL)
-	    REPORT_RUNTIME_ERROR("'not' operator not defined for type '%s'", right.T_info->name);
-	return func(right);
+	VERIFY_TRAIT_IMPL(unary_not, right, "'not' operator not defined for type '%s'",
+			  right.T->name);
+	return right.T->unary_not(right);
     } else if (expr->operator_ == t_minus) {
-	OpUnaryMinus func = right.T_info->unary_minus;
-	if (func == NULL)
-	    REPORT_RUNTIME_ERROR("Unary '-' not defined for type '%s'", right.T_info->name);
-	return func(right);
+	VERIFY_TRAIT_IMPL(unary_minus, right, "Unary '-' not defined for type '%s'", right.T->name);
+	return right.T->unary_minus(right);
     }
 
     REPORT_RUNTIME_ERROR("Internal error: Unsupported unary operator parsed correctly.");
@@ -168,25 +169,24 @@ static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
 {
     SlashValue left = eval(interpreter, expr->left);
     if (IS_OBJ(left))
-	gc_shadow_push(&interpreter->gc_shadow_stack, left.obj);
+	gc_shadow_push(&interpreter->gc, left.obj);
     SlashValue right;
     SlashValue return_value;
 
     /* logical operators */
     if (expr->operator_ == t_and) {
-	if (!left.T_info->truthy(left)) {
-	    return_value = (SlashValue){ .T_info = &bool_type_info, .boolean = false };
+	if (!left.T->truthy(left)) {
+	    return_value = (SlashValue){ .T = &bool_type_info, .boolean = false };
 	    goto defer_shadow_pop;
 	}
 	right = eval(interpreter, expr->right);
-	return_value =
-	    (SlashValue){ .T_info = &bool_type_info, .boolean = right.T_info->truthy(right) };
+	return_value = (SlashValue){ .T = &bool_type_info, .boolean = right.T->truthy(right) };
 	goto defer_shadow_pop;
     }
     right = eval(interpreter, expr->right);
     if (expr->operator_ == t_or) {
-	bool truthy = left.T_info->truthy(left) || right.T_info->truthy(right);
-	return_value = (SlashValue){ .T_info = &bool_type_info, .boolean = truthy };
+	bool truthy = left.T->truthy(left) || right.T->truthy(right);
+	return_value = (SlashValue){ .T = &bool_type_info, .boolean = truthy };
 	goto defer_shadow_pop;
     }
 
@@ -197,16 +197,14 @@ static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
     }
 
     /* left "IN" right */
-    TraitItemIn in_func = right.T_info->item_in;
-    if (in_func == NULL)
-	REPORT_RUNTIME_ERROR("'in' operator not defined for type '%s'", right.T_info->name);
-    bool rc = in_func(right, left);
-    return_value = (SlashValue){ .T_info = &bool_type_info, .boolean = rc };
+    VERIFY_TRAIT_IMPL(item_in, right, "'in' operator not defined for type '%s'", right.T->name);
+    bool rc = right.T->item_in(right, left);
+    return_value = (SlashValue){ .T = &bool_type_info, .boolean = rc };
 
 
 defer_shadow_pop:
     if (IS_OBJ(left))
-	gc_shadow_pop(&interpreter->gc_shadow_stack);
+	gc_shadow_pop(&interpreter->gc);
     return return_value;
 }
 
@@ -230,10 +228,8 @@ static SlashValue eval_subscript(Interpreter *interpreter, SubscriptExpr *expr)
 {
     SlashValue value = eval(interpreter, expr->expr);
     SlashValue access_index = eval(interpreter, expr->access_value);
-    TraitItemGet func = value.T_info->item_get;
-    if (func == NULL)
-	REPORT_RUNTIME_ERROR("'[]' operator not defined for type '%s'", value.T_info->name);
-    return func(interpreter, value, access_index);
+    VERIFY_TRAIT_IMPL(item_get, value, "'[]' operator not defined for type '%s'", value.T->name);
+    return value.T->item_get(interpreter, value, access_index);
 }
 
 static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
@@ -267,10 +263,10 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
 static SlashValue eval_tuple(Interpreter *interpreter, SequenceExpr *expr)
 {
     SlashTuple *tuple = (SlashTuple *)gc_new_T(interpreter, &tuple_type_info);
-    gc_shadow_push(&interpreter->gc_shadow_stack, &tuple->obj);
+    gc_shadow_push(&interpreter->gc, &tuple->obj);
     slash_tuple_init(interpreter, tuple, expr->seq.size);
     if (expr->seq.size == 0) {
-	gc_shadow_pop(&interpreter->gc_shadow_stack);
+	gc_shadow_pop(&interpreter->gc);
 	return AS_VALUE(tuple);
     }
 
@@ -282,7 +278,7 @@ static SlashValue eval_tuple(Interpreter *interpreter, SequenceExpr *expr)
 	tuple->items[i++] = element_value;
     }
 
-    gc_shadow_pop(&interpreter->gc_shadow_stack);
+    gc_shadow_pop(&interpreter->gc);
     return AS_VALUE(tuple);
 }
 
@@ -296,10 +292,10 @@ static SlashValue eval_str(Interpreter *interpreter, StrExpr *expr)
 static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
 {
     SlashList *list = (SlashList *)gc_new_T(interpreter, &list_type_info);
-    gc_shadow_push(&interpreter->gc_shadow_stack, &list->obj);
+    gc_shadow_push(&interpreter->gc, &list->obj);
     slash_list_impl_init(interpreter, list);
     if (expr->exprs == NULL) {
-	gc_shadow_pop(&interpreter->gc_shadow_stack);
+	gc_shadow_pop(&interpreter->gc);
 	return AS_VALUE(list);
     }
 
@@ -310,17 +306,17 @@ static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
 	slash_list_impl_append(interpreter, list, element_value);
     }
 
-    gc_shadow_pop(&interpreter->gc_shadow_stack);
+    gc_shadow_pop(&interpreter->gc);
     return AS_VALUE(list);
 }
 
 static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
 {
     SlashMap *map = (SlashMap *)gc_new_T(interpreter, &map_type_info);
-    gc_shadow_push(&interpreter->gc_shadow_stack, &map->obj);
+    gc_shadow_push(&interpreter->gc, &map->obj);
     slash_map_impl_init(interpreter, map);
     if (expr->key_value_pairs == NULL) {
-	gc_shadow_pop(&interpreter->gc_shadow_stack);
+	gc_shadow_pop(&interpreter->gc);
 	return AS_VALUE(map);
     }
 
@@ -334,7 +330,7 @@ static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
 	slash_map_impl_put(interpreter, map, k, v);
     }
 
-    gc_shadow_pop(&interpreter->gc_shadow_stack);
+    gc_shadow_pop(&interpreter->gc);
     return AS_VALUE(map);
 }
 
@@ -411,7 +407,7 @@ static SlashValue eval_grouping(Interpreter *interpreter, GroupingExpr *expr)
 static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
 {
     SlashValue value = eval(interpreter, stmt->expression);
-    TraitPrint trait_print = value.T_info->print;
+    TraitPrint trait_print = value.T->print;
     assert(trait_print != NULL);
     trait_print(value);
     ///* edge case: if last char printed was a newline then we don't bother printing one */
@@ -462,7 +458,7 @@ static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
     ScopeAndValue path = var_get(interpreter->scope, &(StrView){ .view = "PATH", .size = 4 });
     if (!IS_STR(*path.value))
 	REPORT_RUNTIME_ERROR("PATH variable should be type '%s' not '%s'", str_type_info.name,
-			     path.value->T_info->name);
+			     path.value->T->name);
 
     WhichResult which_result = which(stmt->cmd_name, AS_STR(*path.value)->str);
     if (which_result.type == WHICH_NOT_FOUND)
@@ -492,7 +488,7 @@ static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
 static void exec_if(Interpreter *interpreter, IfStmt *stmt)
 {
     SlashValue r = eval(interpreter, stmt->condition);
-    if (r.T_info->truthy(r))
+    if (r.T->truthy(r))
 	exec(interpreter, stmt->then_branch);
     else if (stmt->else_branch != NULL)
 	exec(interpreter, stmt->else_branch);
@@ -529,13 +525,12 @@ static void exec_subscript_assign(Interpreter *interpreter, AssignStmt *stmt)
 
     ScopeAndValue current = var_get(interpreter->scope, &var_name);
     /* the underlying self who's index (access_index) we're trying to modify */
-    SlashValue *self = current.value;
+    SlashValue self = *current.value;
 
     if (stmt->assignment_op == t_equal) {
-	TraitItemAssign func = self->T_info->item_assign;
-	if (func == NULL)
-	    REPORT_RUNTIME_ERROR("Item assignment not defined for type '%s'", self->T_info->name);
-	func(interpreter, *self, access_index, new_value);
+	VERIFY_TRAIT_IMPL(item_assign, self, "Item assignment not defined for type '%s'",
+			  self.T->name);
+	self.T->item_assign(interpreter, self, access_index, new_value);
 	return;
     }
 
@@ -545,19 +540,15 @@ static void exec_subscript_assign(Interpreter *interpreter, AssignStmt *stmt)
     TokenType operator= stmt->assignment_op == t_plus_equal ? t_plus : t_minus;
     /* += means we eval + and then assign */
     if (operator== t_plus_equal) {
-	OpPlus func = current_item_value.T_info->plus;
-	if (func == NULL)
-	    REPORT_RUNTIME_ERROR("'+' operator not defined for type '%s'",
-				 current_item_value.T_info->name);
-	new_value = func(interpreter, current_item_value, new_value);
+	VERIFY_TRAIT_IMPL(plus, current_item_value, "'+' operator not defined for type '%s'",
+			  current_item_value.T->name);
+	new_value = current_item_value.T->plus(interpreter, current_item_value, new_value);
     } else {
 	REPORT_RUNTIME_ERROR("TODO: FIX SUBSCRIPT ASSSIGN");
     }
 
-    TraitItemAssign func = self->T_info->item_assign;
-    if (func == NULL)
-	REPORT_RUNTIME_ERROR("Item assignment not defined for type '%s'", self->T_info->name);
-    func(interpreter, *self, access_index, new_value);
+    VERIFY_TRAIT_IMPL(item_assign, self, "Item assignment not defined for type '%s'", self.T->name);
+    self.T->item_assign(interpreter, self, access_index, new_value);
 }
 
 static void exec_assign_unpack(Interpreter *interpreter, AssignStmt *stmt)
@@ -684,10 +675,7 @@ static void exec_pipeline(Interpreter *interpreter, PipelineStmt *stmt)
 static void exec_assert(Interpreter *interpreter, AssertStmt *stmt)
 {
     SlashValue result = eval(interpreter, stmt->expr);
-    TraitTruthy truthy_func = result.T_info->truthy;
-    if (truthy_func == NULL)
-	REPORT_RUNTIME_ERROR("Assertion failed because truthy trait not defined for type '%s'",
-			     result.T_info->name);
+    TraitTruthy truthy_func = result.T->truthy;
     if (!truthy_func(result))
 	REPORT_RUNTIME_ERROR("Assertion failed");
 }
@@ -699,10 +687,7 @@ static void exec_loop(Interpreter *interpreter, LoopStmt *stmt)
     interpreter->scope = block_scope;
 
     SlashValue r = eval(interpreter, stmt->condition);
-    TraitTruthy truthy_func = r.T_info->truthy;
-    if (truthy_func == NULL)
-	REPORT_RUNTIME_ERROR("Executing loop failed because truthy is not defined for type '%s' ",
-			     r.T_info->name);
+    TraitTruthy truthy_func = r.T->truthy;
     while (truthy_func(r)) {
 	exec_block_body(interpreter, stmt->body_block);
 	r = eval(interpreter, stmt->condition);
@@ -854,10 +839,10 @@ static void exec_andor(Interpreter *interpreter, BinaryStmt *stmt)
     if (stmt->left->type == STMT_EXPRESSION) {
 	ExpressionStmt *left = (ExpressionStmt *)stmt->left;
 	SlashValue value = eval(interpreter, left->expression);
-	TraitTruthy truthy_func = value.T_info->truthy;
+	TraitTruthy truthy_func = value.T->truthy;
 	if (truthy_func == NULL)
 	    REPORT_RUNTIME_ERROR("&& or || failed becuase truthy is not defined for type '%s'",
-				 value.T_info->name);
+				 value.T->name);
 	predicate = truthy_func(value);
     } else {
 	exec(interpreter, stmt->left);
@@ -874,10 +859,10 @@ static void exec_redirect(Interpreter *interpreter, BinaryStmt *stmt)
     // TODO: here we assume the cmd_stmt can NOT mutate the stmt->right_expr, however, this may
     //       not always be guaranteed ?.
     SlashValue value = eval(interpreter, stmt->right_expr);
-    TraitToStr to_str = value.T_info->to_str;
+    TraitToStr to_str = value.T->to_str;
     if (to_str == NULL)
 	REPORT_RUNTIME_ERROR("Redirection failed because to_str is not defined for type '%s'",
-			     value.T_info->name);
+			     value.T->name);
 
     char *file_name = AS_STR(to_str(interpreter, value))->str;
     StreamCtx *stream_ctx = &interpreter->stream_ctx;
@@ -1006,10 +991,7 @@ void interpreter_init(Interpreter *interpreter, int argc, char **argv)
     scope_init_globals(&interpreter->globals, &interpreter->arena, argc, argv);
     interpreter->scope = &interpreter->globals;
 
-    linkedlist_init(&interpreter->gc_objs, sizeof(SlashObj *));
-    arraylist_init(&interpreter->gc_gray_stack, sizeof(SlashObj *));
-    interpreter->obj_alloced_since_next_gc = 0;
-    arraylist_init(&interpreter->gc_shadow_stack, sizeof(SlashObj **));
+    gc_ctx_init(&interpreter->gc);
 
     /* init default StreamCtx */
     StreamCtx stream_ctx = { .read_fd = STDIN_FILENO, .write_fd = STDOUT_FILENO };
@@ -1019,12 +1001,10 @@ void interpreter_init(Interpreter *interpreter, int argc, char **argv)
 
 void interpreter_free(Interpreter *interpreter)
 {
-    gc_collect_all(&interpreter->gc_objs);
+    gc_collect_all(interpreter);
+    gc_ctx_free(&interpreter->gc);
     scope_destroy(&interpreter->globals);
     arraylist_free(&interpreter->stream_ctx.active_fds);
-    linkedlist_free(&interpreter->gc_objs);
-    arraylist_free(&interpreter->gc_shadow_stack);
-    arraylist_free(&interpreter->gc_gray_stack);
 }
 
 static void interpreter_reset_from_err(Interpreter *interpreter)

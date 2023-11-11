@@ -30,9 +30,9 @@ int builtin_cd(Interpreter *interpreter, size_t argc, SlashValue *argv)
     }
 
     SlashValue param = argv[0];
-    TraitToStr to_str = param.T_info->to_str;
+    TraitToStr to_str = param.T->to_str;
     if (to_str == NULL) {
-	fprintf(stderr, "cd: could not take to_str of type '%s'", param.T_info->name);
+	fprintf(stderr, "cd: could not take to_str of type '%s'", param.T->name);
 	return 1;
     }
     SlashStr *param_str = AS_STR(to_str(interpreter, param));
