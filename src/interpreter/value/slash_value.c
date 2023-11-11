@@ -45,7 +45,7 @@ void bool_print(SlashValue self)
 SlashValue bool_to_str(Interpreter *interpreter, SlashValue self)
 {
     assert(IS_BOOL(self));
-    SlashObj *str = gc_new_T(&interpreter->gc, &str_type_info);
+    SlashObj *str = gc_new_T(interpreter, &str_type_info);
     if (self.boolean)
 	slash_str_init_from_slice(interpreter, (SlashStr *)str, "true", 4);
     else
@@ -162,7 +162,7 @@ void num_print(SlashValue self)
 SlashValue num_to_str(Interpreter *interpreter, SlashValue self)
 {
     assert(IS_NUM(self));
-    SlashObj *str = gc_new_T(&interpreter->gc, &str_type_info);
+    SlashObj *str = gc_new_T(interpreter, &str_type_info);
     char buffer[256];
     int len = sprintf(buffer, "%f", self.num);
     slash_str_init_from_slice(interpreter, (SlashStr *)str, buffer, len);
@@ -218,7 +218,7 @@ void range_print(SlashValue self)
 SlashValue range_to_str(Interpreter *interpreter, SlashValue self)
 {
     assert(IS_RANGE(self));
-    SlashObj *str = gc_new_T(&interpreter->gc, &str_type_info);
+    SlashObj *str = gc_new_T(interpreter, &str_type_info);
     char buffer[512];
     int len = sprintf(buffer, "%d -> %d", self.range.start, self.range.end);
     slash_str_init_from_slice(interpreter, (SlashStr *)str, buffer, len);
@@ -278,7 +278,7 @@ bool range_eq(SlashValue self, SlashValue other)
 SlashValue text_lit_to_str(Interpreter *interpreter, SlashValue self)
 {
     assert(IS_TEXT_LIT(self));
-    SlashObj *str = gc_new_T(&interpreter->gc, &str_type_info);
+    SlashObj *str = gc_new_T(interpreter, &str_type_info);
     slash_str_init_from_view(interpreter, (SlashStr *)str, &self.text_lit);
     return AS_VALUE(str);
 }
@@ -358,7 +358,7 @@ SlashValue list_plus(Interpreter *interpreter, SlashValue self, SlashValue other
     // TODO: 1. We can prealloc the memory since we know the size
     //       2. We can use something like memcpy to copy all data in one batch
     assert(IS_LIST(self) && IS_LIST(self));
-    SlashList *new_list = (SlashList *)gc_new_T(&interpreter->gc, &list_type_info);
+    SlashList *new_list = (SlashList *)gc_new_T(interpreter, &list_type_info);
     gc_shadow_push(&interpreter->gc, &new_list->obj);
     slash_list_impl_init(interpreter, new_list);
 
@@ -478,7 +478,7 @@ void slash_tuple_init(Interpreter *interpreter, SlashTuple *tuple, size_t size)
     if (size == 0)
 	tuple->items = NULL;
     else
-	tuple->items = gc_alloc(&interpreter->gc, sizeof(SlashValue) * size);
+	tuple->items = gc_alloc(interpreter, sizeof(SlashValue) * size);
 }
 
 SlashValue tuple_plus(Interpreter *interpreter, SlashValue self, SlashValue other)
@@ -486,7 +486,7 @@ SlashValue tuple_plus(Interpreter *interpreter, SlashValue self, SlashValue othe
     assert(IS_TUPLE(self) && IS_TUPLE(other));
     SlashTuple *a = AS_TUPLE(self);
     SlashTuple *b = AS_TUPLE(other);
-    SlashTuple *new_tuple = (SlashTuple *)gc_new_T(&interpreter->gc, &tuple_type_info);
+    SlashTuple *new_tuple = (SlashTuple *)gc_new_T(interpreter, &tuple_type_info);
     slash_tuple_init(interpreter, new_tuple, a->len + b->len);
 
     for (size_t i = 0; i < a->len; i++)
@@ -597,7 +597,7 @@ int tuple_hash(SlashValue self)
 void slash_str_init_from_view(Interpreter *interpreter, SlashStr *str, StrView *view)
 {
     str->len = view->size;
-    str->str = gc_alloc(&interpreter->gc, str->len + 1);
+    str->str = gc_alloc(interpreter, str->len + 1);
     memcpy(str->str, view->view, str->len);
     str->str[str->len] = 0;
 }

@@ -134,7 +134,8 @@ extern SlashValue NoneSingleton;
 #define IS_TUPLE(value__) ((value__).T == &tuple_type_info)
 #define IS_STR(value__) ((value__).T == &str_type_info)
 #define IS_NONE(value__) ((value__).T == &none_type_info)
-#define IS_OBJ(value__) (!(IS_BOOL((value__)) && IS_NUM((value__)) && IS_RANGE((value__))))
+#define IS_OBJ(value__) \
+    (IS_MAP((value__)) || IS_LIST((value__)) || IS_TUPLE((value__)) || IS_STR((value__)))
 
 #define AS_MAP(value__) ((SlashMap *)(value__).obj)
 #define AS_LIST(value__) ((SlashList *)(value__).obj)

@@ -255,14 +255,14 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
 	size--;
     close(fd[0]);
 
-    SlashStr *str = (SlashStr *)gc_new_T(&interpreter->gc, &str_type_info);
+    SlashStr *str = (SlashStr *)gc_new_T(interpreter, &str_type_info);
     slash_str_init_from_slice(interpreter, str, buffer, size);
     return AS_VALUE(str);
 }
 
 static SlashValue eval_tuple(Interpreter *interpreter, SequenceExpr *expr)
 {
-    SlashTuple *tuple = (SlashTuple *)gc_new_T(&interpreter->gc, &tuple_type_info);
+    SlashTuple *tuple = (SlashTuple *)gc_new_T(interpreter, &tuple_type_info);
     gc_shadow_push(&interpreter->gc, &tuple->obj);
     slash_tuple_init(interpreter, tuple, expr->seq.size);
     if (expr->seq.size == 0) {
@@ -284,14 +284,14 @@ static SlashValue eval_tuple(Interpreter *interpreter, SequenceExpr *expr)
 
 static SlashValue eval_str(Interpreter *interpreter, StrExpr *expr)
 {
-    SlashStr *str = (SlashStr *)gc_new_T(&interpreter->gc, &str_type_info);
+    SlashStr *str = (SlashStr *)gc_new_T(interpreter, &str_type_info);
     slash_str_init_from_view(interpreter, str, &expr->view);
     return AS_VALUE(str);
 }
 
 static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
 {
-    SlashList *list = (SlashList *)gc_new_T(&interpreter->gc, &list_type_info);
+    SlashList *list = (SlashList *)gc_new_T(interpreter, &list_type_info);
     gc_shadow_push(&interpreter->gc, &list->obj);
     slash_list_impl_init(interpreter, list);
     if (expr->exprs == NULL) {
@@ -312,7 +312,7 @@ static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
 
 static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
 {
-    SlashMap *map = (SlashMap *)gc_new_T(&interpreter->gc, &map_type_info);
+    SlashMap *map = (SlashMap *)gc_new_T(interpreter, &map_type_info);
     gc_shadow_push(&interpreter->gc, &map->obj);
     slash_map_impl_init(interpreter, map);
     if (expr->key_value_pairs == NULL) {

@@ -28,28 +28,30 @@
 #endif /* DEBUG_LOG_GC */
 
 
-static void gc_sweep_obj(SlashObj *obj)
+static void gc_sweep_obj(Interpreter *interpreter, SlashObj *obj)
 {
-    /// SlashValue value = AS_VALUE(obj);
-    /// if (IS_MAP(value)) {
-    ///     // slash_map_impl_free(AS_MAP(value)->map);
-    /// } else if (IS_LIST(value)) {
-    ///     // arraylist_free(&AS_LIST(value)->list);
-    /// } else if (IS_TUPLE(value)) {
-    ///     // free(AS_TUPLE(value)->tuple);
-    /// } else if (IS_STR(value)) {
-    ///     free(AS_STR(value)->str);
-    /// } else {
-    ///     REPORT_RUNTIME_ERROR("Sweep not implemented for this obj");
-    /// }
+    SlashValue value = AS_VALUE(obj);
+    if (IS_MAP(value)) {
+	slash_map_impl_free(interpreter, AS_MAP(value));
+    } else if (IS_LIST(value)) {
+	slash_list_impl_free(interpreter, AS_LIST(value));
+    } else if (IS_TUPLE(value)) {
+	SlashTuple *tuple = AS_TUPLE(value);
+	gc_free(interpreter, tuple->items, tuple->len * sizeof(SlashValue));
+    } else if (IS_STR(value)) {
+	SlashStr *str = AS_STR(value);
+	gc_free(interpreter, str->str, str->len);
+    } else {
+	REPORT_RUNTIME_ERROR("Sweep not implemented for this obj");
+    }
 
-    free(obj);
+    gc_free(interpreter, obj, value.T->obj_size);
 }
 
-static void gc_sweep(GC *gc)
+static void gc_sweep(Interpreter *interpreter)
 {
     LinkedListItem *to_remove = NULL;
-    LinkedListItem *current = gc->gc_objs.head;
+    LinkedListItem *current = interpreter->gc.gc_objs.head;
 
     while (current != NULL) {
 	SlashObj *obj = current->data;
@@ -62,10 +64,10 @@ static void gc_sweep(GC *gc)
 	    print_func(value);
 	    putchar('\n');
 #endif
-	    gc_sweep_obj(obj);
+	    gc_sweep_obj(interpreter, obj);
 	    to_remove = current;
 	    current = current->next;
-	    linkedlist_remove_item(&gc->gc_objs, to_remove);
+	    linkedlist_remove_item(&interpreter->gc.gc_objs, to_remove);
 	    continue;
 	}
 
@@ -75,6 +77,8 @@ static void gc_sweep(GC *gc)
 
 static void gc_reset(GC *gc)
 {
+    gc->next_run = gc->bytes_managing * GC_HEAP_GROW_FACTOR;
+
     for (LinkedListItem *item = gc->gc_objs.head; item != NULL; item = item->next) {
 	SlashObj *obj = item->data;
 	obj->gc_marked = false;
@@ -119,13 +123,33 @@ static void gc_blacken_obj(GC *gc, SlashObj *obj)
     putchar('\n');
 #endif
 
-    /// if (IS_MAP(value)) {
-    /// } else if (IS_LIST(value)) {
-    /// } else if (IS_TUPLE(value)) {
-    /// } else if (IS_STR(value)) {
-    /// } else {
-    ///     REPORT_RUNTIME_ERROR("gc blacken not implemented for this object type");
-    /// }
+    if (IS_MAP(value)) {
+	SlashMap *map = AS_MAP(value);
+	if (map->len == 0)
+	    return;
+	/* TODO: VLA bad ?! */
+	SlashValue keys[map->len];
+	slash_map_impl_get_keys(map, keys);
+	for (size_t i = 0; i < map->len; i++) {
+	    gc_visit_value(gc, &keys[i]);
+	    SlashValue v = slash_map_impl_get(map, keys[i]);
+	    gc_visit_value(gc, &v);
+	}
+    } else if (IS_LIST(value)) {
+	SlashList *list = AS_LIST(value);
+	for (size_t i = 0; i < list->len; i++) {
+	    SlashValue v = slash_list_impl_get(list, i);
+	    gc_visit_value(gc, &v);
+	}
+    } else if (IS_TUPLE(value)) {
+	SlashTuple *tuple = AS_TUPLE(value);
+	for (size_t i = 0; i < tuple->len; i++)
+	    gc_visit_value(gc, &tuple->items[i]);
+    } else if (IS_STR(value)) {
+	return;
+    } else {
+	REPORT_RUNTIME_ERROR("gc blacken not implemented for this object type");
+    }
 }
 
 static void gc_mark_roots(Interpreter *interpreter)
@@ -170,7 +194,7 @@ void gc_ctx_init(GC *gc)
     arraylist_init(&gc->shadow_stack, sizeof(SlashObj **));
 
     gc->bytes_managing = 0;
-    gc->next_run = 0;
+    gc->next_run = 33554432; // ̃~32mb
 }
 
 void gc_ctx_free(GC *gc)
@@ -180,37 +204,52 @@ void gc_ctx_free(GC *gc)
     arraylist_free(&gc->gray_stack);
 }
 
-void *gc_alloc(GC *gc, size_t size)
+void *gc_alloc(Interpreter *interpreter, size_t size)
 {
-    gc->bytes_managing += size;
+#ifdef DEBUG_STRESS_GC
+    gc_run(interpreter);
+#endif
+    interpreter->gc.bytes_managing += size;
+    if (interpreter->gc.bytes_managing > interpreter->gc.next_run)
+	gc_run(interpreter);
+#ifdef DEBUG_LOG_GC
+    printf("gc_alloc %zu bytes\n", size);
+#endif
     return malloc(size);
 }
 
-void *gc_realloc(GC *gc, void *p, size_t old_size, size_t new_size)
+void *gc_realloc(Interpreter *interpreter, void *p, size_t old_size, size_t new_size)
 {
-    gc->bytes_managing += new_size - old_size;
+#ifdef DEBUG_LOG_GC
+    printf("gc_realloc diff of %zu bytes\n", new_size - old_size);
+#endif
+    interpreter->gc.bytes_managing += new_size - old_size;
     return realloc(p, new_size);
 }
 
-void gc_free(GC *gc, void *data, size_t size_freed)
+void gc_free(Interpreter *interpreter, void *data, size_t size_freed)
 {
-    gc->bytes_managing -= size_freed;
+    interpreter->gc.bytes_managing -= size_freed;
     free(data);
 }
 
-SlashObj *gc_new_T(GC *gc, SlashTypeInfo *T)
+SlashObj *gc_new_T(Interpreter *interpreter, SlashTypeInfo *T)
 {
-    SlashObj *obj = gc_alloc(gc, T->obj_size);
+#ifdef DEBUG_LOG_GC
+    printf("GC new %s\n", T->name);
+#endif
+    SlashObj *obj = gc_alloc(interpreter, T->obj_size);
     obj->T = T;
     obj->gc_marked = true;
     obj->gc_managed = true;
-    gc_register(gc, obj);
+    gc_register(&interpreter->gc, obj);
     return obj;
 }
 
 void gc_run(Interpreter *interpreter)
 {
 #ifdef DEBUG_LOG_GC
+    size_t pre = interpreter->gc.bytes_managing;
     printf("-- gc begin\n");
 #endif
     gc_mark_roots(interpreter);
@@ -218,10 +257,11 @@ void gc_run(Interpreter *interpreter)
 #ifdef DEBUG_LOG_GC
     printf("-- gc sweep\n");
 #endif
-    gc_sweep(&interpreter->gc);
+    gc_sweep(interpreter);
     gc_reset(&interpreter->gc);
 
 #ifdef DEBUG_LOG_GC
+    printf("gc freed %zu bytes\n", pre - interpreter->gc.bytes_managing);
     printf("-- gc end\n");
 #endif
 }
@@ -230,19 +270,14 @@ void gc_collect_all(Interpreter *interpreter)
 {
     for (LinkedListItem *item = interpreter->gc.gc_objs.head; item != NULL; item = item->next) {
 	SlashObj *obj = item->data;
-	gc_sweep_obj(obj);
+	gc_sweep_obj(interpreter, obj);
     }
 }
 
 void gc_shadow_push(GC *gc, SlashObj *obj)
 {
 #ifdef DEBUG_LOG_GC
-    printf("%p push to shadow stack ", (void *)obj);
-    TraitPrint print_func = obj->T->print;
-    assert(print_func != NULL);
-    SlashValue value = AS_VALUE(obj);
-    print_func(value);
-    putchar('\n');
+    printf("%p pushed to shadow\n", (void *)obj);
 #endif /* DEBUG_LOG_GC */
     arraylist_append(&gc->shadow_stack, &obj);
 }
@@ -252,7 +287,7 @@ void gc_shadow_pop(GC *gc)
 #ifdef DEBUG_LOG_GC
     SlashObj **obj_ptr = arraylist_get(&gc->shadow_stack, gc->shadow_stack.size - 1);
     SlashObj *obj = *obj_ptr;
-    printf("%p pop shadow stack", (void *)obj);
+    printf("%p popped from shadow stack ->", (void *)obj);
     TraitPrint print_func = obj->T->print;
     assert(print_func != NULL);
     SlashValue value = AS_VALUE(obj);
