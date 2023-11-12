@@ -697,137 +697,114 @@ static void exec_loop(Interpreter *interpreter, LoopStmt *stmt)
     scope_destroy(block_scope);
 }
 
-/// static void exec_iter_loop_list(Interpreter *interpreter, IterLoopStmt *stmt, SlashList
-/// *iterable)
-///{
-///    /* define the loop variable that holds the current iterator value */
-///    var_define(interpreter->scope, &stmt->var_name, NULL);
-///
-///    SlashValue *iterator_value;
-///    for (size_t i = 0; i < iterable->underlying.size; i++) {
-///	iterator_value = slash_list_get(iterable, i);
-///	var_assign(&stmt->var_name, interpreter->scope, iterator_value);
-///	exec_block_body(interpreter, stmt->body_block);
-///	scope_reset(interpreter->scope);
-///    }
-///}
-///
-/// static void exec_iter_loop_tuple(Interpreter *interpreter, IterLoopStmt *stmt, SlashTuple
-/// *iterable)
-///{
-///    /* define the loop variable that holds the current iterator value */
-///    var_define(interpreter->scope, &stmt->var_name, NULL);
-///
-///    SlashValue *iterator_value;
-///    for (size_t i = 0; i < iterable->size; i++) {
-///	iterator_value = &iterable->values[i];
-///	var_assign(&stmt->var_name, interpreter->scope, iterator_value);
-///	exec_block_body(interpreter, stmt->body_block);
-///	scope_reset(interpreter->scope);
-///    }
-///}
-///
-/// static void exec_iter_loop_map(Interpreter *interpreter, IterLoopStmt *stmt, SlashMap *iterable)
-///{
-///    if (iterable->underlying.len == 0)
-///	return;
-///
-///    SlashValue keys = slash_map_get_keys(interpreter, iterable);
-///    SlashTuple *keys_tuple = (SlashTuple *)keys.obj;
-///    /* define the loop variable that holds the current iterator value */
-///    var_define(interpreter->scope, &stmt->var_name, NULL);
-///
-///    SlashValue *iterator_value;
-///    for (size_t i = 0; i < keys_tuple->size; i++) {
-///	iterator_value = &keys_tuple->values[i];
-///	var_assign(&stmt->var_name, interpreter->scope, iterator_value);
-///	exec_block_body(interpreter, stmt->body_block);
-///	scope_reset(interpreter->scope);
-///    }
-///}
-///
-/// static void exec_iter_loop_str(Interpreter *interpreter, IterLoopStmt *stmt, SlashStr *iterable)
-///{
-///    ScopeAndValue ifs_res = var_get(interpreter->scope, &(StrView){ .view = "IFS", .size = 3 });
-///    if (ifs_res.value == NULL) {
-///	REPORT_RUNTIME_ERROR("No IFS variable found");
-///    }
-///    if (!(ifs_res.value->type == SLASH_OBJ && ifs_res.value->obj->type == SLASH_OBJ_STR)) {
-///	REPORT_RUNTIME_ERROR("Expeted IFS to be of type 'str' but got '%s'",
-///			     SLASH_TYPE_TO_STR(ifs_res.value));
-///    }
-///
-///    SlashStr *ifs = (SlashStr *)ifs_res.value->obj;
-///    SlashList *substrings = slash_str_internal_split(interpreter, iterable, ifs->p, true);
-///    gc_shadow_push(&interpreter->gc_shadow_stack, &substrings->obj);
-///    exec_iter_loop_list(interpreter, stmt, substrings);
-///    gc_shadow_pop(&interpreter->gc_shadow_stack);
-///}
-///
-/// static void exec_iter_loop_range(Interpreter *interpreter, IterLoopStmt *stmt, SlashRange
-/// iterable)
-///{
-///    if (!slash_range_is_nonzero(iterable))
-///	return;
-///    SlashValue iterator_value = { .type = SLASH_NUM, .num = iterable.start };
-///
-///    /* define the loop variable that holds the current iterator value */
-///    var_define(interpreter->scope, &stmt->var_name, &iterator_value);
-///
-///    while (iterator_value.num != iterable.end) {
-///	exec_block_body(interpreter, stmt->body_block);
-///	scope_reset(interpreter->scope);
-///	iterator_value.num++;
-///	var_assign(&stmt->var_name, interpreter->scope, &iterator_value);
-///    }
-///}
-///
-/// static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
-///{
-///    Scope loop_scope;
-///    scope_init(&loop_scope, interpreter->scope);
-///    interpreter->scope = &loop_scope;
-///
-///    SlashValue underlying = eval(interpreter, stmt->underlying_iterable);
-///    if (IS_OBJ(underlying.type))
-///	gc_shadow_push(&interpreter->gc_shadow_stack, underlying.obj);
-///
-///    switch (underlying.type) {
-///    case SLASH_RANGE:
-///	exec_iter_loop_range(interpreter, stmt, underlying.range);
-///	break;
-///    case SLASH_OBJ: {
-///	switch (underlying.obj->type) {
-///	case SLASH_OBJ_LIST:
-///	    exec_iter_loop_list(interpreter, stmt, (SlashList *)underlying.obj);
-///	    break;
-///	case SLASH_OBJ_TUPLE:
-///	    exec_iter_loop_tuple(interpreter, stmt, (SlashTuple *)underlying.obj);
-///	    break;
-///	case SLASH_OBJ_MAP:
-///	    exec_iter_loop_map(interpreter, stmt, (SlashMap *)underlying.obj);
-///	    break;
-///	case SLASH_OBJ_STR:
-///	    exec_iter_loop_str(interpreter, stmt, (SlashStr *)underlying.obj);
-///	    break;
-///	default:
-///	    REPORT_RUNTIME_ERROR("Object type '%s' cannot be iterated over",
-///				 SLASH_TYPE_TO_STR(&underlying));
-///	    ASSERT_NOT_REACHED;
-///	}
-///
-///    } break;
-///    default:
-///	REPORT_RUNTIME_ERROR("Type '%s' cannot be iterated over", SLASH_TYPE_TO_STR(&underlying));
-///	ASSERT_NOT_REACHED;
-///    }
-///
-///    if (IS_OBJ(underlying.type))
-///	gc_shadow_pop(&interpreter->gc_shadow_stack);
-///    interpreter->scope = loop_scope.enclosing;
-///    scope_destroy(&loop_scope);
-///}
-///
+static void exec_iter_loop_list(Interpreter *interpreter, IterLoopStmt *stmt, SlashList *iterable)
+{
+    /* define the loop variable that holds the current iterator value */
+    var_define(interpreter->scope, &stmt->var_name, NULL);
+
+    SlashValue iterator_value;
+    for (size_t i = 0; i < iterable->len; i++) {
+	iterator_value = slash_list_impl_get(iterable, i);
+	var_assign(&stmt->var_name, interpreter->scope, &iterator_value);
+	exec_block_body(interpreter, stmt->body_block);
+	scope_reset(interpreter->scope);
+    }
+}
+
+static void exec_iter_loop_tuple(Interpreter *interpreter, IterLoopStmt *stmt, SlashTuple *iterable)
+{
+    /* define the loop variable that holds the current iterator value */
+    var_define(interpreter->scope, &stmt->var_name, NULL);
+
+    SlashValue *iterator_value;
+    for (size_t i = 0; i < iterable->len; i++) {
+	iterator_value = &iterable->items[i];
+	var_assign(&stmt->var_name, interpreter->scope, iterator_value);
+	exec_block_body(interpreter, stmt->body_block);
+	scope_reset(interpreter->scope);
+    }
+}
+
+static void exec_iter_loop_map(Interpreter *interpreter, IterLoopStmt *stmt, SlashMap *iterable)
+{
+    if (iterable->len == 0)
+	return;
+
+    SlashValue keys[iterable->len];
+    slash_map_impl_get_keys(iterable, keys);
+    /* define the loop variable that holds the current iterator value */
+    var_define(interpreter->scope, &stmt->var_name, NULL);
+
+    SlashValue *iterator_value;
+    for (size_t i = 0; i < iterable->len; i++) {
+	iterator_value = &keys[i];
+	var_assign(&stmt->var_name, interpreter->scope, iterator_value);
+	exec_block_body(interpreter, stmt->body_block);
+	scope_reset(interpreter->scope);
+    }
+}
+
+static void exec_iter_loop_str(Interpreter *interpreter, IterLoopStmt *stmt, SlashStr *iterable)
+{
+    ScopeAndValue ifs_res = var_get(interpreter->scope, &(StrView){ .view = "IFS", .size = 3 });
+    if (ifs_res.value == NULL)
+	REPORT_RUNTIME_ERROR("No IFS variable found");
+    if (!IS_STR(*ifs_res.value))
+	REPORT_RUNTIME_ERROR("$IFS has to be of type 'str', but got '%s'", ifs_res.value->T->name);
+
+    SlashStr *ifs = AS_STR(*ifs_res.value);
+    SlashList *substrings = slash_str_split(interpreter, iterable, ifs->str, true);
+    gc_shadow_push(&interpreter->gc, &substrings->obj);
+    exec_iter_loop_list(interpreter, stmt, substrings);
+    gc_shadow_pop(&interpreter->gc);
+}
+
+static void exec_iter_loop_range(Interpreter *interpreter, IterLoopStmt *stmt, SlashRange iterable)
+{
+    if (iterable.start >= iterable.end)
+	return;
+
+    SlashValue iterator_value = { .T = &num_type_info, .num = iterable.start };
+    /* define the loop variable that holds the current iterator value */
+    var_define(interpreter->scope, &stmt->var_name, &iterator_value);
+
+    while (iterator_value.num != iterable.end) {
+	exec_block_body(interpreter, stmt->body_block);
+	scope_reset(interpreter->scope);
+	iterator_value.num++;
+	var_assign(&stmt->var_name, interpreter->scope, &iterator_value);
+    }
+}
+
+static void exec_iter_loop(Interpreter *interpreter, IterLoopStmt *stmt)
+{
+    Scope loop_scope;
+    scope_init(&loop_scope, interpreter->scope);
+    interpreter->scope = &loop_scope;
+
+    SlashValue underlying = eval(interpreter, stmt->underlying_iterable);
+    if (IS_OBJ(underlying))
+	gc_shadow_push(&interpreter->gc, underlying.obj);
+
+    if (IS_RANGE(underlying))
+	exec_iter_loop_range(interpreter, stmt, underlying.range);
+    else if (IS_LIST(underlying))
+	exec_iter_loop_list(interpreter, stmt, AS_LIST(underlying));
+    else if (IS_TUPLE(underlying))
+	exec_iter_loop_tuple(interpreter, stmt, AS_TUPLE(underlying));
+    else if (IS_MAP(underlying))
+	exec_iter_loop_map(interpreter, stmt, AS_MAP(underlying));
+    else if (IS_STR(underlying))
+	exec_iter_loop_str(interpreter, stmt, AS_STR(underlying));
+    else
+	REPORT_RUNTIME_ERROR("Type '%s' can not be iterated over", underlying.T->name);
+
+    if (IS_OBJ(underlying))
+	gc_shadow_pop(&interpreter->gc);
+    interpreter->scope = loop_scope.enclosing;
+    scope_destroy(&loop_scope);
+}
+
 static void exec_andor(Interpreter *interpreter, BinaryStmt *stmt)
 {
     /*
@@ -958,9 +935,9 @@ static void exec(Interpreter *interpreter, Stmt *stmt)
     case STMT_LOOP:
 	exec_loop(interpreter, (LoopStmt *)stmt);
 	break;
-	///    case STMT_ITER_LOOP:
-	///	exec_iter_loop(interpreter, (IterLoopStmt *)stmt);
-	///	break;
+    case STMT_ITER_LOOP:
+	exec_iter_loop(interpreter, (IterLoopStmt *)stmt);
+	break;
     case STMT_IF:
 	exec_if(interpreter, (IfStmt *)stmt);
 	break;

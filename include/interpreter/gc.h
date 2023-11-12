@@ -18,7 +18,7 @@
 #define GC_H
 
 // #define DEBUG_STRESS_GC
-#define DEBUG_LOG_GC
+// #define DEBUG_LOG_GC
 #define GC_HEAP_GROW_FACTOR 2
 
 #include "nicc/nicc.h"
