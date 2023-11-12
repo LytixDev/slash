@@ -747,20 +747,16 @@ static void exec_iter_loop_map(Interpreter *interpreter, IterLoopStmt *stmt, Sla
 static void exec_iter_loop_str(Interpreter *interpreter, IterLoopStmt *stmt, SlashStr *iterable)
 {
     ScopeAndValue ifs_res = var_get(interpreter->scope, &(StrView){ .view = "IFS", .size = 3 });
-    if (ifs_res.value == NULL) {
+    if (ifs_res.value == NULL)
 	REPORT_RUNTIME_ERROR("No IFS variable found");
-    }
-    if (!IS_STR(*ifs_res.value)) {
+    if (!IS_STR(*ifs_res.value))
 	REPORT_RUNTIME_ERROR("$IFS has to be of type 'str', but got '%s'", ifs_res.value->T->name);
-    }
 
     SlashStr *ifs = AS_STR(*ifs_res.value);
-    REPORT_RUNTIME_ERROR("TODO: add iter loop str");
-
-    /// SlashList *substrings = slash_str_internal_split(interpreter, iterable, ifs->p, true);
-    /// gc_shadow_push(&interpreter->gc_shadow_stack, &substrings->obj);
-    /// exec_iter_loop_list(interpreter, stmt, substrings);
-    /// gc_shadow_pop(&interpreter->gc_shadow_stack);
+    SlashList *substrings = slash_str_split(interpreter, iterable, ifs->str, true);
+    gc_shadow_push(&interpreter->gc, &substrings->obj);
+    exec_iter_loop_list(interpreter, stmt, substrings);
+    gc_shadow_pop(&interpreter->gc);
 }
 
 static void exec_iter_loop_range(Interpreter *interpreter, IterLoopStmt *stmt, SlashRange iterable)
