@@ -947,14 +947,17 @@ void interpreter_free(Interpreter *interpreter)
 
 static void interpreter_reset_from_err(Interpreter *interpreter)
 {
-    /* free any old scopes */
+    /* Pop everything from shadow stack as they are no longer in use */
+    interpreter->gc.shadow_stack.size = 0;
+
+    /* Free any old scopes */
     while (interpreter->scope != &interpreter->globals) {
 	Scope *to_destroy = interpreter->scope;
 	interpreter->scope = interpreter->scope->enclosing;
 	scope_destroy(to_destroy);
     }
 
-    /* reset stream_ctx */
+    /* Reset stream_ctx */
     arraylist_free(&interpreter->stream_ctx.active_fds);
     StreamCtx stream_ctx = { .read_fd = STDIN_FILENO, .write_fd = STDOUT_FILENO };
     arraylist_init(&stream_ctx.active_fds, sizeof(int));

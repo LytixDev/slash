@@ -649,7 +649,7 @@ SlashList *slash_str_split(Interpreter *interpreter, SlashStr *str, char *separa
     }
 
     /* final substr */
-    size_t final_size = (str->str + str->len - 1) - start_ptr;
+    size_t final_size = (str->str + str->len) - start_ptr;
     if (final_size != 0) {
 	SlashStr *substr = (SlashStr *)gc_new_T(interpreter, &str_type_info);
 	slash_str_init_from_slice(interpreter, substr, start_ptr, final_size);
