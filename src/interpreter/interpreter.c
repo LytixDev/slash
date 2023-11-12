@@ -111,24 +111,31 @@ static SlashValue eval_binary_operators(Interpreter *interpreter, SlashValue lef
 	VERIFY_TRAIT_IMPL(cmp, left, "'<=' operator not defined for type '%s'", right.T->name);
 	return (SlashValue){ .T = &bool_type_info, .boolean = (left.T->cmp(left, right) <= 0) };
     case t_plus:
+    case t_plus_equal:
 	VERIFY_TRAIT_IMPL(plus, left, "'+' operator not defined for type '%s'", right.T->name);
 	return left.T->plus(interpreter, left, right);
     case t_minus:
+    case t_minus_equal:
 	VERIFY_TRAIT_IMPL(minus, left, "'-' operator not defined for type '%s'", right.T->name);
 	return left.T->minus(left, right);
     case t_slash:
+    case t_slash_equal:
 	VERIFY_TRAIT_IMPL(div, left, "'/' operator not defined for type '%s'", right.T->name);
 	return left.T->div(left, right);
     case t_slash_slash:
+    case t_slash_slash_equal:
 	VERIFY_TRAIT_IMPL(int_div, left, "'//' operator not defined for type '%s'", right.T->name);
 	return left.T->int_div(left, right);
     case t_percent:
+    case t_percent_equal:
 	VERIFY_TRAIT_IMPL(mod, left, "'%%' operator not defined for type '%s'", right.T->name);
 	return left.T->mod(left, right);
     case t_star:
+    case t_star_equal:
 	VERIFY_TRAIT_IMPL(mul, left, "'*' operator not defined for type '%s'", right.T->name);
 	return left.T->mul(interpreter, left, right);
     case t_star_star:
+    case t_star_star_equal:
 	VERIFY_TRAIT_IMPL(mul, left, "'**' operator not defined for type '%s'", right.T->name);
 	return left.T->pow(left, right);
     case t_equal_equal:
@@ -536,17 +543,8 @@ static void exec_subscript_assign(Interpreter *interpreter, AssignStmt *stmt)
 
     // TODO: this is inefficient as we have to re-eval the access_index
     SlashValue current_item_value = eval_subscript(interpreter, subscript);
-    /* convert from += to + and -= to - */
-    TokenType operator= stmt->assignment_op == t_plus_equal ? t_plus : t_minus;
-    /* += means we eval + and then assign */
-    if (operator== t_plus_equal) {
-	VERIFY_TRAIT_IMPL(plus, current_item_value, "'+' operator not defined for type '%s'",
-			  current_item_value.T->name);
-	new_value = current_item_value.T->plus(interpreter, current_item_value, new_value);
-    } else {
-	REPORT_RUNTIME_ERROR("TODO: FIX SUBSCRIPT ASSSIGN");
-    }
-
+    new_value =
+	eval_binary_operators(interpreter, current_item_value, new_value, stmt->assignment_op);
     VERIFY_TRAIT_IMPL(item_assign, self, "Item assignment not defined for type '%s'", self.T->name);
     self.T->item_assign(interpreter, self, access_index, new_value);
 }
@@ -584,14 +582,12 @@ static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
 	exec_subscript_assign(interpreter, stmt);
 	return;
     }
-
     if (stmt->var->type == EXPR_SEQUENCE) {
 	exec_assign_unpack(interpreter, stmt);
 	return;
     }
-
     if (stmt->var->type != EXPR_ACCESS) {
-	REPORT_RUNTIME_ERROR("Internal error: bad expr type");
+	REPORT_RUNTIME_ERROR("Can not assign to a literal");
 	ASSERT_NOT_REACHED;
     }
 
@@ -607,43 +603,8 @@ static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
 	var_assign(&var_name, variable.scope, &new_value);
 	return;
     }
-
-    REPORT_RUNTIME_ERROR("TODO: FIX ASSIGN");
-    ///    /* convert from assignment operator to correct binary operator */
-    ///    TokenType operator_;
-    ///    switch (stmt->assignment_op) {
-    ///    case t_plus_equal:
-    ///	operator_ = t_plus;
-    ///	break;
-    ///    case t_minus_equal:
-    ///	operator_ = t_minus;
-    ///	break;
-    ///    case t_star_equal:
-    ///	operator_ = t_star;
-    ///	break;
-    ///    case t_star_star_equal:
-    ///	operator_ = t_star_star;
-    ///	break;
-    ///    case t_slash_equal:
-    ///	operator_ = t_slash;
-    ///	break;
-    ///    case t_slash_slash_equal:
-    ///	operator_ = t_slash_slash;
-    ///	break;
-    ///    case t_percent_equal:
-    ///	operator_ = t_percent;
-    ///	break;
-    ///    default:
-    ///	REPORT_RUNTIME_ERROR("Unrecognized assignment operator");
-    ///	ASSERT_NOT_REACHED;
-    ///    }
-    ///    // new_value = cmp_binary_values(interpreter, *variable.value, new_value, operator_);
-    ///    /*
-    ///     * For dynamic types the binary compare will update the underlying object.
-    ///     * Therefore, we only assign if the variable type is not dynamic.
-    ///     */
-    ///    if (!IS_OBJ(variable.value->type))
-    ///	var_assign(&var_name, variable.scope, &new_value);
+    new_value = eval_binary_operators(interpreter, *variable.value, new_value, stmt->assignment_op);
+    var_assign(&var_name, variable.scope, &new_value);
 }
 
 static void exec_pipeline(Interpreter *interpreter, PipelineStmt *stmt)
