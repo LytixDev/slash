@@ -233,13 +233,18 @@ SlashValue range_item_get(Interpreter *interpreter, SlashValue self, SlashValue 
 	if (!NUM_IS_INT(other))
 	    REPORT_RUNTIME_ERROR("Range index can not be a floating point number: '%f", other.num);
 	size_t idx = other.num;
-	size_t range_size = self.range.start - self.range.end;
+	size_t range_size = self.range.start > self.range.end ? self.range.start - self.range.end
+							      : self.range.end - self.range.start;
 	if (idx >= range_size)
 	    REPORT_RUNTIME_ERROR(
 		"Range index out of range. Has size '%zu', tried to get item at index '%zu'",
 		range_size, idx);
 
-	int offset = self.range.start + idx;
+	int offset;
+	if (self.range.end > self.range.start)
+	    offset = self.range.start + idx;
+	else
+	    offset = self.range.start - idx;
 	return (SlashValue){ .T = &num_type_info, .num = offset };
     }
 
