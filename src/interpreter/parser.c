@@ -611,7 +611,7 @@ static Expr *single(Parser *parser)
 	    parser->token_pos++;
 	    return NULL;
 	}
-	/// expr->as = SLASH_NUM;//token_type_to_slash_type(previous(parser)->type);
+	expr->type_name = previous(parser)->lexeme;
 	return (Expr *)expr;
     }
 

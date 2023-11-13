@@ -28,7 +28,7 @@
 #include "interpreter/interpreter.h"
 #include "interpreter/lexer.h"
 #include "interpreter/scope.h"
-/// #include "interpreter/value/cast.h"
+#include "interpreter/value/cast.h"
 /// #include "interpreter/value/method.h"
 #include "interpreter/value/slash_list.h"
 #include "interpreter/value/slash_map.h"
@@ -393,24 +393,26 @@ static SlashValue eval_grouping(Interpreter *interpreter, GroupingExpr *expr)
 {
     return eval(interpreter, expr->expr);
 }
-///
-/// static SlashValue eval_cast(Interpreter *interpreter, CastExpr *expr)
-///{
-///     SlashValue value = eval(interpreter, expr->expr);
-///     /*
-///      * When LHS is a subshell and RHS is boolean then the final exit code of the subshell
-///      * expression determines the boolean value.
-///      */
-///     if (expr->as == SLASH_BOOL && expr->expr->type == EXPR_SUBSHELL)
-///	return (SlashValue){ .type = SLASH_BOOL,
-///			     .boolean = interpreter->prev_exit_code == 0 ? true : false };
-///     return dynamic_cast(interpreter, value, expr->as);
-/// }
-///
-///
-////*
-///  * statement execution functions
-///  */
+
+static SlashValue eval_cast(Interpreter *interpreter, CastExpr *expr)
+{
+    SlashValue value = eval(interpreter, expr->expr);
+    /*
+     * When LHS is a subshell and RHS is boolean then the final exit code of the subshell
+     * expression determines the boolean value.
+     */
+    if (str_view_eq(expr->type_name, (StrView){ .view = "bool", .size = 4 }) == 0 &&
+	expr->expr->type == EXPR_SUBSHELL)
+	return (SlashValue){ .T = &bool_type_info,
+			     .boolean = interpreter->prev_exit_code == 0 ? true : false };
+
+    return dynamic_cast(interpreter, value, expr->type_name);
+}
+
+
+/*
+ * statement execution functions
+ */
 static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
 {
     SlashValue value = eval(interpreter, stmt->expression);
@@ -869,8 +871,8 @@ static SlashValue eval(Interpreter *interpreter, Expr *expr)
 	return eval_tuple(interpreter, (SequenceExpr *)expr);
     case EXPR_GROUPING:
 	return eval_grouping(interpreter, (GroupingExpr *)expr);
-	///    case EXPR_CAST:
-	///	return eval_cast(interpreter, (CastExpr *)expr);
+    case EXPR_CAST:
+	return eval_cast(interpreter, (CastExpr *)expr);
     default:
 	REPORT_RUNTIME_ERROR("Internal error: expression type not recognized");
 	/* will never happen, but lets make the compiler happy */
@@ -931,7 +933,28 @@ void interpreter_init(Interpreter *interpreter, int argc, char **argv)
 
     gc_ctx_init(&interpreter->gc);
 
-    /* init default StreamCtx */
+    hashmap_init(&interpreter->type_register);
+    /* Populate type register with all the builtin types types found in Slash */
+    hashmap_put(&interpreter->type_register, "bool", sizeof("bool") - 1, &bool_type_info,
+		sizeof(SlashTypeInfo), false);
+    hashmap_put(&interpreter->type_register, "num", sizeof("num") - 1, &num_type_info,
+		sizeof(SlashTypeInfo), false);
+    hashmap_put(&interpreter->type_register, "range", sizeof("range") - 1, &range_type_info,
+		sizeof(SlashTypeInfo), false);
+    hashmap_put(&interpreter->type_register, "text_lit", sizeof("text_lit") - 1,
+		&text_lit_type_info, sizeof(SlashTypeInfo), false);
+    hashmap_put(&interpreter->type_register, "list", sizeof("list") - 1, &list_type_info,
+		sizeof(SlashTypeInfo), false);
+    hashmap_put(&interpreter->type_register, "tuple", sizeof("tuple") - 1, &tuple_type_info,
+		sizeof(SlashTypeInfo), false);
+    hashmap_put(&interpreter->type_register, "str", sizeof("str") - 1, &str_type_info,
+		sizeof(SlashTypeInfo), false);
+    hashmap_put(&interpreter->type_register, "map", sizeof("map") - 1, &map_type_info,
+		sizeof(SlashTypeInfo), false);
+    hashmap_put(&interpreter->type_register, "none", sizeof("none") - 1, &none_type_info,
+		sizeof(SlashTypeInfo), false);
+
+    /* Init default StreamCtx */
     StreamCtx stream_ctx = { .read_fd = STDIN_FILENO, .write_fd = STDOUT_FILENO };
     arraylist_init(&stream_ctx.active_fds, sizeof(int));
     interpreter->stream_ctx = stream_ctx;
@@ -942,6 +965,7 @@ void interpreter_free(Interpreter *interpreter)
     gc_collect_all(interpreter);
     gc_ctx_free(&interpreter->gc);
     scope_destroy(&interpreter->globals);
+    hashmap_free(&interpreter->type_register);
     arraylist_free(&interpreter->stream_ctx.active_fds);
 }
 

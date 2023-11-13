@@ -14,25 +14,29 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-/// #include "interpreter/error.h"
-/// #include "interpreter/interpreter.h"
-/// #include "interpreter/scope.h"
-/// #include "interpreter/types/slash_obj.h"
-/// #include "interpreter/types/slash_str.h"
-/// #include "interpreter/types/slash_value.h"
-///
-///
-/// SlashValue dynamic_cast(Interpreter *interpreter, SlashValue value, SlashType new_type)
-///{
-///     (void)interpreter;
-///     if (value.type == new_type)
-///	return value;
-///     /* str -> num */
-///     if (value.type == SLASH_OBJ && value.obj->type == SLASH_OBJ_STR && new_type == SLASH_NUM) {
-///	SlashStr *str = (SlashStr *)value.obj;
-///	return (SlashValue){ .type = SLASH_NUM, .num = strtod(str->p, NULL) };
-///     }
-///
-///     REPORT_RUNTIME_ERROR("Cast not supported");
-///     return (SlashValue){ 0 };
-/// }
+#include "interpreter/error.h"
+#include "interpreter/interpreter.h"
+#include "interpreter/scope.h"
+#include "interpreter/value/slash_value.h"
+#include "lib/str_view.h"
+
+
+SlashValue dynamic_cast(Interpreter *interpreter, SlashValue value, StrView type_name)
+{
+    (void)interpreter;
+    SlashTypeInfo *new_T = hashmap_get(&interpreter->type_register, type_name.view, type_name.size);
+    /* Casting to the same type as value already is does nothing */
+    if (new_T == value.T)
+	return value;
+
+    if (new_T == &str_type_info) {
+	VERIFY_TRAIT_IMPL(
+	    to_str, value,
+	    "Could not cast to 'str' because type '%s' does not implement the to_str trait",
+	    value.T->name);
+	return value.T->to_str(interpreter, value);
+    }
+
+    REPORT_RUNTIME_ERROR("Cast not supported ... yet! Please help :-)");
+    return (SlashValue){ 0 };
+}
