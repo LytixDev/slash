@@ -604,7 +604,6 @@ static Expr *single(Parser *parser)
     if (match(parser, t_as)) {
 	CastExpr *expr = (CastExpr *)expr_alloc(parser->ast_arena, EXPR_CAST);
 	expr->expr = left;
-	// TODO: support more casts later
 	if (!match(parser, t_ident)) {
 	    report_parse_err(parser, "Expected identifier after cast");
 	    /* move past token and continue as normal */

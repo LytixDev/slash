@@ -954,6 +954,16 @@ void interpreter_init(Interpreter *interpreter, int argc, char **argv)
     hashmap_put(&interpreter->type_register, "none", sizeof("none") - 1, &none_type_info,
 		sizeof(SlashTypeInfo), false);
 
+    /* 'Truhty' and 'eq' traits must be implemented for each type */
+    assert(bool_type_info.eq != NULL && bool_type_info.truthy != NULL);
+    assert(num_type_info.eq != NULL && num_type_info.truthy != NULL);
+    assert(range_type_info.eq != NULL && range_type_info.truthy != NULL);
+    assert(list_type_info.eq != NULL && list_type_info.truthy != NULL);
+    assert(tuple_type_info.eq != NULL && tuple_type_info.truthy != NULL);
+    assert(str_type_info.eq != NULL && str_type_info.truthy != NULL);
+    assert(map_type_info.eq != NULL && map_type_info.truthy != NULL);
+    assert(none_type_info.eq != NULL && none_type_info.truthy != NULL);
+
     /* Init default StreamCtx */
     StreamCtx stream_ctx = { .read_fd = STDIN_FILENO, .write_fd = STDOUT_FILENO };
     arraylist_init(&stream_ctx.active_fds, sizeof(int));

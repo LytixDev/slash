@@ -671,6 +671,12 @@ void str_print(SlashValue self)
     printf("\"%s\"", AS_STR(self)->str);
 }
 
+bool str_truthy(SlashValue self)
+{
+    assert(IS_STR(self));
+    return AS_STR(self)->len != 0;
+}
+
 bool str_eq(SlashValue self, SlashValue other)
 {
     assert(IS_STR(self) && IS_STR(other));
@@ -702,6 +708,21 @@ void none_print(SlashValue self)
     (void)self;
     assert(IS_NONE(self));
     printf("none");
+}
+
+bool none_truthy(SlashValue self)
+{
+    (void)self;
+    assert(IS_NONE(self));
+    return false;
+}
+
+bool none_eq(SlashValue self, SlashValue other)
+{
+    (void)self;
+    (void)other;
+    assert(IS_NONE(self) && IS_NONE(other));
+    return true;
 }
 
 /*
@@ -883,7 +904,7 @@ SlashTypeInfo str_type_info = { .name = "str",
 				.item_get = NULL,
 				.item_assign = NULL,
 				.item_in = NULL,
-				.truthy = NULL,
+				.truthy = str_truthy,
 				.eq = str_eq,
 				.cmp = NULL,
 				.hash = str_hash,
@@ -906,8 +927,8 @@ SlashTypeInfo none_type_info = { .name = "none",
 				 .item_get = NULL,
 				 .item_assign = NULL,
 				 .item_in = NULL,
-				 .truthy = NULL,
-				 .eq = NULL,
+				 .truthy = none_truthy,
+				 .eq = none_eq,
 				 .cmp = NULL,
 				 .hash = NULL,
 				 .init = NULL,
