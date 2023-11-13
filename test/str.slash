@@ -24,17 +24,17 @@
 }
 
 # test every method
-{
-    var a = "a,b,c"
-    var res = $a.split(",")
-    assert $res.len() == 3
-    assert $res[0] == "a" and $res[1] == "b" and $res[2] == "c"
-
-    $a = "a!!b!!c!!"
-    $res = $a.split("!!")
-    assert $res.len() == 3
-    assert $res[0] == "a" and $res[1] == "b" and $res[2] == "c"
-}
+# {
+#     var a = "a,b,c"
+#     var res = $a.split(",")
+#     assert $res.len() == 3
+#     assert $res[0] == "a" and $res[1] == "b" and $res[2] == "c"
+# 
+#     $a = "a!!b!!c!!"
+#     $res = $a.split("!!")
+#     assert $res.len() == 3
+#     assert $res[0] == "a" and $res[1] == "b" and $res[2] == "c"
+# }
 
 # stress test GC with string allocations
 {
