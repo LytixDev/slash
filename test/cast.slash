@@ -1,3 +1,3 @@
-# assert "10" as num == 10
-# assert "3.14" as num == 3.14
-# assert (ls -l) as bool == true
+assert "10" as num == 10
+assert "3.14" as num == 3.14
+assert (ls -l) as bool == true

@@ -671,6 +671,12 @@ void str_print(SlashValue self)
     printf("\"%s\"", AS_STR(self)->str);
 }
 
+SlashValue str_to_str(Interpreter *interpreter, SlashValue self)
+{
+    (void)interpreter;
+    return self;
+}
+
 bool str_truthy(SlashValue self)
 {
     assert(IS_STR(self));
@@ -691,12 +697,12 @@ int str_hash(SlashValue self)
     assert(IS_STR(self));
     SlashStr *str = AS_STR(self);
 
-    int A = 1327217885;
-    int k = 5381;
+    size_t A = 1327217885;
+    size_t k = 5381;
     for (size_t i = 0; i < str->len; i++)
 	k += ((k << 5) + k) + (str->str)[i];
 
-    return k * A;
+    return (int)(k * A);
 }
 
 
@@ -900,7 +906,7 @@ SlashTypeInfo str_type_info = { .name = "str",
 				.unary_minus = NULL,
 				.unary_not = NULL,
 				.print = str_print,
-				.to_str = NULL,
+				.to_str = str_to_str,
 				.item_get = NULL,
 				.item_assign = NULL,
 				.item_in = NULL,

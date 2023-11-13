@@ -28,7 +28,7 @@ typedef struct {
     size_t left_offset;
 } ErrBuf;
 
-jmp_buf runtime_error_jmp = {0};
+jmp_buf runtime_error_jmp = { 0 };
 
 
 static char *offending_line(char *src, size_t line_no)

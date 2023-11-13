@@ -401,7 +401,8 @@ static SlashValue eval_cast(Interpreter *interpreter, CastExpr *expr)
      * When LHS is a subshell and RHS is boolean then the final exit code of the subshell
      * expression determines the boolean value.
      */
-    if (str_view_eq(expr->type_name, (StrView){ .view = "bool", .size = 4 }) == 0 &&
+    if (hashmap_get(&interpreter->type_register, expr->type_name.view, expr->type_name.size) ==
+	    &bool_type_info &&
 	expr->expr->type == EXPR_SUBSHELL)
 	return (SlashValue){ .T = &bool_type_info,
 			     .boolean = interpreter->prev_exit_code == 0 ? true : false };

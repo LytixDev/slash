@@ -36,6 +36,12 @@ SlashValue dynamic_cast(Interpreter *interpreter, SlashValue value, StrView type
 	    value.T->name);
 	return value.T->to_str(interpreter, value);
     }
+    if (new_T == &num_type_info) {
+	if (value.T != &str_type_info)
+	    REPORT_RUNTIME_ERROR("Cast from '%s' to num is not supported ... yet! Please help :-)",
+				 value.T->name);
+	return (SlashValue){ .T = &num_type_info, .num = strtod(AS_STR(value)->str, NULL) };
+    }
 
     REPORT_RUNTIME_ERROR("Cast not supported ... yet! Please help :-)");
     return (SlashValue){ 0 };
