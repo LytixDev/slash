@@ -20,7 +20,7 @@
 #include "interpreter/error.h"
 #include "interpreter/lexer.h"
 #include "interpreter/parser.h"
-#include "interpreter/types/slash_value.h"
+#include "interpreter/value/slash_value.h"
 #include "lib/arena_ll.h"
 #include "lib/str_view.h"
 #include "nicc/nicc.h"
@@ -185,20 +185,6 @@ static bool match_either(Parser *parser, unsigned int n, ...)
 
 #define match(parser, ...) match_either(parser, VA_NUMBER_OF_ARGS(__VA_ARGS__), __VA_ARGS__)
 
-static SlashType token_type_to_slash_type(TokenType type)
-{
-    switch (type) {
-    case t_num:
-	return SLASH_NUM;
-    case t_bool:
-	return SLASH_BOOL;
-    default:
-	ASSERT_NOT_REACHED;
-    };
-
-    ASSERT_NOT_REACHED;
-    return 0;
-}
 
 /* grammar functions */
 static void newline(Parser *parser)
@@ -279,7 +265,7 @@ static Stmt *statement(Parser *parser)
     if (match(parser, t_if))
 	return if_stmt(parser);
 
-    if (match(parser, t_dt_shident))
+    if (match(parser, t_dt_text_lit))
 	return pipeline_stmt(parser);
 
     if (match(parser, t_lbrace))
@@ -344,7 +330,7 @@ static Stmt *if_stmt(Parser *parser)
 
 static Stmt *pipeline_stmt(Parser *parser)
 {
-    /* came from t_dt_shident */
+    /* came from t_dt_text_lit */
     Stmt *left = cmd_stmt(parser);
     if (match(parser, t_greater, t_greater_greater, t_less))
 	return redirect_stmt(parser, left);
@@ -352,7 +338,7 @@ static Stmt *pipeline_stmt(Parser *parser)
     if (!match(parser, t_pipe))
 	return left;
 
-    consume(parser, t_dt_shident, "Expected shell command after pipe symbol");
+    consume(parser, t_dt_text_lit, "Expected shell command after pipe symbol");
     PipelineStmt *stmt = (PipelineStmt *)stmt_alloc(parser->ast_arena, STMT_PIPELINE);
     stmt->left = (CmdStmt *)left;
     stmt->right = pipeline_stmt(parser);
@@ -371,7 +357,7 @@ static Stmt *redirect_stmt(Parser *parser, Stmt *left)
 
 static Stmt *cmd_stmt(Parser *parser)
 {
-    /* came from t_dt_shident */
+    /* came from t_dt_text_lit */
     Token *cmd_name = previous(parser);
 
     CmdStmt *stmt = (CmdStmt *)stmt_alloc(parser->ast_arena, STMT_CMD);
@@ -594,7 +580,7 @@ static Expr *single(Parser *parser)
 {
     Expr *left;
     if (match(parser, t_lparen)) {
-	if (check(parser, t_dt_shident)) {
+	if (check(parser, t_dt_text_lit)) {
 	    left = subshell(parser);
 	} else {
 	    parser->token_pos--;
@@ -618,14 +604,13 @@ static Expr *single(Parser *parser)
     if (match(parser, t_as)) {
 	CastExpr *expr = (CastExpr *)expr_alloc(parser->ast_arena, EXPR_CAST);
 	expr->expr = left;
-	// TODO: support more casts later
-	if (!match(parser, t_num, t_str, t_bool)) {
-	    report_parse_err(parser, "Expected 'num' or 'bool' keyword after cast");
+	if (!match(parser, t_ident)) {
+	    report_parse_err(parser, "Expected identifier after cast");
 	    /* move past token and continue as normal */
 	    parser->token_pos++;
 	    return NULL;
 	}
-	expr->as = token_type_to_slash_type(previous(parser)->type);
+	expr->type_name = previous(parser)->lexeme;
 	return (Expr *)expr;
     }
 
@@ -651,7 +636,7 @@ static Expr *single(Parser *parser)
 static Expr *subshell(Parser *parser)
 {
     /* came from '(' */
-    consume(parser, t_dt_shident, "Expected shell literal after '('");
+    consume(parser, t_dt_text_lit, "Expected shell literal after '('");
     SubshellExpr *expr = (SubshellExpr *)expr_alloc(parser->ast_arena, EXPR_SUBSHELL);
     expr->stmt = pipeline_stmt(parser);
     consume(parser, t_rparen, "Expected ')' after subshell");
@@ -702,16 +687,16 @@ static Expr *primary(Parser *parser)
     if (match(parser, t_lparen))
 	return grouping(parser);
 
-    if (!match(parser, t_dt_str, t_dt_shident)) {
+    if (!match(parser, t_dt_str, t_dt_text_lit)) {
 	report_parse_err(parser, "Not a valid primary type");
 	return NULL;
     }
 
     Token *token = previous(parser);
-    /* shident */
-    if (token->type == t_dt_shident) {
+    /* text_lit */
+    if (token->type == t_dt_text_lit) {
 	LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
-	expr->value = (SlashValue){ .type = SLASH_SHIDENT, .shident = token->lexeme };
+	expr->value = (SlashValue){ .T = &text_lit_type_info, .text_lit = token->lexeme };
 	return (Expr *)expr;
     }
 
@@ -726,7 +711,7 @@ static Expr *bool_lit(Parser *parser)
     Token *token = previous(parser);
     LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
     expr->value =
-	(SlashValue){ .type = SLASH_BOOL, .boolean = token->type == t_true ? true : false };
+	(SlashValue){ .T = &bool_type_info, .boolean = token->type == t_true ? true : false };
     return (Expr *)expr;
 }
 
@@ -734,7 +719,7 @@ static Expr *number(Parser *parser)
 {
     Token *token = previous(parser);
     LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
-    expr->value = (SlashValue){ .type = SLASH_NUM, .num = str_view_to_double(token->lexeme) };
+    expr->value = (SlashValue){ .T = &num_type_info, .num = str_view_to_double(token->lexeme) };
     return (Expr *)expr;
 }
 
@@ -742,7 +727,7 @@ static Expr *range(Parser *parser)
 {
     SlashRange range;
     Token *start_num_or_any = previous(parser);
-    if (start_num_or_any->type != t_dt_num)
+    if (start_num_or_any == NULL || start_num_or_any->type != t_dt_num)
 	range.start = 0;
     else
 	range.start = str_view_to_int(start_num_or_any->lexeme);
@@ -750,10 +735,11 @@ static Expr *range(Parser *parser)
     consume(parser, t_dot_dot, "This error should be unreachable");
     consume(parser, t_dt_num, "Expected second number after '..' in range expression");
     Token *end_num = previous(parser);
-    range.end = str_view_to_int(end_num->lexeme);
+    // TODO: we can not use atoi() because it does not recognize '_'
+    range.end = (int)str_view_to_double(end_num->lexeme);
 
     LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
-    expr->value = (SlashValue){ .type = SLASH_RANGE, .range = range };
+    expr->value = (SlashValue){ .T = &range_type_info, .range = range };
     return (Expr *)expr;
 }
 
@@ -776,6 +762,12 @@ static Expr *map(Parser *parser)
 {
     /* came from '@[' */
     MapExpr *expr = (MapExpr *)expr_alloc(parser->ast_arena, EXPR_MAP);
+    /* Case where initializer is empty */
+    if (match(parser, t_rbracket)) {
+	expr->key_value_pairs = NULL;
+	return (Expr *)expr;
+    }
+
     expr->key_value_pairs = arena_ll_alloc(parser->ast_arena);
 
     do {

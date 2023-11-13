@@ -17,6 +17,7 @@
 #ifndef INTERPRETER_H
 #define INTERPRETER_H
 
+#include "interpreter/gc.h"
 #include "interpreter/scope.h"
 #include "nicc/nicc.h"
 #include "sac/sac.h"
@@ -30,18 +31,14 @@ typedef struct {
     ArrayList active_fds; // list/stack of open file descriptors that need to be closed on fork()
 } StreamCtx;
 
-typedef struct {
+typedef struct interpreter_t {
     Arena arena;
     Scope globals;
     Scope *scope;
-
-    LinkedList gc_objs; // objects managed by the garbage collector
-    ArrayList gc_gray_stack;
-    size_t obj_alloced_since_next_gc;
-    ArrayList gc_shadow_stack; // list of objects that are always always marked during gc run.
-
-    int prev_exit_code;
+    GC gc;
     StreamCtx stream_ctx;
+    HashMap type_register;
+    int prev_exit_code;
 } Interpreter;
 
 void interpreter_init(Interpreter *interpreter, int argc, char **argv);

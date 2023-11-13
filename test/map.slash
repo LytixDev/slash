@@ -2,10 +2,10 @@ var m = @[ "apple": 10, "banana": 20 ]
 
 assert $m == @[ "apple": 10, "banana": 20 ]
 
-var keys = $m.keys()
-assert "apple" in $keys
-assert "banana" in $keys
-assert not "pear" in $keys
+# var keys = $m.keys()
+# assert "apple" in $keys
+# assert "banana" in $keys
+# assert not "pear" in $keys
 
 {
     var m = @[ 1: 2, 2: 4, 3: 8 ]

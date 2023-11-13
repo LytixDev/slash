@@ -94,7 +94,7 @@ static void emit(Lexer *lexer, TokenType type)
 		    .lexeme =
 			(StrView){ .view = lexer->input + lexer->start, .size = token_length },
 		    .line = lexer->line_count,
-		    /* A single can not span across multiple lines, so this is fine . */
+		    /* A single token can not span across multiple lines, so this is fine . */
 		    .start = lexer->pos_in_line - token_length,
 		    .end = lexer->pos_in_line };
     arraylist_append(&lexer->tokens, &token);
@@ -194,7 +194,7 @@ static void shell_arg_emit(Lexer *lexer)
 {
     backup(lexer);
     if (lexer->start != lexer->pos)
-	emit(lexer, t_dt_shident);
+	emit(lexer, t_dt_text_lit);
     next(lexer);
 }
 
@@ -482,12 +482,13 @@ StateFn lex_identifier(Lexer *lexer)
     }
 
     TokenType previous = prev_token_type(lexer);
-    if (previous == t_var || previous == t_loop || previous == t_dot || previous == t_comma) {
+    if (previous == t_var || previous == t_loop || previous == t_dot || previous == t_comma ||
+	previous == t_as) {
 	emit(lexer, t_ident);
 	return STATE_FN(lex_any);
     }
 
-    emit(lexer, t_dt_shident);
+    emit(lexer, t_dt_text_lit);
     return STATE_FN(lex_shell_arg_list);
 }
 

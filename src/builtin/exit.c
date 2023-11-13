@@ -18,7 +18,7 @@
 #include <unistd.h>
 
 #include "interpreter/interpreter.h"
-#include "interpreter/types/slash_value.h"
+#include "interpreter/value/slash_value.h"
 
 
 int builtin_exit(Interpreter *interpreter, size_t argc, SlashValue *argv)
@@ -28,11 +28,11 @@ int builtin_exit(Interpreter *interpreter, size_t argc, SlashValue *argv)
 	exit(0);
 
     SlashValue arg = argv[0];
-    if (arg.type == SLASH_NUM)
+    if (IS_NUM(arg))
 	exit(arg.num);
 
-    if (arg.type == SLASH_SHIDENT) {
-	int exit_code = str_view_to_int(arg.shident);
+    if (IS_TEXT_LIT(arg)) {
+	int exit_code = str_view_to_int(arg.text_lit);
 	exit(exit_code);
     }
     exit(2);
