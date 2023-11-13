@@ -105,13 +105,9 @@ static void ast_print_binary(BinaryExpr *expr)
     ast_print_expr(expr->right);
 }
 
-static void ast_print_range_literal(SlashRange *range)
-{
-    printf("range(%d -> %d)", range->start, range->end);
-}
-
 static void ast_print_literal(LiteralExpr *expr)
 {
+    (void)expr;
     printf("literal");
     // switch (expr->value.type) {
     // case SLASH_SHIDENT:
