@@ -25,6 +25,7 @@
 
 int builtin_vars(Interpreter *interpreter, size_t argc, SlashValue *argv)
 {
+    (void)interpreter;
     (void)argc;
     (void)argv;
     /// for (Scope *scope = interpreter->scope; scope != NULL; scope = scope->enclosing) {

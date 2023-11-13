@@ -14,12 +14,13 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-/// #ifndef SLASH_CAST_H
-/// #define SLASH_CAST_H
-///
-/// #include "interpreter/interpreter.h"
-/// #include "interpreter/types/slash_value.h"
-///
-/// SlashValue dynamic_cast(Interpreter *interpreter, SlashValue old, SlashType new_type);
-///
-/// #endif /* SLASH_CAST_H */
+#ifndef SLASH_CAST_H
+#define SLASH_CAST_H
+
+#include "interpreter/interpreter.h"
+#include "interpreter/value/slash_value.h"
+#include "lib/str_view.h"
+
+SlashValue dynamic_cast(Interpreter *interpreter, SlashValue old, StrView type_name);
+
+#endif /* SLASH_CAST_H */

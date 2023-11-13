@@ -120,7 +120,6 @@ void slash_map_impl_init(Interpreter *interpreter, SlashMap *map)
     map->len = 0;
     map->total_buckets_log2 = SLASH_MAP_STARTING_BUCKETS_LOG2;
     size_t n_buckets = N_BUCKETS(map->total_buckets_log2);
-    // TODO: should we have a gc_calloc() function ?
     map->buckets = gc_alloc(interpreter, sizeof(SlashMapBucket) * n_buckets);
     /*
      * Since we memset each bucket and therefore each entry to 0 the is_occupied field on

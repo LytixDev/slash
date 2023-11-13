@@ -233,13 +233,18 @@ SlashValue range_item_get(Interpreter *interpreter, SlashValue self, SlashValue 
 	if (!NUM_IS_INT(other))
 	    REPORT_RUNTIME_ERROR("Range index can not be a floating point number: '%f", other.num);
 	size_t idx = other.num;
-	size_t range_size = self.range.start - self.range.end;
+	size_t range_size = self.range.start > self.range.end ? self.range.start - self.range.end
+							      : self.range.end - self.range.start;
 	if (idx >= range_size)
 	    REPORT_RUNTIME_ERROR(
 		"Range index out of range. Has size '%zu', tried to get item at index '%zu'",
 		range_size, idx);
 
-	int offset = self.range.start + idx;
+	int offset;
+	if (self.range.end > self.range.start)
+	    offset = self.range.start + idx;
+	else
+	    offset = self.range.start - idx;
 	return (SlashValue){ .T = &num_type_info, .num = offset };
     }
 
@@ -649,7 +654,7 @@ SlashList *slash_str_split(Interpreter *interpreter, SlashStr *str, char *separa
     }
 
     /* final substr */
-    size_t final_size = (str->str + str->len - 1) - start_ptr;
+    size_t final_size = (str->str + str->len) - start_ptr;
     if (final_size != 0) {
 	SlashStr *substr = (SlashStr *)gc_new_T(interpreter, &str_type_info);
 	slash_str_init_from_slice(interpreter, substr, start_ptr, final_size);
@@ -666,6 +671,18 @@ void str_print(SlashValue self)
     printf("\"%s\"", AS_STR(self)->str);
 }
 
+SlashValue str_to_str(Interpreter *interpreter, SlashValue self)
+{
+    (void)interpreter;
+    return self;
+}
+
+bool str_truthy(SlashValue self)
+{
+    assert(IS_STR(self));
+    return AS_STR(self)->len != 0;
+}
+
 bool str_eq(SlashValue self, SlashValue other)
 {
     assert(IS_STR(self) && IS_STR(other));
@@ -680,12 +697,12 @@ int str_hash(SlashValue self)
     assert(IS_STR(self));
     SlashStr *str = AS_STR(self);
 
-    int A = 1327217885;
-    int k = 5381;
+    size_t A = 1327217885;
+    size_t k = 5381;
     for (size_t i = 0; i < str->len; i++)
 	k += ((k << 5) + k) + (str->str)[i];
 
-    return k * A;
+    return (int)(k * A);
 }
 
 
@@ -697,6 +714,21 @@ void none_print(SlashValue self)
     (void)self;
     assert(IS_NONE(self));
     printf("none");
+}
+
+bool none_truthy(SlashValue self)
+{
+    (void)self;
+    assert(IS_NONE(self));
+    return false;
+}
+
+bool none_eq(SlashValue self, SlashValue other)
+{
+    (void)self;
+    (void)other;
+    assert(IS_NONE(self) && IS_NONE(other));
+    return true;
 }
 
 /*
@@ -874,11 +906,11 @@ SlashTypeInfo str_type_info = { .name = "str",
 				.unary_minus = NULL,
 				.unary_not = NULL,
 				.print = str_print,
-				.to_str = NULL,
+				.to_str = str_to_str,
 				.item_get = NULL,
 				.item_assign = NULL,
 				.item_in = NULL,
-				.truthy = NULL,
+				.truthy = str_truthy,
 				.eq = str_eq,
 				.cmp = NULL,
 				.hash = str_hash,
@@ -901,8 +933,8 @@ SlashTypeInfo none_type_info = { .name = "none",
 				 .item_get = NULL,
 				 .item_assign = NULL,
 				 .item_in = NULL,
-				 .truthy = NULL,
-				 .eq = NULL,
+				 .truthy = none_truthy,
+				 .eq = none_eq,
 				 .cmp = NULL,
 				 .hash = NULL,
 				 .init = NULL,

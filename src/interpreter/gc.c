@@ -296,5 +296,7 @@ void gc_shadow_pop(GC *gc)
     print_func(value);
     putchar('\n');
 #endif /* DEBUG_LOG_GC */
-    arraylist_rm(&gc->shadow_stack, gc->shadow_stack.size - 1);
+    /* Since we are using the ArrayList as a stack we simply decrement its size */
+    assert(gc->shadow_stack.size != 0);
+    gc->shadow_stack.size--;
 }

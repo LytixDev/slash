@@ -28,7 +28,7 @@
 #include "interpreter/interpreter.h"
 #include "interpreter/lexer.h"
 #include "interpreter/scope.h"
-/// #include "interpreter/value/cast.h"
+#include "interpreter/value/cast.h"
 /// #include "interpreter/value/method.h"
 #include "interpreter/value/slash_list.h"
 #include "interpreter/value/slash_map.h"
@@ -111,24 +111,31 @@ static SlashValue eval_binary_operators(Interpreter *interpreter, SlashValue lef
 	VERIFY_TRAIT_IMPL(cmp, left, "'<=' operator not defined for type '%s'", right.T->name);
 	return (SlashValue){ .T = &bool_type_info, .boolean = (left.T->cmp(left, right) <= 0) };
     case t_plus:
+    case t_plus_equal:
 	VERIFY_TRAIT_IMPL(plus, left, "'+' operator not defined for type '%s'", right.T->name);
 	return left.T->plus(interpreter, left, right);
     case t_minus:
+    case t_minus_equal:
 	VERIFY_TRAIT_IMPL(minus, left, "'-' operator not defined for type '%s'", right.T->name);
 	return left.T->minus(left, right);
     case t_slash:
+    case t_slash_equal:
 	VERIFY_TRAIT_IMPL(div, left, "'/' operator not defined for type '%s'", right.T->name);
 	return left.T->div(left, right);
     case t_slash_slash:
+    case t_slash_slash_equal:
 	VERIFY_TRAIT_IMPL(int_div, left, "'//' operator not defined for type '%s'", right.T->name);
 	return left.T->int_div(left, right);
     case t_percent:
+    case t_percent_equal:
 	VERIFY_TRAIT_IMPL(mod, left, "'%%' operator not defined for type '%s'", right.T->name);
 	return left.T->mod(left, right);
     case t_star:
+    case t_star_equal:
 	VERIFY_TRAIT_IMPL(mul, left, "'*' operator not defined for type '%s'", right.T->name);
 	return left.T->mul(interpreter, left, right);
     case t_star_star:
+    case t_star_star_equal:
 	VERIFY_TRAIT_IMPL(mul, left, "'**' operator not defined for type '%s'", right.T->name);
 	return left.T->pow(left, right);
     case t_equal_equal:
@@ -386,24 +393,27 @@ static SlashValue eval_grouping(Interpreter *interpreter, GroupingExpr *expr)
 {
     return eval(interpreter, expr->expr);
 }
-///
-/// static SlashValue eval_cast(Interpreter *interpreter, CastExpr *expr)
-///{
-///     SlashValue value = eval(interpreter, expr->expr);
-///     /*
-///      * When LHS is a subshell and RHS is boolean then the final exit code of the subshell
-///      * expression determines the boolean value.
-///      */
-///     if (expr->as == SLASH_BOOL && expr->expr->type == EXPR_SUBSHELL)
-///	return (SlashValue){ .type = SLASH_BOOL,
-///			     .boolean = interpreter->prev_exit_code == 0 ? true : false };
-///     return dynamic_cast(interpreter, value, expr->as);
-/// }
-///
-///
-////*
-///  * statement execution functions
-///  */
+
+static SlashValue eval_cast(Interpreter *interpreter, CastExpr *expr)
+{
+    SlashValue value = eval(interpreter, expr->expr);
+    /*
+     * When LHS is a subshell and RHS is boolean then the final exit code of the subshell
+     * expression determines the boolean value.
+     */
+    if (hashmap_get(&interpreter->type_register, expr->type_name.view, expr->type_name.size) ==
+	    &bool_type_info &&
+	expr->expr->type == EXPR_SUBSHELL)
+	return (SlashValue){ .T = &bool_type_info,
+			     .boolean = interpreter->prev_exit_code == 0 ? true : false };
+
+    return dynamic_cast(interpreter, value, expr->type_name);
+}
+
+
+/*
+ * statement execution functions
+ */
 static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
 {
     SlashValue value = eval(interpreter, stmt->expression);
@@ -536,17 +546,8 @@ static void exec_subscript_assign(Interpreter *interpreter, AssignStmt *stmt)
 
     // TODO: this is inefficient as we have to re-eval the access_index
     SlashValue current_item_value = eval_subscript(interpreter, subscript);
-    /* convert from += to + and -= to - */
-    TokenType operator= stmt->assignment_op == t_plus_equal ? t_plus : t_minus;
-    /* += means we eval + and then assign */
-    if (operator== t_plus_equal) {
-	VERIFY_TRAIT_IMPL(plus, current_item_value, "'+' operator not defined for type '%s'",
-			  current_item_value.T->name);
-	new_value = current_item_value.T->plus(interpreter, current_item_value, new_value);
-    } else {
-	REPORT_RUNTIME_ERROR("TODO: FIX SUBSCRIPT ASSSIGN");
-    }
-
+    new_value =
+	eval_binary_operators(interpreter, current_item_value, new_value, stmt->assignment_op);
     VERIFY_TRAIT_IMPL(item_assign, self, "Item assignment not defined for type '%s'", self.T->name);
     self.T->item_assign(interpreter, self, access_index, new_value);
 }
@@ -584,14 +585,12 @@ static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
 	exec_subscript_assign(interpreter, stmt);
 	return;
     }
-
     if (stmt->var->type == EXPR_SEQUENCE) {
 	exec_assign_unpack(interpreter, stmt);
 	return;
     }
-
     if (stmt->var->type != EXPR_ACCESS) {
-	REPORT_RUNTIME_ERROR("Internal error: bad expr type");
+	REPORT_RUNTIME_ERROR("Can not assign to a literal");
 	ASSERT_NOT_REACHED;
     }
 
@@ -607,43 +606,8 @@ static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
 	var_assign(&var_name, variable.scope, &new_value);
 	return;
     }
-
-    REPORT_RUNTIME_ERROR("TODO: FIX ASSIGN");
-    ///    /* convert from assignment operator to correct binary operator */
-    ///    TokenType operator_;
-    ///    switch (stmt->assignment_op) {
-    ///    case t_plus_equal:
-    ///	operator_ = t_plus;
-    ///	break;
-    ///    case t_minus_equal:
-    ///	operator_ = t_minus;
-    ///	break;
-    ///    case t_star_equal:
-    ///	operator_ = t_star;
-    ///	break;
-    ///    case t_star_star_equal:
-    ///	operator_ = t_star_star;
-    ///	break;
-    ///    case t_slash_equal:
-    ///	operator_ = t_slash;
-    ///	break;
-    ///    case t_slash_slash_equal:
-    ///	operator_ = t_slash_slash;
-    ///	break;
-    ///    case t_percent_equal:
-    ///	operator_ = t_percent;
-    ///	break;
-    ///    default:
-    ///	REPORT_RUNTIME_ERROR("Unrecognized assignment operator");
-    ///	ASSERT_NOT_REACHED;
-    ///    }
-    ///    // new_value = cmp_binary_values(interpreter, *variable.value, new_value, operator_);
-    ///    /*
-    ///     * For dynamic types the binary compare will update the underlying object.
-    ///     * Therefore, we only assign if the variable type is not dynamic.
-    ///     */
-    ///    if (!IS_OBJ(variable.value->type))
-    ///	var_assign(&var_name, variable.scope, &new_value);
+    new_value = eval_binary_operators(interpreter, *variable.value, new_value, stmt->assignment_op);
+    var_assign(&var_name, variable.scope, &new_value);
 }
 
 static void exec_pipeline(Interpreter *interpreter, PipelineStmt *stmt)
@@ -908,8 +872,8 @@ static SlashValue eval(Interpreter *interpreter, Expr *expr)
 	return eval_tuple(interpreter, (SequenceExpr *)expr);
     case EXPR_GROUPING:
 	return eval_grouping(interpreter, (GroupingExpr *)expr);
-	///    case EXPR_CAST:
-	///	return eval_cast(interpreter, (CastExpr *)expr);
+    case EXPR_CAST:
+	return eval_cast(interpreter, (CastExpr *)expr);
     default:
 	REPORT_RUNTIME_ERROR("Internal error: expression type not recognized");
 	/* will never happen, but lets make the compiler happy */
@@ -970,7 +934,38 @@ void interpreter_init(Interpreter *interpreter, int argc, char **argv)
 
     gc_ctx_init(&interpreter->gc);
 
-    /* init default StreamCtx */
+    hashmap_init(&interpreter->type_register);
+    /* Populate type register with all the builtin types types found in Slash */
+    hashmap_put(&interpreter->type_register, "bool", sizeof("bool") - 1, &bool_type_info,
+		sizeof(SlashTypeInfo), false);
+    hashmap_put(&interpreter->type_register, "num", sizeof("num") - 1, &num_type_info,
+		sizeof(SlashTypeInfo), false);
+    hashmap_put(&interpreter->type_register, "range", sizeof("range") - 1, &range_type_info,
+		sizeof(SlashTypeInfo), false);
+    hashmap_put(&interpreter->type_register, "text_lit", sizeof("text_lit") - 1,
+		&text_lit_type_info, sizeof(SlashTypeInfo), false);
+    hashmap_put(&interpreter->type_register, "list", sizeof("list") - 1, &list_type_info,
+		sizeof(SlashTypeInfo), false);
+    hashmap_put(&interpreter->type_register, "tuple", sizeof("tuple") - 1, &tuple_type_info,
+		sizeof(SlashTypeInfo), false);
+    hashmap_put(&interpreter->type_register, "str", sizeof("str") - 1, &str_type_info,
+		sizeof(SlashTypeInfo), false);
+    hashmap_put(&interpreter->type_register, "map", sizeof("map") - 1, &map_type_info,
+		sizeof(SlashTypeInfo), false);
+    hashmap_put(&interpreter->type_register, "none", sizeof("none") - 1, &none_type_info,
+		sizeof(SlashTypeInfo), false);
+
+    /* 'Truhty' and 'eq' traits must be implemented for each type */
+    assert(bool_type_info.eq != NULL && bool_type_info.truthy != NULL);
+    assert(num_type_info.eq != NULL && num_type_info.truthy != NULL);
+    assert(range_type_info.eq != NULL && range_type_info.truthy != NULL);
+    assert(list_type_info.eq != NULL && list_type_info.truthy != NULL);
+    assert(tuple_type_info.eq != NULL && tuple_type_info.truthy != NULL);
+    assert(str_type_info.eq != NULL && str_type_info.truthy != NULL);
+    assert(map_type_info.eq != NULL && map_type_info.truthy != NULL);
+    assert(none_type_info.eq != NULL && none_type_info.truthy != NULL);
+
+    /* Init default StreamCtx */
     StreamCtx stream_ctx = { .read_fd = STDIN_FILENO, .write_fd = STDOUT_FILENO };
     arraylist_init(&stream_ctx.active_fds, sizeof(int));
     interpreter->stream_ctx = stream_ctx;
@@ -981,19 +976,23 @@ void interpreter_free(Interpreter *interpreter)
     gc_collect_all(interpreter);
     gc_ctx_free(&interpreter->gc);
     scope_destroy(&interpreter->globals);
+    hashmap_free(&interpreter->type_register);
     arraylist_free(&interpreter->stream_ctx.active_fds);
 }
 
 static void interpreter_reset_from_err(Interpreter *interpreter)
 {
-    /* free any old scopes */
+    /* Pop everything from shadow stack as they are no longer in use */
+    interpreter->gc.shadow_stack.size = 0;
+
+    /* Free any old scopes */
     while (interpreter->scope != &interpreter->globals) {
 	Scope *to_destroy = interpreter->scope;
 	interpreter->scope = interpreter->scope->enclosing;
 	scope_destroy(to_destroy);
     }
 
-    /* reset stream_ctx */
+    /* Reset stream_ctx */
     arraylist_free(&interpreter->stream_ctx.active_fds);
     StreamCtx stream_ctx = { .read_fd = STDIN_FILENO, .write_fd = STDOUT_FILENO };
     arraylist_init(&stream_ctx.active_fds, sizeof(int));

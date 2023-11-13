@@ -37,6 +37,7 @@ typedef struct interpreter_t {
     Scope *scope;
     GC gc;
     StreamCtx stream_ctx;
+    HashMap type_register;
     int prev_exit_code;
 } Interpreter;
 
