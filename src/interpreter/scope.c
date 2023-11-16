@@ -18,6 +18,7 @@
 #include <stdio.h>
 
 #include "interpreter/scope.h"
+#include "interpreter/value/slash_str.h"
 #include "interpreter/value/slash_value.h"
 #include "lib/str_view.h"
 #include "nicc/nicc.h"

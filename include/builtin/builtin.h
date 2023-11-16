@@ -22,6 +22,7 @@
 
 #define PROGRAM_PATH_MAX_LEN 512
 
+
 typedef int (*BuiltinFunc)(Interpreter *interpreter, size_t argc, SlashValue *argv);
 
 typedef struct {
@@ -45,8 +46,6 @@ typedef struct {
 
 
 WhichResult which(StrView cmd, char *PATH);
-
-/* builtins */
 int builtin_which(Interpreter *interpreter, size_t argc, SlashValue *argv);
 int builtin_cd(Interpreter *interpreter, size_t argc, SlashValue *argv);
 int builtin_vars(Interpreter *interpreter, size_t argc, SlashValue *argv);

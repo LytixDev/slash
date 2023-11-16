@@ -17,11 +17,13 @@
 #ifndef GC_H
 #define GC_H
 
+#include "nicc/nicc.h"
+
+
 // #define DEBUG_STRESS_GC
 // #define DEBUG_LOG_GC
 #define GC_HEAP_GROW_FACTOR 2
 
-#include "nicc/nicc.h"
 
 typedef struct slash_type_info_t SlashTypeInfo; // Forward decl
 typedef struct slash_obj_t SlashObj; // Forward decl
@@ -39,24 +41,20 @@ typedef struct {
 
 void gc_ctx_init(GC *gc);
 void gc_ctx_free(GC *gc);
-
 void *gc_alloc(Interpreter *interpreter, size_t size);
 void *gc_realloc(Interpreter *interpreter, void *p, size_t old_size, size_t new_size);
 void gc_free(Interpreter *interpreter, void *data, size_t size_freed);
 SlashObj *gc_new_T(Interpreter *interpreter, SlashTypeInfo *T);
-
 /*
  * Runs the garbage collector.
  * Finds all unreachable objects and frees them.
  */
 void gc_run(Interpreter *interpreter);
-
 /*
  * Free all uncollected objects regardless of if they are reachable or not.
  * Used on exit.
  */
 void gc_collect_all(Interpreter *interpreter);
-
 /*
  * Useful when allocating a collection that can not be marked until every element of the
  * initializtion is allocated.

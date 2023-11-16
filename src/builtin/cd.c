@@ -19,6 +19,7 @@
 #include <unistd.h>
 
 #include "interpreter/interpreter.h"
+#include "interpreter/value/slash_str.h"
 #include "interpreter/value/slash_value.h"
 
 

@@ -54,12 +54,6 @@ typedef struct {
     SlashValue *items;
 } SlashTuple;
 
-typedef struct {
-    SlashObj obj;
-    char *str; // Null terminated
-    size_t len; // Length of string: does not includes null terminator. So "hi" has length 2
-} SlashStr;
-
 typedef struct slash_list_impl_t SlashList; // Forward decl.
 
 typedef struct slash_type_info_t {
@@ -150,12 +144,5 @@ extern SlashValue NoneSingleton;
 
 /* Tuple functions */
 void slash_tuple_init(Interpreter *interpreter, SlashTuple *tuple, size_t size);
-
-/* Str functions */
-void slash_str_init_from_view(Interpreter *interpreter, SlashStr *str, StrView *view);
-void slash_str_init_from_slice(Interpreter *interpreter, SlashStr *str, char *cstr, size_t size);
-void slash_str_init_from_alloced_cstr(SlashStr *str, char *cstr);
-SlashList *slash_str_split(Interpreter *interpreter, SlashStr *str, char *separator,
-			   bool split_any);
 
 #endif /* SLASH_VALUE_H */

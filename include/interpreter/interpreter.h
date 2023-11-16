@@ -22,8 +22,10 @@
 #include "nicc/nicc.h"
 #include "sac/sac.h"
 
+
 #define STREAM_WRITE_END 1
 #define STREAM_READ_END 0
+
 
 typedef struct {
     int read_fd; // the file descriptor we are reading from, defaulted to fileno(STDIN)
@@ -41,11 +43,10 @@ typedef struct interpreter_t {
     int prev_exit_code;
 } Interpreter;
 
+
 void interpreter_init(Interpreter *interpreter, int argc, char **argv);
 void interpreter_free(Interpreter *interpreter);
 int interpreter_run(Interpreter *interpreter, ArrayList *statements);
-
 int interpret(ArrayList *statements, int argc, char **argv);
-
 
 #endif /* INTERPRETER_H */

@@ -22,6 +22,7 @@
 #include "nicc/nicc.h"
 #include "sac/sac.h"
 
+
 /* types */
 typedef struct {
     Arena *ast_arena; // memory arena to put where all AST nodes live on
