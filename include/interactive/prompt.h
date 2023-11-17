@@ -36,8 +36,9 @@ typedef struct {
 
 void prompt_init(Prompt *prompt, char *ps1);
 void prompt_free(Prompt *prompt);
-
-/* returns true if interpreter shall continue else false */
+/*
+ * Returns true if interpreter shall continue else false
+ */
 bool prompt_run(Prompt *prompt);
 void prompt_reset(Prompt *prompt);
 

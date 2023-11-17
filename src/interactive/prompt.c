@@ -25,6 +25,7 @@
 
 #include "interactive/prompt.h"
 
+
 #define cursor_right(n) printf("\033[%zuC", (size_t)(n))
 #define cursor_left(n) printf("\033[%zuD", (size_t)(n))
 #define cursor_goto(x) printf("\033[%zu", (size_t)(x))

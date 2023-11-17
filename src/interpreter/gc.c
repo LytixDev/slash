@@ -20,6 +20,7 @@
 #include "interpreter/gc.h"
 #include "interpreter/value/slash_list.h"
 #include "interpreter/value/slash_map.h"
+#include "interpreter/value/slash_str.h"
 #include "interpreter/value/slash_value.h"
 #include "nicc/nicc.h"
 

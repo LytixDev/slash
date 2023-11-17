@@ -14,14 +14,28 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef SLASH_CAST_H
-#define SLASH_CAST_H
+#ifndef SLASH_STR_IMPL_H
+#define SLASH_STR_IMPL_H
+#endif /* SLASH_STR_IMPL_H */
+
+#include <stdbool.h>
+#include <stdlib.h>
 
 #include "interpreter/interpreter.h"
 #include "interpreter/value/slash_value.h"
-#include "lib/str_view.h"
 
 
-SlashValue dynamic_cast(Interpreter *interpreter, SlashValue old, StrView type_name);
+typedef struct {
+    SlashObj obj;
+    char *str; // Null terminated
+    size_t len; // Length of string: does not includes null terminator. So "hi" has length 2
+} SlashStr;
 
-#endif /* SLASH_CAST_H */
+
+/* functions */
+void slash_str_init_from_view(Interpreter *interpreter, SlashStr *str, StrView *view);
+void slash_str_init_from_slice(Interpreter *interpreter, SlashStr *str, char *cstr, size_t size);
+void slash_str_init_from_concat(Interpreter *interpreter, SlashStr *str, SlashStr *a, SlashStr *b);
+void slash_str_init_from_alloced_cstr(SlashStr *str, char *cstr);
+SlashList *slash_str_split(Interpreter *interpreter, SlashStr *str, char *separator,
+			   bool split_any);

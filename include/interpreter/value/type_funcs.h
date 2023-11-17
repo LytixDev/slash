@@ -20,6 +20,14 @@
 #include "interpreter/error.h"
 #include "interpreter/interpreter.h"
 
+
+#define VERIFY_TRAIT_IMPL(trait_func_name, value, ...) \
+    do {                                               \
+	if ((value).T->trait_func_name == NULL)        \
+	    REPORT_RUNTIME_ERROR(__VA_ARGS__);         \
+    } while (0);
+
+
 typedef struct slash_type_info_t SlashTypeInfo; // Forward decl
 typedef struct slash_obj_t SlashObj; // Forward decl
 typedef struct slash_value_t SlashValue; // Forward decl
@@ -52,12 +60,5 @@ typedef int (*TraitHash)(SlashValue self);
 /* Object lifetime */
 typedef void (*ObjInit)(SlashObj *obj);
 typedef void (*ObjFree)(SlashObj *obj);
-
-
-#define VERIFY_TRAIT_IMPL(trait_func_name, value, ...) \
-    do {                                               \
-	if ((value).T->trait_func_name == NULL)        \
-	    REPORT_RUNTIME_ERROR(__VA_ARGS__);         \
-    } while (0);
 
 #endif /* SLASH_TYPE_FUNC_H */

@@ -21,6 +21,7 @@
 
 #include "builtin/builtin.h"
 #include "interpreter/interpreter.h"
+#include "interpreter/value/slash_str.h"
 #include "lib/str_view.h"
 
 

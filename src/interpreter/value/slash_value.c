@@ -24,6 +24,7 @@
 #include "interpreter/interpreter.h"
 #include "interpreter/value/slash_list.h"
 #include "interpreter/value/slash_map.h"
+#include "interpreter/value/slash_str.h"
 #include "interpreter/value/slash_value.h"
 
 
@@ -599,70 +600,14 @@ int tuple_hash(SlashValue self)
 /*
  * str impl
  */
-void slash_str_init_from_view(Interpreter *interpreter, SlashStr *str, StrView *view)
+SlashValue str_plus(Interpreter *interpreter, SlashValue self, SlashValue other)
 {
-    str->len = view->size;
-    str->str = gc_alloc(interpreter, str->len + 1);
-    memcpy(str->str, view->view, str->len);
-    str->str[str->len] = 0;
-}
-
-void slash_str_init_from_slice(Interpreter *interpreter, SlashStr *str, char *cstr, size_t size)
-{
-    slash_str_init_from_view(interpreter, str, &(StrView){ .view = cstr, .size = size });
-}
-
-void slash_str_init_from_alloced_cstr(SlashStr *str, char *cstr)
-{
-    str->len = strlen(cstr);
-    str->str = cstr;
-    str->obj.gc_managed = false;
-}
-
-static char *split_single(char *str, char *chars)
-{
-    size_t offset = 0;
-    size_t split_chars = strlen(chars);
-    while (str[offset] != 0) {
-	for (size_t i = 0; i < split_chars; i++) {
-	    if (str[offset] == chars[i])
-		return str + offset;
-	}
-	offset++;
-    }
-
-    return NULL;
-}
-
-SlashList *slash_str_split(Interpreter *interpreter, SlashStr *str, char *separator, bool split_any)
-{
-    SlashList *list = (SlashList *)gc_new_T(interpreter, &list_type_info);
-    gc_shadow_push(&interpreter->gc, &list->obj);
-    slash_list_impl_init(interpreter, list);
-
-    size_t separator_len = strlen(separator);
-    char *start_ptr = str->str;
-    char *end_ptr = split_any ? split_single(start_ptr, separator) : strstr(start_ptr, separator);
-    while (end_ptr != NULL) {
-	/* save substr */
-	SlashStr *substr = (SlashStr *)gc_new_T(interpreter, &str_type_info);
-	slash_str_init_from_slice(interpreter, substr, start_ptr, end_ptr - start_ptr);
-	slash_list_impl_append(interpreter, list, AS_VALUE(substr));
-	/* continue */
-	start_ptr = end_ptr + (split_any ? 1 : separator_len);
-	end_ptr = split_any ? split_single(start_ptr, separator) : strstr(start_ptr, separator);
-    }
-
-    /* final substr */
-    size_t final_size = (str->str + str->len) - start_ptr;
-    if (final_size != 0) {
-	SlashStr *substr = (SlashStr *)gc_new_T(interpreter, &str_type_info);
-	slash_str_init_from_slice(interpreter, substr, start_ptr, final_size);
-	slash_list_impl_append(interpreter, list, AS_VALUE(substr));
-    }
-
+    assert(IS_STR(self) && IS_STR(other));
+    SlashStr *new = (SlashStr *)gc_new_T(interpreter, &str_type_info);
+    gc_shadow_push(&interpreter->gc, &new->obj);
+    slash_str_init_from_concat(interpreter, new, AS_STR(self), AS_STR(other));
     gc_shadow_pop(&interpreter->gc);
-    return list;
+    return AS_VALUE(new);
 }
 
 void str_print(SlashValue self)
@@ -896,7 +841,7 @@ SlashTypeInfo tuple_type_info = { .name = "tuple",
 				  .obj_size = sizeof(SlashTuple) };
 
 SlashTypeInfo str_type_info = { .name = "str",
-				.plus = NULL,
+				.plus = str_plus,
 				.minus = NULL,
 				.mul = NULL,
 				.div = NULL,

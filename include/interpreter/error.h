@@ -25,8 +25,6 @@
 #include "interpreter/lexer.h"
 #include "interpreter/parser.h"
 
-extern jmp_buf runtime_error_jmp;
-
 
 #define ASSERT_NOT_REACHED assert(0 && "panic: unreachable code reached")
 
@@ -37,6 +35,9 @@ extern jmp_buf runtime_error_jmp;
 #define REPORT_IMPL(...) fprintf(REPORT_FILE, __VA_ARGS__)
 
 #define RUNTIME_ERROR 1
+
+extern jmp_buf runtime_error_jmp;
+
 
 void report_lex_err(Lexer *lexer, bool print_offending, char *msg);
 void report_parse_err(Parser *parser, char *msg);

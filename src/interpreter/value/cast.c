@@ -17,6 +17,7 @@
 #include "interpreter/error.h"
 #include "interpreter/interpreter.h"
 #include "interpreter/scope.h"
+#include "interpreter/value/slash_str.h"
 #include "interpreter/value/slash_value.h"
 #include "lib/str_view.h"
 

@@ -22,6 +22,7 @@
 #include "lib/str_view.h"
 #include "nicc/nicc.h"
 
+
 #define STATE_FN(___state_fn) \
     (StateFn)                 \
     {                         \
@@ -144,7 +145,6 @@ typedef struct {
     ArrayList tokens;
     HashMap keywords;
 } Lexer;
-
 
 typedef struct func_wrap {
     struct func_wrap (*fn)(Lexer *);

@@ -14,7 +14,6 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include <math.h>
 #include <setjmp.h>
 #include <stdio.h>
 #include <string.h>
@@ -32,6 +31,7 @@
 /// #include "interpreter/value/method.h"
 #include "interpreter/value/slash_list.h"
 #include "interpreter/value/slash_map.h"
+#include "interpreter/value/slash_str.h"
 #include "interpreter/value/slash_value.h"
 #include "lib/arena_ll.h"
 #include "lib/str_view.h"
@@ -92,7 +92,9 @@ static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt, char *pro
 static SlashValue eval_binary_operators(Interpreter *interpreter, SlashValue left, SlashValue right,
 					TokenType op)
 {
-    /* Binary operators */
+    if (IS_NONE(left) && !IS_NONE(right))
+	return (SlashValue){ .T = &bool_type_info, .boolean = false };
+
     if (!TYPE_EQ(left, right))
 	REPORT_RUNTIME_ERROR("Binary operation failed: type mismatch between '%s' and '%s'",
 			     left.T->name, right.T->name);
