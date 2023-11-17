@@ -92,7 +92,9 @@ static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt, char *pro
 static SlashValue eval_binary_operators(Interpreter *interpreter, SlashValue left, SlashValue right,
 					TokenType op)
 {
-    /* Binary operators */
+    if (IS_NONE(left) && !IS_NONE(right))
+	return (SlashValue){ .T = &bool_type_info, .boolean = false };
+
     if (!TYPE_EQ(left, right))
 	REPORT_RUNTIME_ERROR("Binary operation failed: type mismatch between '%s' and '%s'",
 			     left.T->name, right.T->name);
