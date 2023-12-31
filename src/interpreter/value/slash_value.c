@@ -281,6 +281,21 @@ bool range_eq(SlashValue self, SlashValue other)
 /*
  * text_lit impl
  */
+SlashValue slash_text_lit_parse_symbols(Interpreter *interpreter, SlashValue *self)
+{
+    assert(IS_TEXT_LIT(self));
+    StrView tl = self->text_lit;
+    // str builder
+    /* parse and eval: ~ . .. */
+    for (size_t i = 0; i < tl.size; i++) {
+
+    }
+    
+    SlashObj *str = gc_new_T(interpreter, &str_type_info);
+
+    return AS_VALUE(str);
+}
+
 SlashValue text_lit_to_str(Interpreter *interpreter, SlashValue self)
 {
     assert(IS_TEXT_LIT(self));
