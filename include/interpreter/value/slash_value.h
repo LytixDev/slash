@@ -145,7 +145,4 @@ extern SlashValue NoneSingleton;
 /* Tuple functions */
 void slash_tuple_init(Interpreter *interpreter, SlashTuple *tuple, size_t size);
 
-/* text_lit functions */
-SlashValue slash_text_lit_parse_symbols(Interpreter *interpreter, SlashValue *self);
-
 #endif /* SLASH_VALUE_H */

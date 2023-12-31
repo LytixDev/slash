@@ -19,6 +19,7 @@
 
 #include <stdlib.h>
 
+#include "lib/str_view.h"
 #include "sac/sac.h"
 
 
@@ -33,7 +34,7 @@ typedef struct {
 } StrBuilder;
 
 
-/* 
+/*
  * Inits the StrBuilder and attaches the backing arena.
  * The backing arena must be manually released to get back the memory.
  *
@@ -53,8 +54,8 @@ void str_builder_init(StrBuilder *sb, Arena *arena);
 void str_builder_append(StrBuilder *sb, char *cstr, size_t len);
 void str_builder_append_char(StrBuilder *sb, char c);
 
-/* Appends the null terminator. */
-void str_builder_complete(StrBuilder *sb);
+/* Appends the null terminator and returns the built string as a view. */
+StrView str_builder_complete(StrBuilder *sb);
 
 
 #endif /* STR_BUILDER_H */

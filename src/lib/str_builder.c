@@ -18,6 +18,7 @@
 #include <string.h>
 
 #include "lib/str_builder.h"
+#include "lib/str_view.h"
 #include "sac/sac.h"
 
 
@@ -33,8 +34,8 @@ void str_builder_init(StrBuilder *sb, Arena *arena)
 void str_builder_append(StrBuilder *sb, char *cstr, size_t len)
 {
     while (sb->len + len >= sb->cap) {
-        m_arena_alloc(sb->arena, sb->cap);
-        sb->cap += sb->cap;
+	m_arena_alloc(sb->arena, sb->cap);
+	sb->cap += sb->cap;
     }
     memcpy(sb->buffer + sb->len, cstr, len);
     sb->len += len;
@@ -43,14 +44,15 @@ void str_builder_append(StrBuilder *sb, char *cstr, size_t len)
 void str_builder_append_char(StrBuilder *sb, char c)
 {
     if (sb->len >= sb->cap) {
-        m_arena_alloc(sb->arena, sb->cap);
-        sb->cap += sb->cap;
+	m_arena_alloc(sb->arena, sb->cap);
+	sb->cap += sb->cap;
     }
     sb->buffer[sb->len] = c;
     sb->len++;
 }
 
-void str_builder_complete(StrBuilder *sb)
+StrView str_builder_complete(StrBuilder *sb)
 {
     str_builder_append_char(sb, '\0');
+    return (StrView){ .view = sb->buffer, .size = sb->len };
 }
