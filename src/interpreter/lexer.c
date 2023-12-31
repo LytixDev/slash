@@ -264,9 +264,6 @@ StateFn lex_any(Lexer *lexer)
 	case ':':
 	    emit(lexer, t_colon);
 	    break;
-	case '~':
-	    emit(lexer, t_tilde);
-	    break;
 	case '\\':
 	    emit(lexer, t_backslash);
 	    break;
