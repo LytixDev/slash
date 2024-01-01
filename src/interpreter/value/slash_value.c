@@ -26,6 +26,7 @@
 #include "interpreter/value/slash_map.h"
 #include "interpreter/value/slash_str.h"
 #include "interpreter/value/slash_value.h"
+#include "lib/str_builder.h"
 
 
 /*
@@ -284,8 +285,31 @@ bool range_eq(SlashValue self, SlashValue other)
 SlashValue text_lit_to_str(Interpreter *interpreter, SlashValue self)
 {
     assert(IS_TEXT_LIT(self));
+    StrView tl = self.text_lit;
+    ArenaTmp tmp = m_arena_tmp_init(&interpreter->arena);
+    StrBuilder sb;
+    str_builder_init(&sb, tmp.arena);
+    /* Eval tilde */
+    for (size_t i = 0; i < tl.size; i++) {
+	char c = tl.view[i];
+	if (c == '~') {
+	    ScopeAndValue sv = var_get(interpreter->scope, &(StrView){ .view = "HOME", .size = 4 });
+	    if (sv.scope != NULL && IS_STR(*sv.value)) {
+		SlashStr *home_val = AS_STR(*sv.value);
+		str_builder_append(&sb, home_val->str, home_val->len);
+		continue;
+	    }
+	}
+
+	/* TODO: Wasteful to call append_char on every iteration. */
+	str_builder_append_char(&sb, c);
+    }
+
     SlashObj *str = gc_new_T(interpreter, &str_type_info);
-    slash_str_init_from_view(interpreter, (SlashStr *)str, &self.text_lit);
+    StrView built = str_builder_complete(&sb);
+    slash_str_init_from_view(interpreter, (SlashStr *)str, &built);
+    m_arena_tmp_release(tmp);
+
     return AS_VALUE(str);
 }
 

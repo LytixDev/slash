@@ -61,7 +61,6 @@
     X(rbrace)              \
     X(lbracket)            \
     X(rbracket)            \
-    X(tilde)               \
     X(backslash)           \
     X(comma)               \
     X(colon)               \

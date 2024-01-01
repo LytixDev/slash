@@ -101,6 +101,7 @@ subscript       -> access ( "[" expression "]" access? )* ;
 access          -> ACCESS | primary ;
 
 primary         -> STRING 
+                |  TEXT_LIT
                 |  bool_lit
                 |  number
                 |  range 
