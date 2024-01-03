@@ -21,7 +21,12 @@ declaration     -> var_declaration
                 |  and_or ;
 
 var_declaration -> "var" IDENTIFIER "=" top_level_expr newline
-                |  "var" IDENTIFIER ( "," IDENTIFIER )* "=" top_level_expr newline ;
+                |  "var" IDENTIFIER ( "," IDENTIFIER )* "=" top_level_expr newline
+                |  func_def
+
+func_def        -> "var" IDENTIFIER "=" "(" arguments ")" block;
+
+arguments       -> IDENTIFIER ( "," IDENTIFIER NEWLINE? )* ;
 
 and_or          -> statement ( ( "&&" | "||" ) statement )* ;
 
@@ -83,14 +88,14 @@ unary           -> ("not" | "-") unary
                 |  single ;
 
 single          -> subshell
-                |  method_call
                 |  contains
                 |  cast
-                |  subscript ;
+                |  subscript
+                |  call ;
 
 subshell        -> "(" declaration+ ")" ;
 
-method_call     -> expression "." IDENTIFIER "(" sequence_expr ")" ;
+/// method_call     -> expression "." IDENTIFIER "(" sequence_expr ")" ;
 
 contains        -> expression "in" expression ;
 
@@ -98,10 +103,14 @@ cast            -> expression "as" IDENTIFIER ;
 
 subscript       -> access ( "[" expression "]" access? )* ;
 
+call            -> access "(" sequence_expr ")" ; 
+/// call        -> primary ( "(" sequence_expr ") )* ;
+
 access          -> ACCESS | primary ;
 
 primary         -> STRING 
                 |  TEXT_LIT
+                |  IDENTIFIER
                 |  bool_lit
                 |  number
                 |  range 

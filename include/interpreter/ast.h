@@ -38,6 +38,7 @@ typedef enum {
     EXPR_SEQUENCE,
     EXPR_GROUPING,
     EXPR_CAST,
+    EXPR_CALL,
     EXPR_ENUM_COUNT
 } ExprType;
 
@@ -54,6 +55,7 @@ typedef enum {
     STMT_PIPELINE,
     STMT_ASSERT,
     STMT_BINARY,
+    STMT_FUNCTION,
     STMT_ENUM_COUNT
 } StmtType;
 
@@ -151,6 +153,12 @@ typedef struct {
     StrView type_name;
 } CastExpr;
 
+typedef struct {
+    ExprType type;
+    Expr *callee;
+    SequenceExpr *args;
+} CallExpr;
+
 
 /* statements */
 typedef struct {
@@ -158,7 +166,7 @@ typedef struct {
     Expr *expression;
 } ExpressionStmt;
 
-typedef struct {
+typedef struct slash_block_stmt_t {
     StmtType type;
     ArenaLL *statements;
 } BlockStmt;
@@ -228,6 +236,13 @@ typedef struct {
 	Expr *right_expr;
     };
 } BinaryStmt;
+
+typedef struct {
+    StmtType type;
+    StrView name;
+    ArenaLL params;
+    BlockStmt *body;
+} FunctionStmt;
 
 
 /* functions */

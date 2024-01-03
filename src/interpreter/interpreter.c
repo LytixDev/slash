@@ -40,6 +40,7 @@
 
 static SlashValue eval(Interpreter *interpreter, Expr *expr);
 static void exec(Interpreter *interpreter, Stmt *stmt);
+static void exec_block(Interpreter *interpreter, BlockStmt *stmt);
 
 /*
  * helpers
@@ -410,6 +411,17 @@ static SlashValue eval_cast(Interpreter *interpreter, CastExpr *expr)
 			     .boolean = interpreter->prev_exit_code == 0 ? true : false };
 
     return dynamic_cast(interpreter, value, expr->type_name);
+}
+
+static SlashValue eval_call(Interpreter *interpreter, CallExpr *expr)
+{
+    SlashValue callee = eval(interpreter, expr->callee);
+    if (!IS_FUNCTION(callee))
+	REPORT_RUNTIME_ERROR("Can not call value of type '%s'", callee.T->name);
+
+    SlashFunction function = callee.function;
+    exec_block(interpreter, function.body);
+    return NoneSingleton;
 }
 
 
@@ -847,6 +859,19 @@ static void exec_binary(Interpreter *interpreter, BinaryStmt *stmt)
 	exec_redirect(interpreter, stmt);
 }
 
+static void exec_function(Interpreter *interpreter, FunctionStmt *stmt)
+{
+    /* Make sure variable is not defined already */
+    ScopeAndValue current = var_get(interpreter->scope, &stmt->name);
+    if (current.scope == interpreter->scope)
+	REPORT_RUNTIME_ERROR("Redefinition of '%s'", "X");
+
+    // TODO: closure
+    SlashFunction function = { .name = stmt->name, .body = stmt->body };
+    SlashValue value = { .T = &function_type_info, .function = function };
+    var_define(interpreter->scope, &stmt->name, &value);
+}
+
 static SlashValue eval(Interpreter *interpreter, Expr *expr)
 {
     switch (expr->type) {
@@ -876,6 +901,8 @@ static SlashValue eval(Interpreter *interpreter, Expr *expr)
 	return eval_grouping(interpreter, (GroupingExpr *)expr);
     case EXPR_CAST:
 	return eval_cast(interpreter, (CastExpr *)expr);
+    case EXPR_CALL:
+	return eval_call(interpreter, (CallExpr *)expr);
     default:
 	REPORT_RUNTIME_ERROR("Internal error: expression type not recognized");
 	/* will never happen, but lets make the compiler happy */
@@ -921,6 +948,9 @@ static void exec(Interpreter *interpreter, Stmt *stmt)
 	break;
     case STMT_BINARY:
 	exec_binary(interpreter, (BinaryStmt *)stmt);
+	break;
+    case STMT_FUNCTION:
+	exec_function(interpreter, (FunctionStmt *)stmt);
 	break;
     default:
 	REPORT_RUNTIME_ERROR("Internal error: Statement type not recognized");

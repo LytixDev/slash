@@ -315,6 +315,19 @@ SlashValue text_lit_to_str(Interpreter *interpreter, SlashValue self)
 
 
 /*
+ * function impl
+ */
+void function_print(SlashValue self)
+{
+    assert(IS_FUNCTION(self));
+    SlashFunction function = self.function;
+    char name[function.name.size];
+    str_view_to_cstr(function.name, name);
+    printf("<function '%s'>", name);
+}
+
+
+/*
  * map impl
  */
 SlashValue map_unary_not(SlashValue self)
@@ -784,6 +797,29 @@ SlashTypeInfo text_lit_type_info = { .name = "text",
 				     .unary_not = NULL,
 				     .print = NULL,
 				     .to_str = text_lit_to_str,
+				     .item_get = NULL,
+				     .item_assign = NULL,
+				     .item_in = NULL,
+				     .truthy = NULL,
+				     .eq = NULL,
+				     .cmp = NULL,
+				     .hash = NULL,
+				     .init = NULL,
+				     .free = NULL,
+				     .obj_size = 0 };
+
+SlashTypeInfo function_type_info = { .name = "function",
+				     .plus = NULL,
+				     .minus = NULL,
+				     .mul = NULL,
+				     .div = NULL,
+				     .int_div = NULL,
+				     .pow = NULL,
+				     .mod = NULL,
+				     .unary_minus = NULL,
+				     .unary_not = NULL,
+				     .print = function_print,
+				     .to_str = NULL,
 				     .item_get = NULL,
 				     .item_assign = NULL,
 				     .item_in = NULL,

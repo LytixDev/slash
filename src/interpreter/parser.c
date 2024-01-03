@@ -225,6 +225,16 @@ static Stmt *var_decl(Parser *parser)
     }
 
     consume(parser, t_equal, "Expected variable definition");
+    /* function definition */
+    if (match(parser, t_lparen)) {
+	FunctionStmt *stmt = (FunctionStmt *)stmt_alloc(parser->ast_arena, STMT_FUNCTION);
+	consume(parser, t_rparen, "TODO: parse param list");
+	consume(parser, t_lbrace, "TODO: lambda?");
+	stmt->name = name->lexeme;
+	stmt->body = (BlockStmt *)block(parser);
+	return (Stmt *)stmt;
+    }
+
     Expr *initializer = top_level_expr(parser);
     expr_promotion(parser);
     if (seq_var != NULL) {
@@ -614,20 +624,31 @@ static Expr *single(Parser *parser)
 	return (Expr *)expr;
     }
 
-    /* method call */
-    if (match(parser, t_dot)) {
-	MethodExpr *expr = (MethodExpr *)expr_alloc(parser->ast_arena, EXPR_METHOD);
-	Token *method_name = consume(parser, t_ident, "Expected method name");
-	expr->obj = left;
-	expr->method_name = method_name->lexeme;
-	consume(parser, t_lparen, "Expected left paren");
-	if (!match(parser, t_rparen)) {
+    /* call */
+    if (match(parser, t_lparen)) {
+	CallExpr *expr = (CallExpr *)expr_alloc(parser->ast_arena, EXPR_CALL);
+	expr->callee = left;
+	if (!match(parser, t_rparen))
 	    expr->args = sequence(parser, t_rparen);
-	} else {
-	    expr->args = NULL;
-	}
+	else
+	    expr->args = NULL; // no arguments passed to call
 	return (Expr *)expr;
     }
+
+    /* method call */
+    /// if (match(parser, t_dot)) {
+    ///     MethodExpr *expr = (MethodExpr *)expr_alloc(parser->ast_arena, EXPR_METHOD);
+    ///     Token *method_name = consume(parser, t_ident, "Expected method name");
+    ///     expr->obj = left;
+    ///     expr->method_name = method_name->lexeme;
+    ///     consume(parser, t_lparen, "Expected left paren");
+    ///     if (!match(parser, t_rparen)) {
+    ///         expr->args = sequence(parser, t_rparen);
+    ///     } else {
+    ///         expr->args = NULL;
+    ///     }
+    ///     return (Expr *)expr;
+    /// }
 
     /* neither contains nor method_call matched */
     return left;
