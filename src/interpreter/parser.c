@@ -35,6 +35,7 @@ static void newline(Parser *parser);
 static void expr_promotion(Parser *parser);
 static Stmt *declaration(Parser *parser);
 static Stmt *var_decl(Parser *parser);
+static ArenaLL arguments(Parser *parser);
 static Stmt *and_or(Parser *parser);
 /* stmts */
 static Stmt *statement(Parser *parser);
@@ -225,6 +226,17 @@ static Stmt *var_decl(Parser *parser)
     }
 
     consume(parser, t_equal, "Expected variable definition");
+    /* function definition */
+    if (check(parser, t_ident)) {
+	FunctionStmt *stmt = (FunctionStmt *)stmt_alloc(parser->ast_arena, STMT_FUNCTION);
+	stmt->name = name->lexeme;
+	stmt->params = arguments(parser);
+
+	consume(parser, t_lbrace, "TODO: lambda?");
+	stmt->body = (BlockStmt *)block(parser);
+	return (Stmt *)stmt;
+    }
+
     Expr *initializer = top_level_expr(parser);
     expr_promotion(parser);
     if (seq_var != NULL) {
@@ -236,6 +248,21 @@ static Stmt *var_decl(Parser *parser)
     stmt->name = name->lexeme;
     stmt->initializer = initializer;
     return (Stmt *)stmt;
+}
+
+static ArenaLL arguments(Parser *parser)
+{
+    // arguments       -> IDENTIFIER ( "," IDENTIFIER NEWLINE? )* ;
+    ArenaLL args;
+    arena_ll_init(parser->ast_arena, &args);
+    do {
+	ignore(parser, t_newline);
+	consume(parser, t_ident, "hmmm");
+	arena_ll_append(&args, &previous(parser)->lexeme);
+	ignore(parser, t_newline);
+    } while (!check(parser, t_rbrace) && match(parser, t_comma));
+
+    return args;
 }
 
 static Stmt *and_or(Parser *parser)
@@ -614,20 +641,31 @@ static Expr *single(Parser *parser)
 	return (Expr *)expr;
     }
 
-    /* method call */
-    if (match(parser, t_dot)) {
-	MethodExpr *expr = (MethodExpr *)expr_alloc(parser->ast_arena, EXPR_METHOD);
-	Token *method_name = consume(parser, t_ident, "Expected method name");
-	expr->obj = left;
-	expr->method_name = method_name->lexeme;
-	consume(parser, t_lparen, "Expected left paren");
-	if (!match(parser, t_rparen)) {
+    /* call */
+    if (match(parser, t_lparen)) {
+	CallExpr *expr = (CallExpr *)expr_alloc(parser->ast_arena, EXPR_CALL);
+	expr->callee = left;
+	if (!match(parser, t_rparen))
 	    expr->args = sequence(parser, t_rparen);
-	} else {
-	    expr->args = NULL;
-	}
+	else
+	    expr->args = NULL; // no arguments passed to call
 	return (Expr *)expr;
     }
+
+    /* method call */
+    /// if (match(parser, t_dot)) {
+    ///     MethodExpr *expr = (MethodExpr *)expr_alloc(parser->ast_arena, EXPR_METHOD);
+    ///     Token *method_name = consume(parser, t_ident, "Expected method name");
+    ///     expr->obj = left;
+    ///     expr->method_name = method_name->lexeme;
+    ///     consume(parser, t_lparen, "Expected left paren");
+    ///     if (!match(parser, t_rparen)) {
+    ///         expr->args = sequence(parser, t_rparen);
+    ///     } else {
+    ///         expr->args = NULL;
+    ///     }
+    ///     return (Expr *)expr;
+    /// }
 
     /* neither contains nor method_call matched */
     return left;

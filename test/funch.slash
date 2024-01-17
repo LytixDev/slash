@@ -1,0 +1,3 @@
+var foo = name, age { $age > 30 && echo $name is old }
+$foo("Nicolai", 21)
+$foo("Robin", 77)

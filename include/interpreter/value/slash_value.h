@@ -22,6 +22,7 @@
 #include "interpreter/interpreter.h"
 #include "interpreter/lexer.h"
 #include "interpreter/value/type_funcs.h"
+#include "lib/arena_ll.h"
 #include "sac/sac.h"
 
 
@@ -30,6 +31,15 @@ typedef struct {
     int32_t start;
     int32_t end;
 } SlashRange;
+
+typedef struct slash_block_stmt_t BlockStmt; // Forward decl.
+
+/* The Function type */
+typedef struct {
+    StrView name;
+    ArenaLL params;
+    BlockStmt *body;
+} SlashFunction;
 
 
 typedef struct slash_type_info_t SlashTypeInfo;
@@ -103,6 +113,7 @@ typedef struct slash_value_t {
 	double num;
 	SlashRange range;
 	StrView text_lit;
+	SlashFunction function;
 	SlashObj *obj;
     };
 } SlashValue;
@@ -112,6 +123,7 @@ extern SlashTypeInfo bool_type_info;
 extern SlashTypeInfo num_type_info;
 extern SlashTypeInfo range_type_info;
 extern SlashTypeInfo text_lit_type_info;
+extern SlashTypeInfo function_type_info;
 extern SlashTypeInfo list_type_info;
 extern SlashTypeInfo tuple_type_info;
 extern SlashTypeInfo str_type_info;
@@ -124,6 +136,7 @@ extern SlashValue NoneSingleton;
 #define IS_NUM(value__) ((value__).T == &num_type_info)
 #define IS_RANGE(value__) ((value__).T == &range_type_info)
 #define IS_TEXT_LIT(value__) ((value__).T == &text_lit_type_info)
+#define IS_FUNCTION(value__) ((value__).T == &function_type_info)
 #define IS_MAP(value__) ((value__).T == &map_type_info)
 #define IS_LIST(value__) ((value__).T == &list_type_info)
 #define IS_TUPLE(value__) ((value__).T == &tuple_type_info)
