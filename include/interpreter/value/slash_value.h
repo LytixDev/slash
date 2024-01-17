@@ -22,6 +22,7 @@
 #include "interpreter/interpreter.h"
 #include "interpreter/lexer.h"
 #include "interpreter/value/type_funcs.h"
+#include "lib/arena_ll.h"
 #include "sac/sac.h"
 
 
@@ -36,6 +37,7 @@ typedef struct slash_block_stmt_t BlockStmt; // Forward decl.
 /* The Function type */
 typedef struct {
     StrView name;
+    ArenaLL params;
     BlockStmt *body;
 } SlashFunction;
 

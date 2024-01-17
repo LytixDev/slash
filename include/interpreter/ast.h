@@ -240,7 +240,7 @@ typedef struct {
 typedef struct {
     StmtType type;
     StrView name;
-    ArenaLL params;
+    ArenaLL params; // list of parameter names as pointers to StrView's
     BlockStmt *body;
 } FunctionStmt;
 

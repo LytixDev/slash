@@ -24,7 +24,7 @@ var_declaration -> "var" IDENTIFIER "=" top_level_expr newline
                 |  "var" IDENTIFIER ( "," IDENTIFIER )* "=" top_level_expr newline
                 |  func_def
 
-func_def        -> "var" IDENTIFIER "=" "(" arguments ")" block;
+func_def        -> "var" IDENTIFIER "=" arguments block;
 
 arguments       -> IDENTIFIER ( "," IDENTIFIER NEWLINE? )* ;
 
@@ -39,6 +39,7 @@ statement       -> loop_stmt
                 |  pipeline_stmt
                 |  block
                 |  assignment_stmt
+                |  return_stmt
                 |  expr_stmt ;
 
 loop_stmt       -> "loop" ( IDENTIFIER "in" )? top_level_expr block ;
@@ -56,6 +57,8 @@ cmd_stmt        -> TEXT_LIT expression* ;
 block           -> "{" declaration* "}" ;
 
 assignment_stmt -> top_level_expr ( "=" | "+=" | "-=" | "*=" | "**=" | "%=" | "%=" ) top_level_expr newline_or_block_end ;
+
+return_stmt     -> "return" expression? ;
 
 expr_stmt       -> top_level_expr newline_or_block_end ;
 

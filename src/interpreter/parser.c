@@ -35,6 +35,7 @@ static void newline(Parser *parser);
 static void expr_promotion(Parser *parser);
 static Stmt *declaration(Parser *parser);
 static Stmt *var_decl(Parser *parser);
+static ArenaLL arguments(Parser *parser);
 static Stmt *and_or(Parser *parser);
 /* stmts */
 static Stmt *statement(Parser *parser);
@@ -226,11 +227,12 @@ static Stmt *var_decl(Parser *parser)
 
     consume(parser, t_equal, "Expected variable definition");
     /* function definition */
-    if (match(parser, t_lparen)) {
+    if (check(parser, t_ident)) {
 	FunctionStmt *stmt = (FunctionStmt *)stmt_alloc(parser->ast_arena, STMT_FUNCTION);
-	consume(parser, t_rparen, "TODO: parse param list");
-	consume(parser, t_lbrace, "TODO: lambda?");
 	stmt->name = name->lexeme;
+	stmt->params = arguments(parser);
+
+	consume(parser, t_lbrace, "TODO: lambda?");
 	stmt->body = (BlockStmt *)block(parser);
 	return (Stmt *)stmt;
     }
@@ -246,6 +248,21 @@ static Stmt *var_decl(Parser *parser)
     stmt->name = name->lexeme;
     stmt->initializer = initializer;
     return (Stmt *)stmt;
+}
+
+static ArenaLL arguments(Parser *parser)
+{
+    // arguments       -> IDENTIFIER ( "," IDENTIFIER NEWLINE? )* ;
+    ArenaLL args;
+    arena_ll_init(parser->ast_arena, &args);
+    do {
+	ignore(parser, t_newline);
+	consume(parser, t_ident, "hmmm");
+	arena_ll_append(&args, &previous(parser)->lexeme);
+	ignore(parser, t_newline);
+    } while (!check(parser, t_rbrace) && match(parser, t_comma));
+
+    return args;
 }
 
 static Stmt *and_or(Parser *parser)

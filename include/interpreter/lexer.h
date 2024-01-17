@@ -38,7 +38,6 @@
  */
 #define KEYWORD_TOKENS \
     X(var)             \
-    X(func)            \
     X(return)          \
     X(if)              \
     X(elif)            \
