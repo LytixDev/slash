@@ -200,6 +200,15 @@ static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
 	goto defer_shadow_pop;
     }
 
+    /* range initializer */
+    if (expr->operator_ == t_dot_dot) {
+	if (!(IS_NUM(left) && NUM_IS_INT(left) && IS_NUM(right) && NUM_IS_INT(right)))
+	    REPORT_RUNTIME_ERROR("Bad range initializer");
+	SlashRange range = { .start = left.num, .end = right.num };
+	return_value = (SlashValue){ .T = &range_type_info, .range = range };
+	goto defer_shadow_pop;
+    }
+
     /* binary operators */
     if (expr->operator_ != t_in) {
 	return_value = eval_binary_operators(interpreter, left, right, expr->operator_);
@@ -450,6 +459,9 @@ static SlashValue eval_call(Interpreter *interpreter, CallExpr *expr)
 static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
 {
     SlashValue value = eval(interpreter, stmt->expression);
+    if (stmt->expression->type == EXPR_CALL)
+	return;
+
     TraitPrint trait_print = value.T->print;
     assert(trait_print != NULL);
     trait_print(value);
@@ -599,16 +611,24 @@ static void exec_assign_unpack(Interpreter *interpreter, AssignStmt *stmt)
 	ASSERT_NOT_REACHED;
     }
 
-    LLItem *l = left->seq.head;
-    LLItem *r = right->seq.head;
-    for (size_t i = 0; i < left->seq.size; i++) {
-	AccessExpr *access = (AccessExpr *)l->value;
+    /* early eval all values on the right side of assignment */
+    SlashValue values[right->seq.size];
+    size_t i = 0;
+    LLItem *item = right->seq.head;
+    ARENA_LL_FOR_EACH(&right->seq, item)
+    {
+	// TODO: can have problems with GC?
+	values[i++] = eval(interpreter, (Expr *)item->value);
+    }
+
+    i = 0;
+    item = left->seq.head;
+    ARENA_LL_FOR_EACH(&left->seq, item)
+    {
+	AccessExpr *access = (AccessExpr *)item->value;
 	if (access->type != EXPR_ACCESS)
 	    REPORT_RUNTIME_ERROR("Can not assign to literal value");
-	SlashValue value = eval(interpreter, (Expr *)r->value);
-	var_assign(&access->var_name, interpreter->scope, &value);
-	l = l->next;
-	r = r->next;
+	var_assign(&access->var_name, interpreter->scope, &values[i++]);
     }
 }
 

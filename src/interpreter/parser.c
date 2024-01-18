@@ -66,7 +66,6 @@ static Expr *access(Parser *parser);
 static Expr *primary(Parser *parser);
 static Expr *bool_lit(Parser *parser);
 static Expr *number(Parser *parser);
-static Expr *range(Parser *parser);
 static Expr *list(Parser *parser);
 static Expr *map(Parser *parser);
 static Expr *grouping(Parser *parser);
@@ -614,16 +613,30 @@ static Expr *single(Parser *parser)
 	    /* continue the "normal" recursive path */
 	    left = subscript(parser);
 	}
+    } else if (check(parser, t_dot_dot)) {
+	/* insert num literal '0' when we encounter a range initializer in this form : '..expr' */
+	LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
+	expr->value = (SlashValue){ .T = &num_type_info, .num = 0 };
+	left = (Expr *)expr;
     } else {
 	/* continue the "normal" recursive path */
 	left = subscript(parser);
     }
 
-    /* contains */
     if (match(parser, t_in)) {
+	/* contains */
 	BinaryExpr *expr = (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY);
 	expr->left = left;
 	expr->operator_ = t_in;
+	expr->right = expression(parser);
+	return (Expr *)expr;
+    }
+
+    if (match(parser, t_dot_dot)) {
+	/* range */
+	BinaryExpr *expr = (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY);
+	expr->left = left;
+	expr->operator_ = t_dot_dot;
 	expr->right = expression(parser);
 	return (Expr *)expr;
     }
@@ -711,13 +724,8 @@ static Expr *primary(Parser *parser)
 {
     if (match(parser, t_true, t_false))
 	return bool_lit(parser);
-    if (check(parser, t_dot_dot))
-	return range(parser);
-    if (match(parser, t_dt_num)) {
-	if (check(parser, t_dot_dot))
-	    return range(parser);
+    if (match(parser, t_dt_num))
 	return number(parser);
-    }
     if (match(parser, t_lbracket))
 	return list(parser);
     if (match(parser, t_at_lbracket))
@@ -758,26 +766,6 @@ static Expr *number(Parser *parser)
     Token *token = previous(parser);
     LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
     expr->value = (SlashValue){ .T = &num_type_info, .num = str_view_to_double(token->lexeme) };
-    return (Expr *)expr;
-}
-
-static Expr *range(Parser *parser)
-{
-    SlashRange range;
-    Token *start_num_or_any = previous(parser);
-    if (start_num_or_any == NULL || start_num_or_any->type != t_dt_num)
-	range.start = 0;
-    else
-	range.start = str_view_to_int(start_num_or_any->lexeme);
-
-    consume(parser, t_dot_dot, "This error should be unreachable");
-    consume(parser, t_dt_num, "Expected second number after '..' in range expression");
-    Token *end_num = previous(parser);
-    // TODO: we can not use atoi() because it does not recognize '_'
-    range.end = (int)str_view_to_double(end_num->lexeme);
-
-    LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL);
-    expr->value = (SlashValue){ .T = &range_type_info, .range = range };
     return (Expr *)expr;
 }
 
