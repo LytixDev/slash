@@ -93,6 +93,7 @@ unary           -> ("not" | "-") unary
 single          -> subshell
                 |  contains
                 |  cast
+                |  range
                 |  subscript
                 |  call ;
 
@@ -103,6 +104,8 @@ subshell        -> "(" declaration+ ")" ;
 contains        -> expression "in" expression ;
 
 cast            -> expression "as" IDENTIFIER ;
+
+range           -> expression? ".." expression ;
 
 subscript       -> access ( "[" expression "]" access? )* ;
 
@@ -116,7 +119,6 @@ primary         -> STRING
                 |  IDENTIFIER
                 |  bool_lit
                 |  number
-                |  range 
                 |  list
                 |  map
                 |  tuple 
@@ -125,8 +127,6 @@ primary         -> STRING
 bool_lit        -> "true" | "false ";
 
 number          -> NUMBER ;
-
-range           -> expression? ".." expression ;
 
 list            -> "[" sequence_expr "]" ;
 
