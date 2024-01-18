@@ -459,6 +459,9 @@ static SlashValue eval_call(Interpreter *interpreter, CallExpr *expr)
 static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
 {
     SlashValue value = eval(interpreter, stmt->expression);
+    if (stmt->expression->type == EXPR_CALL)
+	return;
+
     TraitPrint trait_print = value.T->print;
     assert(trait_print != NULL);
     trait_print(value);
@@ -608,12 +611,13 @@ static void exec_assign_unpack(Interpreter *interpreter, AssignStmt *stmt)
 	ASSERT_NOT_REACHED;
     }
 
-    /* eval all values on the right hand sight of assignment */
+    /* early eval all values on the right side of assignment */
     SlashValue values[right->seq.size];
     size_t i = 0;
     LLItem *item = right->seq.head;
     ARENA_LL_FOR_EACH(&right->seq, item)
     {
+	// TODO: can have problems with GC?
 	values[i++] = eval(interpreter, (Expr *)item->value);
     }
 
@@ -626,18 +630,6 @@ static void exec_assign_unpack(Interpreter *interpreter, AssignStmt *stmt)
 	    REPORT_RUNTIME_ERROR("Can not assign to literal value");
 	var_assign(&access->var_name, interpreter->scope, &values[i++]);
     }
-
-    /// LLItem *l = left->seq.head;
-    /// LLItem *r = right->seq.head;
-    /// for (size_t i = 0; i < left->seq.size; i++) {
-    ///     AccessExpr *access = (AccessExpr *)l->value;
-    ///     if (access->type != EXPR_ACCESS)
-    ///         REPORT_RUNTIME_ERROR("Can not assign to literal value");
-    ///     SlashValue value = eval(interpreter, (Expr *)r->value);
-    ///     var_assign(&access->var_name, interpreter->scope, &value);
-    ///     l = l->next;
-    ///     r = r->next;
-    /// }
 }
 
 static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
