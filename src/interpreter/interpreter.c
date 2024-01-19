@@ -447,8 +447,8 @@ static SlashValue eval_call(Interpreter *interpreter, CallExpr *expr)
     }
 
     exec_block_body(interpreter, function.body);
+    interpreter->scope = function_scope->enclosing;
     scope_destroy(function_scope);
-
     return NoneSingleton;
 }
 
