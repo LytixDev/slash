@@ -56,6 +56,7 @@ typedef enum {
     STMT_ASSERT,
     STMT_BINARY,
     STMT_FUNCTION,
+    STMT_ABRUPT_CONTROL_FLOW,
     STMT_ENUM_COUNT
 } StmtType;
 
@@ -66,7 +67,7 @@ extern char *stmt_type_str_map[STMT_ENUM_COUNT];
 /*
  * evil trick to get some sort of polymorphism (I concede, my brain has been corrupted by OOP)
  */
-typedef struct {
+typedef struct expr_t {
     ExprType type;
 } Expr;
 
@@ -243,6 +244,12 @@ typedef struct {
     ArenaLL params; // list of parameter names as pointers to StrView's
     BlockStmt *body;
 } FunctionStmt;
+
+typedef struct {
+    StmtType type;
+    TokenType ctrlf_type; // t_break, t_continue or t_return
+    Expr *return_expr;
+} AbruptControlFlowStmt;
 
 
 /* functions */

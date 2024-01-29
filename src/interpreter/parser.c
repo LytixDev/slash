@@ -47,6 +47,7 @@ static Stmt *redirect_stmt(Parser *parser, Stmt *left);
 static Stmt *cmd_stmt(Parser *parser);
 static Stmt *block(Parser *parser);
 static Stmt *assignment_stmt(Parser *parser);
+static Stmt *abrupt_stmt(Parser *parser);
 /* exprs */
 static Expr *top_level_expr(Parser *parser);
 static Expr *expression(Parser *parser);
@@ -297,6 +298,9 @@ static Stmt *statement(Parser *parser)
     if (match(parser, t_lbrace))
 	return block(parser);
 
+    if (match(parser, t_break, t_continue, t_return))
+	return abrupt_stmt(parser);
+
     return assignment_stmt(parser);
 }
 
@@ -436,6 +440,19 @@ static Stmt *assignment_stmt(Parser *parser)
     stmt->var = expr;
     stmt->assignment_op = assignment_op->type;
     stmt->value = value;
+    return (Stmt *)stmt;
+}
+
+static Stmt *abrupt_stmt(Parser *parser)
+{
+    AbruptControlFlowStmt *stmt =
+	(AbruptControlFlowStmt *)stmt_alloc(parser->ast_arena, STMT_ABRUPT_CONTROL_FLOW);
+    stmt->return_expr = NULL;
+    stmt->ctrlf_type = previous(parser)->type;
+
+    if (stmt->ctrlf_type == t_return && !check(parser, t_newline))
+	stmt->return_expr = expression(parser);
+
     return (Stmt *)stmt;
 }
 

@@ -32,10 +32,13 @@ const size_t expr_size_table[] = {
 };
 
 const size_t stmt_size_table[] = {
-    sizeof(ExpressionStmt), sizeof(VarStmt),	  sizeof(SeqVarStmt), sizeof(LoopStmt),
-    sizeof(IterLoopStmt),   sizeof(IfStmt),	  sizeof(CmdStmt),    sizeof(AssignStmt),
-    sizeof(BlockStmt),	    sizeof(PipelineStmt), sizeof(AssignStmt), sizeof(BinaryStmt),
-    sizeof(FunctionStmt),
+    sizeof(ExpressionStmt), sizeof(VarStmt),
+    sizeof(SeqVarStmt),	    sizeof(LoopStmt),
+    sizeof(IterLoopStmt),   sizeof(IfStmt),
+    sizeof(CmdStmt),	    sizeof(AssignStmt),
+    sizeof(BlockStmt),	    sizeof(PipelineStmt),
+    sizeof(AssignStmt),	    sizeof(BinaryStmt),
+    sizeof(FunctionStmt),   sizeof(AbruptControlFlowStmt),
 };
 
 char *expr_type_str_map[EXPR_ENUM_COUNT] = {
@@ -45,9 +48,13 @@ char *expr_type_str_map[EXPR_ENUM_COUNT] = {
 };
 
 char *stmt_type_str_map[STMT_ENUM_COUNT] = {
-    "STMT_EXPRESSION", "STMT_VAR",    "STMT_SEQ_VAR",  "STMT_LOOP",  "STMT_ITER_LOOP",
-    "STMT_IF",	       "STMT_CMD",    "STMT_ASSIGN",   "STMT_BLOCK", "STMT_PIPELINE",
-    "STMT_ASSERT",     "STMT_BINARY", "STMT_FUNCTION",
+    "STMT_EXPRESSION", "STMT_VAR",
+    "STMT_SEQ_VAR",    "STMT_LOOP",
+    "STMT_ITER_LOOP",  "STMT_IF",
+    "STMT_CMD",	       "STMT_ASSIGN",
+    "STMT_BLOCK",      "STMT_PIPELINE",
+    "STMT_ASSERT",     "STMT_BINARY",
+    "STMT_FUNCTION",   "STMT_ABRUPT_CONTROL_FLOW",
 };
 
 
