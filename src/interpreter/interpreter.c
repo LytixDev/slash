@@ -628,7 +628,8 @@ static void exec_assign_unpack(Interpreter *interpreter, AssignStmt *stmt)
 	AccessExpr *access = (AccessExpr *)item->value;
 	if (access->type != EXPR_ACCESS)
 	    REPORT_RUNTIME_ERROR("Can not assign to literal value");
-	var_assign(&access->var_name, interpreter->scope, &values[i++]);
+	ScopeAndValue variable = var_get(interpreter->scope, &access->var_name);
+	var_assign(&access->var_name, variable.scope, &values[i++]);
     }
 }
 
