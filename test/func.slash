@@ -1,3 +1,6 @@
-var foo = name, age { $age > 30 && echo $name is old }
-$foo("Nicolai", 21)
-$foo("Robin", 77)
+var is_old = age { 
+    return $age > 30
+}
+
+assert not $is_old(21)
+assert $is_old(77)

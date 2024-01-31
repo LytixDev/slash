@@ -26,6 +26,26 @@
 #define STREAM_WRITE_END 1
 #define STREAM_READ_END 0
 
+typedef struct expr_t Expr; // forward decl
+
+
+typedef enum {
+    RT_NORMAL,
+    RT_RETURN,
+    RT_BREAK,
+    RT_CONTINUE,
+} ExecResultType;
+
+typedef struct {
+    ExecResultType type;
+    Expr *return_expr;
+} ExecResult;
+
+#define EXEC_NORMAL                            \
+    (ExecResult)                               \
+    {                                          \
+	.type = RT_NORMAL, .return_expr = NULL \
+    }
 
 typedef struct {
     int read_fd; // the file descriptor we are reading from, defaulted to fileno(STDIN)
@@ -41,6 +61,7 @@ typedef struct interpreter_t {
     StreamCtx stream_ctx;
     HashMap type_register;
     int prev_exit_code;
+    ExecResult exec_res_ctx;
 } Interpreter;
 
 

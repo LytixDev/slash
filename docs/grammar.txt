@@ -39,7 +39,7 @@ statement       -> loop_stmt
                 |  pipeline_stmt
                 |  block
                 |  assignment_stmt
-                |  return_stmt
+                |  abrupt_stmt
                 |  expr_stmt ;
 
 loop_stmt       -> "loop" ( IDENTIFIER "in" )? top_level_expr block ;
@@ -58,7 +58,9 @@ block           -> "{" declaration* "}" ;
 
 assignment_stmt -> top_level_expr ( "=" | "+=" | "-=" | "*=" | "**=" | "%=" | "%=" ) top_level_expr newline_or_block_end ;
 
-return_stmt     -> "return" expression? ;
+abrupt_stmt     -> "break"
+                 | "continue"
+                 | "return" expression? ;
 
 expr_stmt       -> top_level_expr newline_or_block_end ;
 

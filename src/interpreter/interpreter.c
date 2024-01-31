@@ -52,13 +52,24 @@ static void set_exit_code(Interpreter *interpreter, int exit_code)
     var_assign(&(StrView){ .view = "?", .size = 1 }, &interpreter->globals, &value);
 }
 
-static void exec_block_body(Interpreter *interpreter, BlockStmt *stmt)
+static inline ExecResult consume_exec_result(Interpreter *interpreter)
+{
+    ExecResult tmp = interpreter->exec_res_ctx;
+    interpreter->exec_res_ctx = EXEC_NORMAL;
+    return tmp;
+}
+
+
+static ExecResult exec_block_body(Interpreter *interpreter, BlockStmt *stmt)
 {
     LLItem *item;
     ARENA_LL_FOR_EACH(stmt->statements, item)
     {
 	exec(interpreter, item->value);
+	if (interpreter->exec_res_ctx.type != RT_NORMAL)
+	    return consume_exec_result(interpreter);
     }
+    return EXEC_NORMAL;
 }
 
 static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt, char *program_path)
@@ -446,10 +457,14 @@ static SlashValue eval_call(Interpreter *interpreter, CallExpr *expr)
 	var_define(interpreter->scope, (StrView *)param->value, &arg_value);
     }
 
-    exec_block_body(interpreter, function.body);
+    SlashValue return_value = NoneSingleton;
+    ExecResult result = exec_block_body(interpreter, function.body);
+    if (result.type != RT_NORMAL) {
+	return_value = eval(interpreter, result.return_expr);
+    }
     interpreter->scope = function_scope->enclosing;
     scope_destroy(function_scope);
-    return NoneSingleton;
+    return return_value;
 }
 
 
@@ -459,8 +474,8 @@ static SlashValue eval_call(Interpreter *interpreter, CallExpr *expr)
 static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
 {
     SlashValue value = eval(interpreter, stmt->expression);
-    if (stmt->expression->type == EXPR_CALL)
-	return;
+    //    if (stmt->expression->type == EXPR_CALL)
+    //	return;
 
     TraitPrint trait_print = value.T->print;
     assert(trait_print != NULL);
@@ -559,7 +574,8 @@ static void exec_block(Interpreter *interpreter, BlockStmt *stmt)
     scope_init(block_scope, interpreter->scope);
     interpreter->scope = block_scope;
 
-    exec_block_body(interpreter, stmt);
+    /* Permeate any abrupt control flow */
+    interpreter->exec_res_ctx = exec_block_body(interpreter, stmt);
 
     interpreter->scope = block_scope->enclosing;
     interpreter->scope->arena_tmp.arena->offset -= sizeof(Scope);
@@ -707,7 +723,13 @@ static void exec_loop(Interpreter *interpreter, LoopStmt *stmt)
     SlashValue r = eval(interpreter, stmt->condition);
     TraitTruthy truthy_func = r.T->truthy;
     while (truthy_func(r)) {
-	exec_block_body(interpreter, stmt->body_block);
+	ExecResultType result_t = exec_block_body(interpreter, stmt->body_block).type;
+	if (result_t == RT_BREAK)
+	    break;
+	if (result_t == RT_CONTINUE) {
+	    scope_reset(block_scope);
+	    continue;
+	}
 	r = eval(interpreter, stmt->condition);
 	scope_reset(block_scope);
     }
@@ -724,8 +746,10 @@ static void exec_iter_loop_list(Interpreter *interpreter, IterLoopStmt *stmt, Sl
     for (size_t i = 0; i < iterable->len; i++) {
 	iterator_value = slash_list_impl_get(iterable, i);
 	var_assign(&stmt->var_name, interpreter->scope, &iterator_value);
-	exec_block_body(interpreter, stmt->body_block);
+	ExecResultType result_t = exec_block_body(interpreter, stmt->body_block).type;
 	scope_reset(interpreter->scope);
+	if (result_t == RT_BREAK)
+	    break;
     }
 }
 
@@ -738,8 +762,10 @@ static void exec_iter_loop_tuple(Interpreter *interpreter, IterLoopStmt *stmt, S
     for (size_t i = 0; i < iterable->len; i++) {
 	iterator_value = &iterable->items[i];
 	var_assign(&stmt->var_name, interpreter->scope, iterator_value);
-	exec_block_body(interpreter, stmt->body_block);
+	ExecResultType result_t = exec_block_body(interpreter, stmt->body_block).type;
 	scope_reset(interpreter->scope);
+	if (result_t == RT_BREAK)
+	    break;
     }
 }
 
@@ -757,8 +783,10 @@ static void exec_iter_loop_map(Interpreter *interpreter, IterLoopStmt *stmt, Sla
     for (size_t i = 0; i < iterable->len; i++) {
 	iterator_value = &keys[i];
 	var_assign(&stmt->var_name, interpreter->scope, iterator_value);
-	exec_block_body(interpreter, stmt->body_block);
+	ExecResultType result_t = exec_block_body(interpreter, stmt->body_block).type;
 	scope_reset(interpreter->scope);
+	if (result_t == RT_BREAK)
+	    break;
     }
 }
 
@@ -787,10 +815,12 @@ static void exec_iter_loop_range(Interpreter *interpreter, IterLoopStmt *stmt, S
     var_define(interpreter->scope, &stmt->var_name, &iterator_value);
 
     while (iterator_value.num != iterable.end) {
-	exec_block_body(interpreter, stmt->body_block);
+	ExecResultType result_t = exec_block_body(interpreter, stmt->body_block).type;
 	scope_reset(interpreter->scope);
 	iterator_value.num++;
 	var_assign(&stmt->var_name, interpreter->scope, &iterator_value);
+	if (result_t == RT_BREAK)
+	    break;
     }
 }
 
@@ -912,6 +942,18 @@ static void exec_function(Interpreter *interpreter, FunctionStmt *stmt)
     var_define(interpreter->scope, &stmt->name, &value);
 }
 
+static void exec_abrupt_control_flow(Interpreter *interpreter, AbruptControlFlowStmt *stmt)
+{
+    ExecResult result = { .type = RT_BREAK };
+    if (stmt->ctrlf_type == t_continue) {
+	result.type = RT_CONTINUE;
+    } else {
+	result.type = RT_RETURN;
+	result.return_expr = stmt->return_expr;
+    }
+    interpreter->exec_res_ctx = result;
+}
+
 static SlashValue eval(Interpreter *interpreter, Expr *expr)
 {
     switch (expr->type) {
@@ -992,6 +1034,9 @@ static void exec(Interpreter *interpreter, Stmt *stmt)
     case STMT_FUNCTION:
 	exec_function(interpreter, (FunctionStmt *)stmt);
 	break;
+    case STMT_ABRUPT_CONTROL_FLOW:
+	exec_abrupt_control_flow(interpreter, (AbruptControlFlowStmt *)stmt);
+	break;
     default:
 	REPORT_RUNTIME_ERROR("Internal error: Statement type not recognized");
     }
@@ -1041,6 +1086,8 @@ void interpreter_init(Interpreter *interpreter, int argc, char **argv)
     StreamCtx stream_ctx = { .read_fd = STDIN_FILENO, .write_fd = STDOUT_FILENO };
     arraylist_init(&stream_ctx.active_fds, sizeof(int));
     interpreter->stream_ctx = stream_ctx;
+
+    interpreter->exec_res_ctx = EXEC_NORMAL;
 }
 
 void interpreter_free(Interpreter *interpreter)
@@ -1069,6 +1116,8 @@ static void interpreter_reset_from_err(Interpreter *interpreter)
     StreamCtx stream_ctx = { .read_fd = STDIN_FILENO, .write_fd = STDOUT_FILENO };
     arraylist_init(&stream_ctx.active_fds, sizeof(int));
     interpreter->stream_ctx = stream_ctx;
+
+    interpreter->exec_res_ctx = EXEC_NORMAL;
 }
 
 int interpreter_run(Interpreter *interpreter, ArrayList *statements)
