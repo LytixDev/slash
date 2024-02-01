@@ -450,11 +450,13 @@ static SlashValue eval_call(Interpreter *interpreter, CallExpr *expr)
     scope_init(function_scope, interpreter->scope);
     interpreter->scope = function_scope;
     /* Assign arguments */
-    LLItem *param = function.params.head;
-    LLItem *arg = expr->args->seq.head;
-    for (; param != NULL; param = param->next, arg = arg->next) {
-	SlashValue arg_value = eval(interpreter, (Expr *)arg->value);
-	var_define(interpreter->scope, (StrView *)param->value, &arg_value);
+    if (function.params.size != 0) {
+	LLItem *param = function.params.head;
+	LLItem *arg = expr->args->seq.head;
+	for (; param != NULL; param = param->next, arg = arg->next) {
+	    SlashValue arg_value = eval(interpreter, (Expr *)arg->value);
+	    var_define(interpreter->scope, (StrView *)param->value, &arg_value);
+	}
     }
 
     SlashValue return_value = NoneSingleton;

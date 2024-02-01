@@ -34,7 +34,8 @@
 static void newline(Parser *parser);
 static void expr_promotion(Parser *parser);
 static Stmt *declaration(Parser *parser);
-static Stmt *var_decl(Parser *parser);
+static Stmt *var_decl_start(Parser *parser);
+static Stmt *func_def(Parser *parser, StrView name);
 static ArenaLL arguments(Parser *parser);
 static Stmt *and_or(Parser *parser);
 /* stmts */
@@ -204,17 +205,31 @@ static void expr_promotion(Parser *parser)
 static Stmt *declaration(Parser *parser)
 {
     ignore(parser, t_newline);
-    Stmt *stmt = match(parser, t_var) ? var_decl(parser) : and_or(parser);
+    Stmt *stmt = match(parser, t_var) ? var_decl_start(parser) : and_or(parser);
     ignore(parser, t_newline);
     return stmt;
 }
 
-static Stmt *var_decl(Parser *parser)
+static Stmt *var_decl_start(Parser *parser)
 {
-    SeqVarStmt *seq_var = NULL;
     /* came from 'var' */
     Token *name = consume(parser, t_ident, "Expected variable name");
-    /* SeqVarStmt */
+
+    /* var_decl_reg */
+    if (match(parser, t_equal)) {
+	if (check(parser, t_ident, t_lbrace))
+	    return func_def(parser, name->lexeme);
+
+	Expr *initializer = top_level_expr(parser);
+	expr_promotion(parser);
+	VarStmt *stmt = (VarStmt *)stmt_alloc(parser->ast_arena, STMT_VAR);
+	stmt->name = name->lexeme;
+	stmt->initializer = initializer;
+	return (Stmt *)stmt;
+    }
+
+    /* var_decl_seq */
+    SeqVarStmt *seq_var = NULL;
     if (match(parser, t_comma)) {
 	seq_var = (SeqVarStmt *)stmt_alloc(parser->ast_arena, STMT_SEQ_VAR);
 	arena_ll_init(parser->ast_arena, &seq_var->names);
@@ -224,29 +239,21 @@ static Stmt *var_decl(Parser *parser)
 	    arena_ll_append(&seq_var->names, &name->lexeme);
 	} while (match(parser, t_comma));
     }
-
     consume(parser, t_equal, "Expected variable definition");
-    /* function definition */
-    if (check(parser, t_ident)) {
-	FunctionStmt *stmt = (FunctionStmt *)stmt_alloc(parser->ast_arena, STMT_FUNCTION);
-	stmt->name = name->lexeme;
+    seq_var->initializer = top_level_expr(parser);
+    return (Stmt *)seq_var;
+}
+
+static Stmt *func_def(Parser *parser, StrView name)
+{
+    FunctionStmt *stmt = (FunctionStmt *)stmt_alloc(parser->ast_arena, STMT_FUNCTION);
+    stmt->name = name;
+    if (check(parser, t_ident))
 	stmt->params = arguments(parser);
-
-	consume(parser, t_lbrace, "TODO: lambda?");
-	stmt->body = (BlockStmt *)block(parser);
-	return (Stmt *)stmt;
-    }
-
-    Expr *initializer = top_level_expr(parser);
-    expr_promotion(parser);
-    if (seq_var != NULL) {
-	seq_var->initializer = initializer;
-	return (Stmt *)seq_var;
-    }
-
-    VarStmt *stmt = (VarStmt *)stmt_alloc(parser->ast_arena, STMT_VAR);
-    stmt->name = name->lexeme;
-    stmt->initializer = initializer;
+    else
+	stmt->params.size = 0;
+    consume(parser, t_lbrace, "TODO: lambda?");
+    stmt->body = (BlockStmt *)block(parser);
     return (Stmt *)stmt;
 }
 
@@ -280,9 +287,6 @@ static Stmt *and_or(Parser *parser)
 
 static Stmt *statement(Parser *parser)
 {
-    if (match(parser, t_var))
-	return var_decl(parser);
-
     if (match(parser, t_loop))
 	return loop_stmt(parser);
 

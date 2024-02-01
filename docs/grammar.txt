@@ -20,13 +20,16 @@ expr_promotion  -> newline | "}" | "&&" | "||" ;
 declaration     -> var_declaration
                 |  and_or ;
 
-var_declaration -> "var" IDENTIFIER "=" top_level_expr newline
-                |  "var" IDENTIFIER ( "," IDENTIFIER )* "=" top_level_expr newline
-                |  func_def
+var_decl_start  -> "var" IDENTIFIER ( var_decl_reg | var_decl_seq ) ;
 
-func_def        -> "var" IDENTIFIER "=" arguments block;
+var_decl_reg    -> "=" ( func_def | ( top_level_expr newline ) );
+
+var_decl_seq    -> ( "," IDENTIFIER )* "=" top_level_expr newline ;
+
+func_def        -> arguments? block ;
 
 arguments       -> IDENTIFIER ( "," IDENTIFIER NEWLINE? )* ;
+
 
 and_or          -> statement ( ( "&&" | "||" ) statement )* ;
 
