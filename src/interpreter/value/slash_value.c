@@ -320,10 +320,8 @@ SlashValue text_lit_to_str(Interpreter *interpreter, SlashValue self)
 void function_print(SlashValue self)
 {
     assert(IS_FUNCTION(self));
-    SlashFunction function = self.function;
-    char name[function.name.size];
-    str_view_to_cstr(function.name, name);
-    printf("<function '%s'>", name);
+    (void)self;
+    printf("<function>");
 }
 
 

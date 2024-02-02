@@ -33,6 +33,7 @@ typedef enum {
     EXPR_SUBSHELL,
     EXPR_STR,
     EXPR_LIST,
+    EXPR_FUNCTION,
     EXPR_MAP,
     EXPR_METHOD,
     EXPR_SEQUENCE,
@@ -55,7 +56,6 @@ typedef enum {
     STMT_PIPELINE,
     STMT_ASSERT,
     STMT_BINARY,
-    STMT_FUNCTION,
     STMT_ABRUPT_CONTROL_FLOW,
     STMT_ENUM_COUNT
 } StmtType;
@@ -124,6 +124,13 @@ typedef struct {
     ExprType type;
     SequenceExpr *exprs; // will be NULL for the empty list
 } ListExpr;
+
+typedef struct {
+    StmtType type;
+    ArenaLL params; // list of parameter names as pointers to StrView's
+    BlockStmt *body;
+} FunctionExpr;
+
 
 // NOTE: not an expression
 typedef struct {
@@ -237,13 +244,6 @@ typedef struct {
 	Expr *right_expr;
     };
 } BinaryStmt;
-
-typedef struct {
-    StmtType type;
-    StrView name;
-    ArenaLL params; // list of parameter names as pointers to StrView's
-    BlockStmt *body;
-} FunctionStmt;
 
 typedef struct {
     StmtType type;

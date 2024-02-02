@@ -25,36 +25,48 @@
 
 
 const size_t expr_size_table[] = {
-    sizeof(UnaryExpr),	   sizeof(BinaryExpr),	 sizeof(LiteralExpr),  sizeof(AccessExpr),
-    sizeof(SubscriptExpr), sizeof(SubshellExpr), sizeof(StrExpr),      sizeof(ListExpr),
-    sizeof(MapExpr),	   sizeof(MethodExpr),	 sizeof(SequenceExpr), sizeof(GroupingExpr),
-    sizeof(CastExpr),	   sizeof(CallExpr),
+    sizeof(UnaryExpr),	   sizeof(BinaryExpr),	 sizeof(LiteralExpr), sizeof(AccessExpr),
+    sizeof(SubscriptExpr), sizeof(SubshellExpr), sizeof(StrExpr),     sizeof(ListExpr),
+    sizeof(FunctionExpr),  sizeof(MapExpr),	 sizeof(MethodExpr),  sizeof(SequenceExpr),
+    sizeof(GroupingExpr),  sizeof(CastExpr),	 sizeof(CallExpr),
 };
 
 const size_t stmt_size_table[] = {
-    sizeof(ExpressionStmt), sizeof(VarStmt),
-    sizeof(SeqVarStmt),	    sizeof(LoopStmt),
-    sizeof(IterLoopStmt),   sizeof(IfStmt),
-    sizeof(CmdStmt),	    sizeof(AssignStmt),
-    sizeof(BlockStmt),	    sizeof(PipelineStmt),
-    sizeof(AssignStmt),	    sizeof(BinaryStmt),
-    sizeof(FunctionStmt),   sizeof(AbruptControlFlowStmt),
+    sizeof(ExpressionStmt),
+    sizeof(VarStmt),
+    sizeof(SeqVarStmt),
+    sizeof(LoopStmt),
+    sizeof(IterLoopStmt),
+    sizeof(IfStmt),
+    sizeof(CmdStmt),
+    sizeof(AssignStmt),
+    sizeof(BlockStmt),
+    sizeof(PipelineStmt),
+    sizeof(AssignStmt),
+    sizeof(BinaryStmt),
+    sizeof(AbruptControlFlowStmt),
 };
 
 char *expr_type_str_map[EXPR_ENUM_COUNT] = {
-    "EXPR_UNARY",    "EXPR_BINARY",   "EXPR_LITERAL", "EXPR_ACCESS", "EXPR_ITEM_ACCESS",
-    "EXPR_SUBSHELL", "EXPR_STR",      "EXPR_LIST",    "EXPR_MAP",    "EXPR_METHOD",
-    "EXPR_SEQUENCE", "EXPR_GROUPING", "EXPR_CAST",    "EXPR_CALL",
+    "EXPR_UNARY",    "EXPR_BINARY",   "EXPR_LITERAL",  "EXPR_ACCESS",	"EXPR_ITEM_ACCESS",
+    "EXPR_SUBSHELL", "EXPR_STR",      "EXPR_LIST",     "EXPR_FUNCTION", "EXPR_MAP",
+    "EXPR_METHOD",   "EXPR_SEQUENCE", "EXPR_GROUPING", "EXPR_CAST",	"EXPR_CALL",
 };
 
 char *stmt_type_str_map[STMT_ENUM_COUNT] = {
-    "STMT_EXPRESSION", "STMT_VAR",
-    "STMT_SEQ_VAR",    "STMT_LOOP",
-    "STMT_ITER_LOOP",  "STMT_IF",
-    "STMT_CMD",	       "STMT_ASSIGN",
-    "STMT_BLOCK",      "STMT_PIPELINE",
-    "STMT_ASSERT",     "STMT_BINARY",
-    "STMT_FUNCTION",   "STMT_ABRUPT_CONTROL_FLOW",
+    "STMT_EXPRESSION",
+    "STMT_VAR",
+    "STMT_SEQ_VAR",
+    "STMT_LOOP",
+    "STMT_ITER_LOOP",
+    "STMT_IF",
+    "STMT_CMD",
+    "STMT_ASSIGN",
+    "STMT_BLOCK",
+    "STMT_PIPELINE",
+    "STMT_ASSERT",
+    "STMT_BINARY",
+    "STMT_ABRUPT_CONTROL_FLOW",
 };
 
 

@@ -20,13 +20,11 @@ expr_promotion  -> newline | "}" | "&&" | "||" ;
 declaration     -> var_declaration
                 |  and_or ;
 
-var_declaration -> "var" IDENTIFIER "=" top_level_expr newline
-                |  "var" IDENTIFIER ( "," IDENTIFIER )* "=" top_level_expr newline
-                |  func_def
+var_decl_start  -> "var" IDENTIFIER ( var_decl_reg | var_decl_seq ) ;
 
-func_def        -> "var" IDENTIFIER "=" arguments block;
+var_decl_reg    -> "=" top_level_expr newline ;
 
-arguments       -> IDENTIFIER ( "," IDENTIFIER NEWLINE? )* ;
+var_decl_seq    -> ( "," IDENTIFIER )* "=" top_level_expr newline ;
 
 and_or          -> statement ( ( "&&" | "||" ) statement )* ;
 
@@ -112,19 +110,18 @@ range           -> expression? ".." expression ;
 subscript       -> access ( "[" expression "]" access? )* ;
 
 call            -> access "(" sequence_expr ")" ; 
-/// call        -> primary ( "(" sequence_expr ") )* ;
 
 access          -> ACCESS | primary ;
 
 primary         -> STRING 
                 |  TEXT_LIT
-                |  IDENTIFIER
                 |  bool_lit
                 |  number
                 |  list
                 |  map
                 |  tuple 
-                |  grouping ;
+                |  grouping
+                |  func_def ;
 
 bool_lit        -> "true" | "false ";
 
@@ -138,3 +135,7 @@ tuple           -> sequence_expr
                 |  "(" sequence_expr ")" ;
 
 grouping        -> "(" expression ")" ;
+
+func_def        -> "func" arguments? block ;
+
+arguments       -> IDENTIFIER ( "," IDENTIFIER NEWLINE? )* ;

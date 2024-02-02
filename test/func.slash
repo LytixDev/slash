@@ -1,4 +1,4 @@
-var is_old = age { 
+var is_old = func age { 
     return $age > 30
 }
 
