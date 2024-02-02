@@ -52,7 +52,8 @@
     X(not )            \
     X(assert)          \
     X(break)           \
-    X(continue)
+    X(continue)        \
+    X(func)
 #define SINGLE_CHAR_TOKENS \
     X(lparen)              \
     X(rparen)              \

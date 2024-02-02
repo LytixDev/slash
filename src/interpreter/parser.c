@@ -35,8 +35,6 @@ static void newline(Parser *parser);
 static void expr_promotion(Parser *parser);
 static Stmt *declaration(Parser *parser);
 static Stmt *var_decl_start(Parser *parser);
-static Stmt *func_def(Parser *parser, StrView name);
-static ArenaLL arguments(Parser *parser);
 static Stmt *and_or(Parser *parser);
 /* stmts */
 static Stmt *statement(Parser *parser);
@@ -71,6 +69,8 @@ static Expr *number(Parser *parser);
 static Expr *list(Parser *parser);
 static Expr *map(Parser *parser);
 static Expr *grouping(Parser *parser);
+static Expr *func_def(Parser *parser);
+static ArenaLL arguments(Parser *parser);
 
 
 /* util/helper functions */
@@ -217,9 +217,6 @@ static Stmt *var_decl_start(Parser *parser)
 
     /* var_decl_reg */
     if (match(parser, t_equal)) {
-	if (check(parser, t_ident, t_lbrace))
-	    return func_def(parser, name->lexeme);
-
 	Expr *initializer = top_level_expr(parser);
 	expr_promotion(parser);
 	VarStmt *stmt = (VarStmt *)stmt_alloc(parser->ast_arena, STMT_VAR);
@@ -242,34 +239,6 @@ static Stmt *var_decl_start(Parser *parser)
     consume(parser, t_equal, "Expected variable definition");
     seq_var->initializer = top_level_expr(parser);
     return (Stmt *)seq_var;
-}
-
-static Stmt *func_def(Parser *parser, StrView name)
-{
-    FunctionStmt *stmt = (FunctionStmt *)stmt_alloc(parser->ast_arena, STMT_FUNCTION);
-    stmt->name = name;
-    if (check(parser, t_ident))
-	stmt->params = arguments(parser);
-    else
-	stmt->params.size = 0;
-    consume(parser, t_lbrace, "TODO: lambda?");
-    stmt->body = (BlockStmt *)block(parser);
-    return (Stmt *)stmt;
-}
-
-static ArenaLL arguments(Parser *parser)
-{
-    // arguments       -> IDENTIFIER ( "," IDENTIFIER NEWLINE? )* ;
-    ArenaLL args;
-    arena_ll_init(parser->ast_arena, &args);
-    do {
-	ignore(parser, t_newline);
-	consume(parser, t_ident, "hmmm");
-	arena_ll_append(&args, &previous(parser)->lexeme);
-	ignore(parser, t_newline);
-    } while (!check(parser, t_rbrace) && match(parser, t_comma));
-
-    return args;
 }
 
 static Stmt *and_or(Parser *parser)
@@ -753,6 +722,8 @@ static Expr *primary(Parser *parser)
 	return map(parser);
     if (match(parser, t_lparen))
 	return grouping(parser);
+    if (match(parser, t_func))
+	return func_def(parser);
 
     if (!match(parser, t_dt_str, t_dt_text_lit)) {
 	report_parse_err(parser, "Not a valid primary type");
@@ -845,6 +816,34 @@ static Expr *grouping(Parser *parser)
     consume(parser, t_rparen, "Expected ')' after grouping expression");
     return (Expr *)grouping;
 }
+
+static Expr *func_def(Parser *parser)
+{
+    FunctionExpr *expr = (FunctionExpr *)expr_alloc(parser->ast_arena, EXPR_FUNCTION);
+    if (check(parser, t_ident))
+	expr->params = arguments(parser);
+    else
+	expr->params.size = 0;
+    consume(parser, t_lbrace, "TODO: lambda?");
+    expr->body = (BlockStmt *)block(parser);
+    return (Expr *)expr;
+}
+
+static ArenaLL arguments(Parser *parser)
+{
+    // arguments       -> IDENTIFIER ( "," IDENTIFIER NEWLINE? )* ;
+    ArenaLL args;
+    arena_ll_init(parser->ast_arena, &args);
+    do {
+	ignore(parser, t_newline);
+	consume(parser, t_ident, "hmmm");
+	arena_ll_append(&args, &previous(parser)->lexeme);
+	ignore(parser, t_newline);
+    } while (!check(parser, t_rbrace) && match(parser, t_comma));
+
+    return args;
+}
+
 
 StmtsOrErr parse(Arena *ast_arena, ArrayList *tokens, char *input)
 {

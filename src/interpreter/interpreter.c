@@ -340,6 +340,15 @@ static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
     return AS_VALUE(list);
 }
 
+static SlashValue eval_function(Interpreter *interpreter, FunctionExpr *expr)
+{
+    (void)interpreter;
+    // TODO: closure
+    SlashFunction function = { .params = expr->params, .body = expr->body };
+    return (SlashValue){ .T = &function_type_info, .function = function };
+}
+
+
 static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
 {
     SlashMap *map = (SlashMap *)gc_new_T(interpreter, &map_type_info);
@@ -931,19 +940,6 @@ static void exec_binary(Interpreter *interpreter, BinaryStmt *stmt)
 	exec_redirect(interpreter, stmt);
 }
 
-static void exec_function(Interpreter *interpreter, FunctionStmt *stmt)
-{
-    /* Make sure variable is not defined already */
-    ScopeAndValue current = var_get(interpreter->scope, &stmt->name);
-    if (current.scope == interpreter->scope)
-	REPORT_RUNTIME_ERROR("Redefinition of '%s'", "X");
-
-    // TODO: closure
-    SlashFunction function = { .name = stmt->name, .params = stmt->params, .body = stmt->body };
-    SlashValue value = { .T = &function_type_info, .function = function };
-    var_define(interpreter->scope, &stmt->name, &value);
-}
-
 static void exec_abrupt_control_flow(Interpreter *interpreter, AbruptControlFlowStmt *stmt)
 {
     ExecResult result = { .type = RT_BREAK };
@@ -975,6 +971,8 @@ static SlashValue eval(Interpreter *interpreter, Expr *expr)
 	return eval_str(interpreter, (StrExpr *)expr);
     case EXPR_LIST:
 	return eval_list(interpreter, (ListExpr *)expr);
+    case EXPR_FUNCTION:
+	return eval_function(interpreter, (FunctionExpr *)expr);
     case EXPR_MAP:
 	return eval_map(interpreter, (MapExpr *)expr);
 	/// case EXPR_METHOD:
@@ -1032,9 +1030,6 @@ static void exec(Interpreter *interpreter, Stmt *stmt)
 	break;
     case STMT_BINARY:
 	exec_binary(interpreter, (BinaryStmt *)stmt);
-	break;
-    case STMT_FUNCTION:
-	exec_function(interpreter, (FunctionStmt *)stmt);
 	break;
     case STMT_ABRUPT_CONTROL_FLOW:
 	exec_abrupt_control_flow(interpreter, (AbruptControlFlowStmt *)stmt);

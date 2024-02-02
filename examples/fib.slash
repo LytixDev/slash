@@ -1,4 +1,4 @@
-var fib_iterative = n {
+var fib_iterative = func n {
     var a = 0
     var b = 1
     loop _ in 1..$n+1 {
@@ -8,7 +8,7 @@ var fib_iterative = n {
     return $a
 }
 
-var fib_recursive = n {
+var fib_recursive = func n {
     $n <= 1 && return $n
     return $fib_recursive($n - 1) + $fib_recursive($n - 2)
 }

@@ -35,7 +35,6 @@ typedef struct slash_block_stmt_t BlockStmt; // Forward decl.
 
 /* The Function type */
 typedef struct {
-    StrView name;
     ArenaLL params;
     BlockStmt *body;
 } SlashFunction;
