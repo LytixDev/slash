@@ -255,6 +255,7 @@ typedef struct {
 /* functions */
 Expr *expr_alloc(Arena *ast_arena, ExprType type);
 Stmt *stmt_alloc(Arena *ast_arena, StmtType type);
+Stmt *stmt_copy(Arena *arena, Stmt *to_copy);
 
 void ast_print(ArrayList *ast_heads);
 

@@ -86,6 +86,47 @@ Stmt *stmt_alloc(Arena *ast_arena, StmtType type)
     return stmt;
 }
 
+Stmt *stmt_copy(Arena *arena, Stmt *to_copy)
+{
+    /* Need expr_copy as well :-( */
+    Stmt *copy = stmt_alloc(arena, to_copy->type);
+    switch (to_copy->type) {
+        case STMT_VAR: {
+            break;
+        }
+        case STMT_SEQ_VAR:
+            break;
+        case STMT_EXPRESSION: {
+            ((ExpressionStmt *)copy)->expression = ((ExpressionStmt *)to_copy)->expression;
+            break;
+        }
+        case STMT_CMD:
+            break;
+        case STMT_LOOP:
+            break;
+        case STMT_ITER_LOOP:
+            break;
+        case STMT_IF:
+            break;
+        case STMT_BLOCK:
+            break;
+        case STMT_ASSIGN:
+            break;
+        case STMT_PIPELINE:
+            break;
+        case STMT_ASSERT:
+            break;
+        case STMT_BINARY:
+            break;
+        case STMT_ABRUPT_CONTROL_FLOW:
+            break;
+        case STMT_ENUM_COUNT:
+            break;
+    }
+
+    return copy;
+}
+
 
 /* arena */
 void ast_arena_init(Arena *ast_arena)
