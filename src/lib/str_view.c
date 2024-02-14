@@ -185,3 +185,11 @@ void str_view_to_cstr(StrView view, char *cstr)
     memcpy(cstr, view.view, view.size);
     cstr[view.size] = 0;
 }
+
+StrView str_view_arena_copy(Arena *arena, StrView to_copy)
+{
+    // TODO: since we are now copying we also have the opportunity to null terminate
+    char *view_cpy = m_arena_alloc(arena, sizeof(char) * to_copy.size);
+    memcpy(view_cpy, to_copy.view, to_copy.size);
+    return (StrView){ .view = view_cpy, .size = to_copy.size };
+}
