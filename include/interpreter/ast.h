@@ -77,7 +77,7 @@ typedef struct {
 
 typedef struct {
     ExprType type;
-    ArenaLL seq;
+    ArenaLL seq; // pointers to Exprs
 } SequenceExpr;
 
 /* expressions */
@@ -214,7 +214,7 @@ typedef struct {
 typedef struct {
     StmtType type;
     StrView cmd_name;
-    ArenaLL *arg_exprs;
+    ArenaLL *arg_exprs; // list of exprs
 } CmdStmt;
 
 typedef struct {
@@ -239,7 +239,7 @@ typedef struct {
     StmtType type;
     Stmt *left;
     TokenType operator_;
-    union {
+    union { // if operator_ is t_greater then union is expr
 	Stmt *right_stmt;
 	Expr *right_expr;
     };
@@ -256,6 +256,7 @@ typedef struct {
 Expr *expr_alloc(Arena *ast_arena, ExprType type);
 Stmt *stmt_alloc(Arena *ast_arena, StmtType type);
 Stmt *stmt_copy(Arena *arena, Stmt *to_copy);
+Expr *expr_copy(Arena *arena, Expr *to_copy);
 
 void ast_print(ArrayList *ast_heads);
 

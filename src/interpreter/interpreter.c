@@ -342,7 +342,7 @@ static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
 
 static SlashValue eval_function(Interpreter *interpreter, FunctionExpr *expr)
 {
-    /* 
+    /*
      * SlashFunction is "special" in that it holds pointers to the AST and source (through StrViews)
      * When using the REPL, the AST will and source will be reset on each new command, meaning we
      * have to make copies of the params and function body.
@@ -350,15 +350,12 @@ static SlashValue eval_function(Interpreter *interpreter, FunctionExpr *expr)
     ArenaLL params;
     arena_ll_init(interpreter->scope->arena_tmp.arena, &params);
     LLItem *item;
-    ARENA_LL_FOR_EACH(&expr->params, item) {
-        StrView *param = item->value;
-        StrView *param_cpy = scope_alloc(interpreter->scope, sizeof(StrView));
-        char *view_cpy = scope_alloc(interpreter->scope, param->size + 1);
-        strncpy(view_cpy, param->view, param->size);
-        view_cpy[param->size] = 0;
-        param_cpy->view = view_cpy;
-        param_cpy->size = params.size;
-        arena_ll_append(&params, param);
+    ARENA_LL_FOR_EACH(&expr->params, item)
+    {
+	StrView *param = item->value;
+	StrView *param_cpy = scope_alloc(interpreter->scope, sizeof(StrView));
+	*param_cpy = str_view_arena_copy(interpreter->scope->arena_tmp.arena, *param);
+	arena_ll_append(&params, param);
     }
 
     Stmt *body_cpy = stmt_copy(interpreter->scope->arena_tmp.arena, (Stmt *)expr->body);

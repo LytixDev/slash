@@ -86,44 +86,226 @@ Stmt *stmt_alloc(Arena *ast_arena, StmtType type)
     return stmt;
 }
 
+Expr *expr_copy(Arena *arena, Expr *to_copy)
+{
+    Expr *copy = expr_alloc(arena, to_copy->type);
+    switch (to_copy->type) {
+    case EXPR_UNARY: {
+	((UnaryExpr *)copy)->operator_ = ((UnaryExpr *)to_copy)->operator_;
+	((UnaryExpr *)copy)->right = expr_copy(arena, ((UnaryExpr *)to_copy)->right);
+	break;
+    }
+    case EXPR_BINARY: {
+	((BinaryExpr *)copy)->left = expr_copy(arena, ((BinaryExpr *)to_copy)->left);
+	((BinaryExpr *)copy)->operator_ = ((BinaryExpr *)to_copy)->operator_;
+	((BinaryExpr *)copy)->right = expr_copy(arena, ((BinaryExpr *)to_copy)->right);
+	break;
+    }
+    case EXPR_LITERAL: {
+	((LiteralExpr *)copy)->value = ((LiteralExpr *)to_copy)->value;
+	break;
+    }
+    case EXPR_ACCESS: {
+	((AccessExpr *)copy)->var_name =
+	    str_view_arena_copy(arena, ((AccessExpr *)to_copy)->var_name);
+	break;
+    }
+    case EXPR_SUBSCRIPT: {
+	((SubscriptExpr *)copy)->expr = expr_copy(arena, ((SubscriptExpr *)to_copy)->expr);
+	((SubscriptExpr *)copy)->access_value =
+	    expr_copy(arena, ((SubscriptExpr *)to_copy)->access_value);
+	break;
+    }
+    case EXPR_SUBSHELL: {
+	((SubshellExpr *)copy)->stmt = stmt_copy(arena, ((SubshellExpr *)to_copy)->stmt);
+	break;
+    }
+    case EXPR_STR: {
+	((StrExpr *)copy)->view = str_view_arena_copy(arena, ((StrExpr *)to_copy)->view);
+	break;
+    }
+    case EXPR_LIST: {
+	((ListExpr *)copy)->exprs =
+	    (SequenceExpr *)expr_copy(arena, (Expr *)((ListExpr *)to_copy)->exprs);
+	break;
+    }
+    case EXPR_FUNCTION: {
+	FunctionExpr *tc = (FunctionExpr *)to_copy;
+	/* list of parameter names as pointers to StrView's */
+	arena_ll_init(arena, &((FunctionExpr *)copy)->params);
+	LLItem *item;
+	ARENA_LL_FOR_EACH(&tc->params, item)
+	{
+	    StrView *view = item->value;
+	    StrView *view_cpy = m_arena_alloc(arena, sizeof(StrView));
+	    *view_cpy = str_view_arena_copy(arena, *view);
+	    arena_ll_append(&((FunctionExpr *)copy)->params, view_cpy);
+	}
+
+	((FunctionExpr *)copy)->body = (BlockStmt *)stmt_copy(arena, (Stmt *)tc->body);
+	break;
+    }
+    case EXPR_MAP: {
+	MapExpr *tc = (MapExpr *)to_copy;
+	/* list of KeyValuePairs */
+	((MapExpr *)copy)->key_value_pairs = arena_ll_alloc(arena);
+	LLItem *item;
+	ARENA_LL_FOR_EACH(tc->key_value_pairs, item)
+	{
+	    KeyValuePair *pair = item->value;
+	    KeyValuePair *pair_cpy = m_arena_alloc_struct(arena, KeyValuePair);
+	    pair_cpy->key = expr_copy(arena, pair->key);
+	    pair_cpy->value = expr_copy(arena, pair->value);
+	    arena_ll_append(((MapExpr *)copy)->key_value_pairs, pair_cpy);
+	}
+	break;
+    }
+    case EXPR_SEQUENCE: {
+	SequenceExpr *tc = (SequenceExpr *)to_copy;
+	/* list of Exprs */
+	arena_ll_init(arena, &((SequenceExpr *)copy)->seq);
+	LLItem *item;
+	ARENA_LL_FOR_EACH(&tc->seq, item)
+	{
+	    arena_ll_append(&((SequenceExpr *)copy)->seq, expr_copy(arena, item->value));
+	}
+	break;
+    }
+    case EXPR_GROUPING: {
+	((GroupingExpr *)copy)->expr = expr_copy(arena, ((GroupingExpr *)to_copy)->expr);
+	break;
+    }
+    case EXPR_CAST: {
+	((CastExpr *)copy)->expr = expr_copy(arena, ((CastExpr *)to_copy)->expr);
+	((CastExpr *)copy)->type_name =
+	    str_view_arena_copy(arena, ((CastExpr *)to_copy)->type_name);
+	break;
+    }
+    case EXPR_CALL: {
+	((CallExpr *)copy)->callee = expr_copy(arena, ((CallExpr *)to_copy)->callee);
+	((CallExpr *)copy)->args =
+	    (SequenceExpr *)expr_copy(arena, (Expr *)((CallExpr *)to_copy)->args);
+	break;
+    }
+    case EXPR_METHOD:
+    case EXPR_ENUM_COUNT:
+	break;
+    }
+
+    return copy;
+}
+
 Stmt *stmt_copy(Arena *arena, Stmt *to_copy)
 {
     /* Need expr_copy as well :-( */
     Stmt *copy = stmt_alloc(arena, to_copy->type);
     switch (to_copy->type) {
-        case STMT_VAR: {
-            break;
-        }
-        case STMT_SEQ_VAR:
-            break;
-        case STMT_EXPRESSION: {
-            ((ExpressionStmt *)copy)->expression = ((ExpressionStmt *)to_copy)->expression;
-            break;
-        }
-        case STMT_CMD:
-            break;
-        case STMT_LOOP:
-            break;
-        case STMT_ITER_LOOP:
-            break;
-        case STMT_IF:
-            break;
-        case STMT_BLOCK:
-            break;
-        case STMT_ASSIGN:
-            break;
-        case STMT_PIPELINE:
-            break;
-        case STMT_ASSERT:
-            break;
-        case STMT_BINARY:
-            break;
-        case STMT_ABRUPT_CONTROL_FLOW:
-            break;
-        case STMT_ENUM_COUNT:
-            break;
+    case STMT_VAR: {
+	((VarStmt *)copy)->name = str_view_arena_copy(arena, ((VarStmt *)to_copy)->name);
+	((VarStmt *)copy)->initializer = expr_copy(arena, ((VarStmt *)to_copy)->initializer);
+	break;
     }
+    case STMT_SEQ_VAR: {
+	SeqVarStmt *tc = (SeqVarStmt *)to_copy;
+	/* list of parameter names as pointers to StrView's */
+	arena_ll_init(arena, &((SeqVarStmt *)copy)->names);
+	LLItem *item;
+	ARENA_LL_FOR_EACH(&tc->names, item)
+	{
+	    StrView *view = item->value;
+	    StrView *view_cpy = m_arena_alloc(arena, sizeof(StrView));
+	    *view_cpy = str_view_arena_copy(arena, *view);
+	    arena_ll_append(&((SeqVarStmt *)copy)->names, view_cpy);
+	}
 
+	((SeqVarStmt *)copy)->initializer = expr_copy(arena, tc->initializer);
+	break;
+    }
+    case STMT_EXPRESSION: {
+	((ExpressionStmt *)copy)->expression =
+	    expr_copy(arena, ((ExpressionStmt *)to_copy)->expression);
+	break;
+    }
+    case STMT_CMD: {
+	((CmdStmt *)copy)->cmd_name = str_view_arena_copy(arena, ((CmdStmt *)to_copy)->cmd_name);
+	((CmdStmt *)copy)->arg_exprs = arena_ll_alloc(arena);
+	LLItem *item;
+	ARENA_LL_FOR_EACH(((CmdStmt *)to_copy)->arg_exprs, item)
+	{
+	    arena_ll_append(((CmdStmt *)copy)->arg_exprs, expr_copy(arena, item->value));
+	}
+	break;
+    }
+    case STMT_LOOP: {
+	((LoopStmt *)copy)->condition = expr_copy(arena, ((LoopStmt *)to_copy)->condition);
+	((LoopStmt *)copy)->body_block =
+	    (BlockStmt *)stmt_copy(arena, (Stmt *)((LoopStmt *)to_copy)->body_block);
+	break;
+    }
+    case STMT_ITER_LOOP: {
+	((IterLoopStmt *)copy)->var_name =
+	    str_view_arena_copy(arena, ((IterLoopStmt *)to_copy)->var_name);
+	((IterLoopStmt *)copy)->underlying_iterable =
+	    expr_copy(arena, ((IterLoopStmt *)to_copy)->underlying_iterable);
+	((IterLoopStmt *)copy)->body_block =
+	    (BlockStmt *)stmt_copy(arena, (Stmt *)((IterLoopStmt *)to_copy)->body_block);
+	break;
+    }
+    case STMT_IF: {
+	((IfStmt *)copy)->condition = expr_copy(arena, ((IfStmt *)to_copy)->condition);
+	((IfStmt *)copy)->then_branch = stmt_copy(arena, ((IfStmt *)to_copy)->then_branch);
+	((IfStmt *)copy)->else_branch = stmt_copy(arena, ((IfStmt *)to_copy)->else_branch);
+	break;
+    }
+    case STMT_BLOCK: {
+	BlockStmt *tc = (BlockStmt *)to_copy;
+	/* list of pointers to stmts */
+	((BlockStmt *)copy)->statements = arena_ll_alloc(arena);
+	LLItem *item;
+	ARENA_LL_FOR_EACH(tc->statements, item)
+	{
+	    arena_ll_append(((BlockStmt *)copy)->statements, stmt_copy(arena, item->value));
+	}
+	break;
+    }
+    case STMT_ASSIGN: {
+	((AssignStmt *)copy)->var = expr_copy(arena, ((AssignStmt *)to_copy)->var);
+	((AssignStmt *)copy)->value = expr_copy(arena, ((AssignStmt *)to_copy)->value);
+	((AssignStmt *)copy)->assignment_op = ((AssignStmt *)to_copy)->assignment_op;
+	break;
+    }
+    case STMT_PIPELINE: {
+	((PipelineStmt *)copy)->left =
+	    (CmdStmt *)stmt_copy(arena, (Stmt *)((PipelineStmt *)to_copy)->left);
+	((PipelineStmt *)copy)->right = stmt_copy(arena, ((PipelineStmt *)to_copy)->right);
+	break;
+    }
+    case STMT_ASSERT: {
+	((AssertStmt *)copy)->expr = expr_copy(arena, ((AssertStmt *)to_copy)->expr);
+	break;
+    }
+    case STMT_BINARY: {
+	((BinaryStmt *)copy)->left = stmt_copy(arena, ((BinaryStmt *)to_copy)->left);
+	((BinaryStmt *)copy)->operator_ = ((BinaryStmt *)to_copy)->operator_;
+	if (((BinaryStmt *)copy)->operator_ == t_greater)
+	    ((BinaryStmt *)copy)->right_expr =
+		expr_copy(arena, ((BinaryStmt *)to_copy)->right_expr);
+	else
+	    ((BinaryStmt *)copy)->right_stmt =
+		stmt_copy(arena, ((BinaryStmt *)to_copy)->right_stmt);
+	break;
+    }
+    case STMT_ABRUPT_CONTROL_FLOW: {
+	((AbruptControlFlowStmt *)copy)->ctrlf_type =
+	    ((AbruptControlFlowStmt *)to_copy)->ctrlf_type;
+	if (((AbruptControlFlowStmt *)to_copy)->return_expr != NULL)
+	    ((AbruptControlFlowStmt *)copy)->return_expr =
+		expr_copy(arena, ((AbruptControlFlowStmt *)to_copy)->return_expr);
+	break;
+    }
+    case STMT_ENUM_COUNT:
+	break;
+    }
     return copy;
 }
 
