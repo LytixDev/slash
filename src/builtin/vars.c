@@ -23,27 +23,46 @@
 #include "nicc/nicc.h"
 
 
+static void hashmap_get_keys_as_str_views(HashMap *map, StrView *return_ptr)
+{
+    size_t count = 0;
+    for (int i = 0; i < N_BUCKETS(map->size_log2); i++) {
+	struct hm_bucket_t *bucket = &map->buckets[i];
+	for (int j = 0; j < HM_BUCKET_SIZE; j++) {
+	    struct hm_entry_t entry = bucket->entries[j];
+	    if (entry.key == NULL)
+		continue;
+
+	    return_ptr[count++] = (StrView){ .view = entry.key, .size = entry.key_size };
+	    if (count == map->len)
+		return;
+	}
+    }
+}
+
+
 int builtin_vars(Interpreter *interpreter, size_t argc, SlashValue *argv)
 {
-    (void)interpreter;
     (void)argc;
     (void)argv;
-    /// for (Scope *scope = interpreter->scope; scope != NULL; scope = scope->enclosing) {
-    ///     HashMap map = scope->values;
-    ///     char *keys[map.len];
-    ///     SlashValue *values[map.len];
-    ///     hashmap_get_keys(&map, (void **)keys);
-    ///     hashmap_get_values(&map, (void **)values);
+    for (Scope *scope = interpreter->scope; scope != NULL; scope = scope->enclosing) {
+	HashMap map = scope->values;
+	StrView keys[map.len];
+	SlashValue *values[map.len];
+	hashmap_get_keys_as_str_views(&map, keys);
+	hashmap_get_values(&map, (void **)values);
 
-    ///    for (size_t i = 0; i < map.len; i++) {
-    ///        // char *var = vars[i];
-    ///        SlashValue *value = values[i];
-    ///        putchar('=');
-    ///        TraitPrint print_func = trait_print[value->type];
-    ///        print_func(value);
-    ///        putchar('\n');
-    ///    }
-    ///}
+	for (size_t i = 0; i < map.len; i++) {
+	    StrView key = keys[i];
+	    SlashValue *value = values[i];
+	    str_view_to_buf_cstr(key); // creates temporary buf variable
+	    printf("%s", buf);
+	    putchar('=');
+	    VERIFY_TRAIT_IMPL(print, *value, "print not defined for type '%s'", value->T->name);
+	    value->T->print(*value);
+	    putchar('\n');
+	}
+    }
 
     return 0;
 }

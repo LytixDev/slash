@@ -557,8 +557,10 @@ static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
 			     path.value->T->name);
 
     WhichResult which_result = which(stmt->cmd_name, AS_STR(*path.value)->str);
-    if (which_result.type == WHICH_NOT_FOUND)
-	REPORT_RUNTIME_ERROR("Command not found");
+    if (which_result.type == WHICH_NOT_FOUND) {
+	str_view_to_buf_cstr(stmt->cmd_name); // creates temporary buf variable
+	REPORT_RUNTIME_ERROR("Command '%s' not found", buf);
+    }
 
     if (which_result.type == WHICH_EXTERN) {
 	exec_program_stub(interpreter, stmt, which_result.path);
