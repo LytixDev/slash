@@ -43,4 +43,10 @@ void str_view_to_cstr(StrView view, char *cstr);
 
 StrView str_view_arena_copy(Arena *arena, StrView to_copy);
 
+
+#define str_view_to_buf_cstr(__str_view)               \
+    char buf[(__str_view).size + 1];                   \
+    memcpy(buf, (__str_view).view, (__str_view).size); \
+    buf[(__str_view).size] = 0;
+
 #endif /* STR_VIEW_H */

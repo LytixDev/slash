@@ -485,9 +485,8 @@ static SlashValue eval_call(Interpreter *interpreter, CallExpr *expr)
 
     SlashValue return_value = NoneSingleton;
     ExecResult result = exec_block_body(interpreter, function.body);
-    if (result.type != RT_NORMAL) {
+    if (result.type == RT_RETURN && result.return_expr != NULL)
 	return_value = eval(interpreter, result.return_expr);
-    }
     interpreter->scope = function_scope->enclosing;
     scope_destroy(function_scope);
     return return_value;
@@ -500,8 +499,8 @@ static SlashValue eval_call(Interpreter *interpreter, CallExpr *expr)
 static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
 {
     SlashValue value = eval(interpreter, stmt->expression);
-    //    if (stmt->expression->type == EXPR_CALL)
-    //	return;
+    if (stmt->expression->type == EXPR_CALL)
+        return;
 
     TraitPrint trait_print = value.T->print;
     assert(trait_print != NULL);
@@ -557,8 +556,10 @@ static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
 			     path.value->T->name);
 
     WhichResult which_result = which(stmt->cmd_name, AS_STR(*path.value)->str);
-    if (which_result.type == WHICH_NOT_FOUND)
-	REPORT_RUNTIME_ERROR("Command not found");
+    if (which_result.type == WHICH_NOT_FOUND) {
+	str_view_to_buf_cstr(stmt->cmd_name); // creates temporary buf variable
+	REPORT_RUNTIME_ERROR("Command '%s' not found", buf);
+    }
 
     if (which_result.type == WHICH_EXTERN) {
 	exec_program_stub(interpreter, stmt, which_result.path);
