@@ -485,9 +485,8 @@ static SlashValue eval_call(Interpreter *interpreter, CallExpr *expr)
 
     SlashValue return_value = NoneSingleton;
     ExecResult result = exec_block_body(interpreter, function.body);
-    if (result.type != RT_NORMAL) {
+    if (result.type == RT_RETURN && result.return_expr != NULL)
 	return_value = eval(interpreter, result.return_expr);
-    }
     interpreter->scope = function_scope->enclosing;
     scope_destroy(function_scope);
     return return_value;
@@ -500,8 +499,8 @@ static SlashValue eval_call(Interpreter *interpreter, CallExpr *expr)
 static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
 {
     SlashValue value = eval(interpreter, stmt->expression);
-    //    if (stmt->expression->type == EXPR_CALL)
-    //	return;
+    if (stmt->expression->type == EXPR_CALL)
+        return;
 
     TraitPrint trait_print = value.T->print;
     assert(trait_print != NULL);
