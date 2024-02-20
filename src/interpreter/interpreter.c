@@ -34,8 +34,10 @@
 #include "interpreter/value/slash_str.h"
 #include "interpreter/value/slash_value.h"
 #include "lib/arena_ll.h"
+#include "lib/str_builder.h"
 #include "lib/str_view.h"
 #include "nicc/nicc.h"
+#include "sac/sac.h"
 
 
 static SlashValue eval(Interpreter *interpreter, Expr *expr);
@@ -278,15 +280,24 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
     /* restore original write fd */
     stream_ctx->write_fd = original_write_fd;
 
-    // TODO: dynamic buffer
+    ArenaTmp scratch_arena = m_arena_tmp_init(&interpreter->arena);
+    size_t bytes_read = 0;
     char buffer[4096] = { 0 };
-    size_t size = read(fd[0], buffer, 4096);
-    if (buffer[size - 1] == '\n')
-	size--;
+    StrBuilder sb;
+    str_builder_init(&sb, scratch_arena.arena);
+    while ((bytes_read = read(fd[0], buffer, 4096)) > 0)
+	str_builder_append(&sb, buffer, bytes_read);
+
     close(fd[0]);
 
+    if (str_builder_peek(&sb) == '\n')
+	sb.len--;
+
+    StrView final = str_builder_complete(&sb);
     SlashStr *str = (SlashStr *)gc_new_T(interpreter, &str_type_info);
-    slash_str_init_from_slice(interpreter, str, buffer, size);
+    slash_str_init_from_view(interpreter, str, &final);
+    m_arena_tmp_release(scratch_arena);
+
     return AS_VALUE(str);
 }
 
@@ -500,7 +511,7 @@ static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
 {
     SlashValue value = eval(interpreter, stmt->expression);
     if (stmt->expression->type == EXPR_CALL)
-        return;
+	return;
 
     TraitPrint trait_print = value.T->print;
     assert(trait_print != NULL);

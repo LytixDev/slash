@@ -54,6 +54,8 @@ void str_builder_init(StrBuilder *sb, Arena *arena);
 void str_builder_append(StrBuilder *sb, char *cstr, size_t len);
 void str_builder_append_char(StrBuilder *sb, char c);
 
+char str_builder_peek(StrBuilder *sb);
+
 /* Appends the null terminator and returns the built string as a view. */
 StrView str_builder_complete(StrBuilder *sb);
 

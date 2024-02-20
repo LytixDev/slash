@@ -17,11 +17,11 @@
 
 #include <stdio.h>
 
+#include "interactive/prompt.h"
 #include "interpreter/interpreter.h"
 #include "interpreter/scope.h"
-#include "interpreter/value/slash_value.h"
 #include "interpreter/value/slash_str.h"
-#include "interactive/prompt.h"
+#include "interpreter/value/slash_value.h"
 
 
 int builtin_read(Interpreter *interpreter, size_t argc, SlashValue *argv)
@@ -39,7 +39,7 @@ int builtin_read(Interpreter *interpreter, size_t argc, SlashValue *argv)
     SlashValue arg = argv[0];
     if (!IS_TEXT_LIT(arg)) {
 	fprintf(stderr, "read: expected argument to be text, not '%s'", arg.T->name);
-        return 1;
+	return 1;
     }
 
     Prompt prompt;
