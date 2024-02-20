@@ -44,6 +44,7 @@ void report_parse_err(Parser *parser, char *msg);
 
 #define REPORT_RUNTIME_ERROR(...)                  \
     do {                                           \
+	REPORT_IMPL("[Slash Runtime Error]: ");    \
 	REPORT_IMPL(__VA_ARGS__);                  \
 	REPORT_IMPL("\n");                         \
 	longjmp(runtime_error_jmp, RUNTIME_ERROR); \
