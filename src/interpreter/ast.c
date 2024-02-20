@@ -89,7 +89,7 @@ Stmt *stmt_alloc(Arena *ast_arena, StmtType type)
 Expr *expr_copy(Arena *arena, Expr *to_copy)
 {
     if (to_copy == NULL)
-        return NULL;
+	return NULL;
 
     Expr *copy = expr_alloc(arena, to_copy->type);
     switch (to_copy->type) {
@@ -201,7 +201,7 @@ Expr *expr_copy(Arena *arena, Expr *to_copy)
 Stmt *stmt_copy(Arena *arena, Stmt *to_copy)
 {
     if (to_copy == NULL)
-        return NULL;
+	return NULL;
 
     Stmt *copy = stmt_alloc(arena, to_copy->type);
     switch (to_copy->type) {
@@ -306,9 +306,9 @@ Stmt *stmt_copy(Arena *arena, Stmt *to_copy)
 	if (((AbruptControlFlowStmt *)to_copy)->return_expr != NULL) {
 	    ((AbruptControlFlowStmt *)copy)->return_expr =
 		expr_copy(arena, ((AbruptControlFlowStmt *)to_copy)->return_expr);
-        } else {
+	} else {
 	    ((AbruptControlFlowStmt *)copy)->return_expr = NULL;
-        }
+	}
 	break;
     }
     case STMT_ENUM_COUNT:

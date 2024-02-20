@@ -29,7 +29,7 @@ Builtin builtins[] = { { .name = "cd", .func = builtin_cd },
 		       { .name = "vars", .func = builtin_vars },
 		       { .name = "which", .func = builtin_which },
 		       { .name = "exit", .func = builtin_exit },
-                       { .name = "read", .func = builtin_read } };
+		       { .name = "read", .func = builtin_read } };
 
 
 static void which_internal(WhichResult *mutable_result, char *PATH, char *command)
