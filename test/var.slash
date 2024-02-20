@@ -13,3 +13,6 @@ var x, y, hello = 1, 2, "Hello World!"
 assert $x == 1
 assert $y == 2
 assert $hello == "Hello World!"
+
+var c, d = 1, 2
+assert $c == 1 and $d == 2

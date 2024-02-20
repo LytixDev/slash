@@ -539,23 +539,44 @@ static void exec_var(Interpreter *interpreter, VarStmt *stmt)
 static void exec_seq_var(Interpreter *interpreter, SeqVarStmt *stmt)
 {
     SequenceExpr *initializer = (SequenceExpr *)stmt->initializer;
-    if (initializer->type != EXPR_SEQUENCE)
+    if (initializer->type == EXPR_SEQUENCE) {
+	if (stmt->names.size != initializer->seq.size)
+	    REPORT_RUNTIME_ERROR("Unpacking only supported for collections of the same size");
+
+	LLItem *l = stmt->names.head;
+	LLItem *r = initializer->seq.head;
+	for (size_t i = 0; i < stmt->names.size; i++) {
+	    StrView *name = l->value;
+	    ScopeAndValue current = var_get(interpreter->scope, name);
+	    if (current.scope == interpreter->scope) {
+		str_view_to_buf_cstr(*name); // creates buf variable
+		REPORT_RUNTIME_ERROR("Redefinition of '%s'", buf);
+	    }
+	    SlashValue value = eval(interpreter, (Expr *)r->value);
+	    var_define(interpreter->scope, name, &value);
+	    l = l->next;
+	    r = r->next;
+	}
+	return;
+    }
+
+    SlashValue initializer_value = eval(interpreter, stmt->initializer);
+    if (!IS_TUPLE(initializer_value))
 	REPORT_RUNTIME_ERROR("Multiple variable declaration only supported for tuples");
+    SlashTuple *values = AS_TUPLE(initializer_value);
 
-    if (stmt->names.size != initializer->seq.size)
-	REPORT_RUNTIME_ERROR("Unpacking only supported for collections of the same size");
-
-    LLItem *l = stmt->names.head;
-    LLItem *r = initializer->seq.head;
-    for (size_t i = 0; i < stmt->names.size; i++) {
-	StrView *name = l->value;
+    LLItem *item;
+    size_t i = 0;
+    ARENA_LL_FOR_EACH(&stmt->names, item)
+    {
+	StrView *name = item->value;
 	ScopeAndValue current = var_get(interpreter->scope, name);
-	if (current.scope == interpreter->scope)
-	    REPORT_RUNTIME_ERROR("Redefinition of '%s'", "X");
-	SlashValue value = eval(interpreter, (Expr *)r->value);
-	var_define(interpreter->scope, name, &value);
-	l = l->next;
-	r = r->next;
+	if (current.scope == interpreter->scope) {
+	    str_view_to_buf_cstr(*name); // creates buf variable
+	    REPORT_RUNTIME_ERROR("Redefinition of '%s'", buf);
+	}
+	var_define(interpreter->scope, name, &values->items[i]);
+	i++;
     }
 }
 
