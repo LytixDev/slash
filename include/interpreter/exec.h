@@ -20,6 +20,9 @@
 #include "interpreter/interpreter.h"
 
 
+/*
+ * argv must be NULL terminated.
+ */
 int exec_program(StreamCtx *stream_ctx, char **argv);
 
 #endif /* CORE_EXEC_H */

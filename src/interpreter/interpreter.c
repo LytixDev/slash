@@ -529,8 +529,10 @@ static void exec_var(Interpreter *interpreter, VarStmt *stmt)
 {
     /* Make sure variable is not defined already */
     ScopeAndValue current = var_get(interpreter->scope, &stmt->name);
-    if (current.scope == interpreter->scope)
-	REPORT_RUNTIME_ERROR("Redefinition of '%s'", "X");
+    if (current.scope == interpreter->scope) {
+	str_view_to_buf_cstr(stmt->name); // creates buf variable
+	REPORT_RUNTIME_ERROR("Redefinition of '%s'", buf);
+    }
 
     SlashValue value = eval(interpreter, stmt->initializer);
     var_define(interpreter->scope, &stmt->name, &value);

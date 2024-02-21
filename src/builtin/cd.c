@@ -26,16 +26,13 @@
 int builtin_cd(Interpreter *interpreter, size_t argc, SlashValue *argv)
 {
     if (argc == 0) {
-	fprintf(stderr, "cd: no argument received");
+	fprintf(stderr, "cd: no argument received\n");
 	return 1;
     }
 
     SlashValue param = argv[0];
+    VERIFY_TRAIT_IMPL(to_str, param, ".: could not take to_str of type '%s'", param.T->name);
     TraitToStr to_str = param.T->to_str;
-    if (to_str == NULL) {
-	fprintf(stderr, "cd: could not take to_str of type '%s'", param.T->name);
-	return 1;
-    }
     SlashStr *param_str = AS_STR(to_str(interpreter, param));
     return chdir(param_str->str);
 }
