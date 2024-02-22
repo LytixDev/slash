@@ -400,7 +400,7 @@ SlashValue list_plus(Interpreter *interpreter, SlashValue self, SlashValue other
     //       2. We can use something like memcpy to copy all data in one batch
     assert(IS_LIST(self) && IS_LIST(self));
     SlashList *new_list = (SlashList *)gc_new_T(interpreter, &list_type_info);
-    gc_shadow_push(&interpreter->gc, &new_list->obj);
+    gc_barrier_start(&interpreter->gc);
     slash_list_impl_init(interpreter, new_list);
 
     SlashList *a = AS_LIST(self);
@@ -411,7 +411,7 @@ SlashValue list_plus(Interpreter *interpreter, SlashValue self, SlashValue other
     for (size_t i = 0; i < b->len; i++)
 	slash_list_impl_append(interpreter, new_list, b->items[i]);
 
-    gc_shadow_pop(&interpreter->gc);
+    gc_barrier_end(&interpreter->gc);
     return AS_VALUE(new_list);
 }
 
@@ -639,9 +639,9 @@ SlashValue str_plus(Interpreter *interpreter, SlashValue self, SlashValue other)
 {
     assert(IS_STR(self) && IS_STR(other));
     SlashStr *new = (SlashStr *)gc_new_T(interpreter, &str_type_info);
-    gc_shadow_push(&interpreter->gc, &new->obj);
+    gc_barrier_start(&interpreter->gc);
     slash_str_init_from_concat(interpreter, new, AS_STR(self), AS_STR(other));
-    gc_shadow_pop(&interpreter->gc);
+    gc_barrier_end(&interpreter->gc);
     return AS_VALUE(new);
 }
 

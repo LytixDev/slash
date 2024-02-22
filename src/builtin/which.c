@@ -25,17 +25,18 @@
 #include "lib/str_view.h"
 
 
-Builtin builtins[] = { { .name = "cd", .func = builtin_cd },
-		       { .name = "vars", .func = builtin_vars },
-		       { .name = "which", .func = builtin_which },
-		       { .name = "exit", .func = builtin_exit },
-		       { .name = "read", .func = builtin_read } };
+Builtin builtins[] = {
+    { .name = "cd", .func = builtin_cd },	{ .name = "vars", .func = builtin_vars },
+    { .name = "which", .func = builtin_which }, { .name = "exit", .func = builtin_exit },
+    { .name = "read", .func = builtin_read },	{ .name = ".", .func = builtin_dot }
+};
 
 
 static void which_internal(WhichResult *mutable_result, char *PATH, char *command)
 {
     /* PATH environment variable is often prefixed with 'PATH=' */
     size_t PATH_len = strlen(PATH) + 1;
+    // TODO: use ArenaTmp and StrBuilder
     char *path_cpy = malloc(PATH_len);
     memcpy(path_cpy, PATH, PATH_len);
 

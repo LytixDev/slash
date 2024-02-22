@@ -32,7 +32,7 @@ $(TARGET-ASAN): $(OBJS)
 debug: CFLAGS = -Iinclude -Wall -Wpedantic -Wextra -Wshadow -std=gnu11 -g -DDEBUG -DDEBUG_PERF
 debug: $(TARGET)
 
-asan: CFLAGS += -fsanitize=address -fsanitize=undefined
+asan: CFLAGS += -fsanitize=address -fsanitize=undefined -DDEBUG_STRESS_GC
 asan: LDFLAGS += -fsanitize=address -fsanitize=undefined
 asan: $(TARGET-ASAN)
 

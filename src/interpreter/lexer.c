@@ -294,9 +294,15 @@ StateFn lex_any(Lexer *lexer)
 	case '<':
 	    emit(lexer, match(lexer, '=') ? t_less_equal : t_less);
 	    break;
-	case '.':
+	case '.': {
+	    /* TODO: botch, please fix */
+	    if (peek(lexer) == '/') {
+		emit(lexer, t_dot);
+		return STATE_FN(lex_shell_arg_list);
+	    }
 	    emit(lexer, match(lexer, '.') ? t_dot_dot : t_dot);
 	    break;
+	}
 	case '@':
 	    emit(lexer, match(lexer, '[') ? t_at_lbracket : t_at);
 	    break;
@@ -479,8 +485,8 @@ StateFn lex_identifier(Lexer *lexer)
     }
 
     TokenType previous = prev_token_type(lexer);
-    if (previous == t_var || previous == t_loop || previous == t_dot || previous == t_comma ||
-	previous == t_as || previous == t_equal || previous == t_func) {
+    if (previous == t_var || previous == t_loop || previous == t_comma || previous == t_as ||
+	previous == t_equal || previous == t_func) {
 	emit(lexer, t_ident);
 	return STATE_FN(lex_any);
     }

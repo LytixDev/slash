@@ -1,15 +1,12 @@
 #!/bin/slash
-make clean
-make asan
-# hack because './slash-asan' doesnt work yet
-sudo cp slash-asan /bin/slash-asan
-
 var successes = 0
-var tests = 0
+var tests = (find "test/" -name "*.slash")
+var tests_count = (echo $tests | wc -l)
 
-loop file in (find "test/" -name "*.slash") {
-    $tests += 1
-    if (slash-asan $file) as bool {
+make clean && make asan -j8
+
+loop file in $tests {
+    if (./slash-asan $file) as bool {
         $successes += 1
         echo $file "passed"
     } else {
@@ -17,5 +14,5 @@ loop file in (find "test/" -name "*.slash") {
     }
 }
 
-echo "finished asan"
-echo $successes "out of" $tests "passed"
+echo "---"
+echo $successes "out of" $tests_count "passed"

@@ -265,7 +265,7 @@ static Stmt *statement(Parser *parser)
     if (match(parser, t_if))
 	return if_stmt(parser);
 
-    if (match(parser, t_dt_text_lit))
+    if (match(parser, t_dt_text_lit, t_dot))
 	return pipeline_stmt(parser);
 
     if (match(parser, t_lbrace))
@@ -333,7 +333,7 @@ static Stmt *if_stmt(Parser *parser)
 
 static Stmt *pipeline_stmt(Parser *parser)
 {
-    /* came from t_dt_text_lit */
+    /* came from t_dt_text_lit or t_dot */
     Stmt *left = cmd_stmt(parser);
     if (match(parser, t_greater, t_greater_greater, t_less))
 	return redirect_stmt(parser, left);
@@ -360,7 +360,7 @@ static Stmt *redirect_stmt(Parser *parser, Stmt *left)
 
 static Stmt *cmd_stmt(Parser *parser)
 {
-    /* came from t_dt_text_lit */
+    /* came from t_dt_text_lit or t_dot */
     Token *cmd_name = previous(parser);
 
     CmdStmt *stmt = (CmdStmt *)stmt_alloc(parser->ast_arena, STMT_CMD);
@@ -596,7 +596,7 @@ static Expr *single(Parser *parser)
 {
     Expr *left;
     if (match(parser, t_lparen)) {
-	if (check(parser, t_dt_text_lit)) {
+	if (check(parser, t_dt_text_lit, t_dot)) {
 	    left = subshell(parser);
 	} else {
 	    parser->token_pos--;
@@ -677,7 +677,10 @@ static Expr *single(Parser *parser)
 static Expr *subshell(Parser *parser)
 {
     /* came from '(' */
-    consume(parser, t_dt_text_lit, "Expected shell literal after '('");
+    if (!match(parser, t_dt_text_lit, t_dot)) {
+	backup(parser);
+	consume(parser, t_dt_text_lit, "Expected command after subshell begin");
+    }
     SubshellExpr *expr = (SubshellExpr *)expr_alloc(parser->ast_arena, EXPR_SUBSHELL);
     expr->stmt = pipeline_stmt(parser);
     consume(parser, t_rparen, "Expected ')' after subshell");
