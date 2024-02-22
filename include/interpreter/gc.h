@@ -33,9 +33,12 @@ typedef struct interpreter_t Interpreter; // Forward decl
 typedef struct {
     LinkedList gc_objs; // objects managed by the GC
     ArrayList gray_stack;
-    ArrayList shadow_stack; // list of objects that are always always marked during gc run.
     size_t bytes_managing;
     size_t next_run; // how many bytes allocated until we run the GC again
+
+    ArrayList shadow_stack; // list of objects that are always always marked during gc run.
+    unsigned int barrier; // value > 0 means we are in a GC barrier. Value signifies barrier depth.
+    size_t shadow_stack_len_pre_barrier; // elements in shadow_stack before barrier
 } GC;
 
 
@@ -56,10 +59,18 @@ void gc_run(Interpreter *interpreter);
  */
 void gc_collect_all(Interpreter *interpreter);
 /*
- * Useful when allocating a collection that can not be marked until every element of the
- * initializtion is allocated.
+ * Objects residing in the shadow stack can not collected.
  */
 void gc_shadow_push(GC *gc, SlashObj *obj);
 void gc_shadow_pop(GC *gc);
+/*
+ * GC objects allocated inside a barrier are guaranteed not to be collected before the barrier ends.
+ * Example usage:
+ * gc_barrier_start(gc);
+ * ... some allocations ...
+ * gc_barrier_end(gc);
+ */
+void gc_barrier_start(GC *gc);
+void gc_barrier_end(GC *gc);
 
 #endif /* GC_H */

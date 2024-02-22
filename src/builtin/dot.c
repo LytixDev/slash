@@ -36,10 +36,10 @@ int builtin_dot(Interpreter *interpreter, size_t argc, SlashValue *argv)
     char *exec_argv[argc + 1]; // NULL terminated
     exec_argv[argc] = NULL;
 
+    gc_barrier_start(&interpreter->gc);
     VERIFY_TRAIT_IMPL(to_str, argv[0], ".: could not take to_str of type '%s'", argv[0].T->name);
     TraitToStr to_str = argv[0].T->to_str;
     SlashStr *program_str = AS_STR(to_str(interpreter, argv[0]));
-    gc_shadow_push(&interpreter->gc, &program_str->obj);
     /* prepend './' to first argument */
     char program_name[program_str->len + 3]; // + 2 (for './) and + 1 for null termination
     program_name[0] = '.';
@@ -54,14 +54,10 @@ int builtin_dot(Interpreter *interpreter, size_t argc, SlashValue *argv)
 	to_str = argv[i].T->to_str;
 	SlashStr *param_str = AS_STR(to_str(interpreter, argv[i]));
 	exec_argv[i] = param_str->str;
-	gc_shadow_push(&interpreter->gc, &param_str->obj);
     }
 
     int rc = exec_program(&interpreter->stream_ctx, exec_argv);
-
-    // TODO: a better API for pushing and popping multiple objects
-    for (size_t i = 0; i < argc; i++)
-	gc_shadow_pop(&interpreter->gc);
+    gc_barrier_end(&interpreter->gc);
 
     return rc;
 }

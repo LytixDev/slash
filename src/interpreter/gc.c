@@ -41,7 +41,7 @@ static void gc_sweep_obj(Interpreter *interpreter, SlashObj *obj)
 	gc_free(interpreter, tuple->items, tuple->len * sizeof(SlashValue));
     } else if (IS_STR(value)) {
 	SlashStr *str = AS_STR(value);
-	gc_free(interpreter, str->str, str->len);
+	gc_free(interpreter, str->str, str->len + 1);
     } else {
 	REPORT_RUNTIME_ERROR("Sweep not implemented for this obj");
     }
@@ -196,6 +196,7 @@ void gc_ctx_init(GC *gc)
 
     gc->bytes_managing = 0;
     gc->next_run = 33554432; // ̃~32mb
+    gc->barrier = 0;
 }
 
 void gc_ctx_free(GC *gc)
@@ -215,6 +216,7 @@ void *gc_alloc(Interpreter *interpreter, size_t size)
 	gc_run(interpreter);
 #ifdef DEBUG_LOG_GC
     printf("gc_alloc %zu bytes\n", size);
+    printf("barrier state %d \n", interpreter->gc.barrier);
 #endif
     return malloc(size);
 }
@@ -246,6 +248,8 @@ SlashObj *gc_new_T(Interpreter *interpreter, SlashTypeInfo *T)
     obj->gc_marked = true;
     obj->gc_managed = true;
     gc_register(&interpreter->gc, obj);
+    if (interpreter->gc.barrier)
+	gc_shadow_push(&interpreter->gc, obj);
     return obj;
 }
 
@@ -271,10 +275,20 @@ void gc_run(Interpreter *interpreter)
 
 void gc_collect_all(Interpreter *interpreter)
 {
+#ifdef DEBUG_LOG_GC
+    size_t pre = interpreter->gc.bytes_managing;
+    printf("-- gc collect all begin\n");
+#endif
     for (LinkedListItem *item = interpreter->gc.gc_objs.head; item != NULL; item = item->next) {
 	SlashObj *obj = item->data;
 	gc_sweep_obj(interpreter, obj);
     }
+#ifdef DEBUG_LOG_GC
+    printf("gc freed %zu bytes\n", pre - interpreter->gc.bytes_managing);
+    printf("gc bytes managing: %zu bytes\n", interpreter->gc.bytes_managing);
+    printf("gc barrier state: %d \n", interpreter->gc.barrier);
+    printf("-- gc collect all end\n");
+#endif
 }
 
 void gc_shadow_push(GC *gc, SlashObj *obj)
@@ -300,4 +314,18 @@ void gc_shadow_pop(GC *gc)
     /* Since we are using the ArrayList as a stack we simply decrement its size */
     assert(gc->shadow_stack.size != 0);
     gc->shadow_stack.size--;
+}
+
+void gc_barrier_start(GC *gc)
+{
+    gc->barrier++;
+    if (gc->barrier == 1)
+	gc->shadow_stack_len_pre_barrier = gc->shadow_stack.size;
+}
+
+void gc_barrier_end(GC *gc)
+{
+    gc->barrier--;
+    if (gc->barrier == 0)
+	gc->shadow_stack.size = gc->shadow_stack_len_pre_barrier;
 }

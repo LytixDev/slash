@@ -82,6 +82,7 @@ static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt, char *pro
     char *argv[argc + 1]; // + 1 because last element is NULL
     argv[0] = program_path;
 
+    gc_barrier_start(&interpreter->gc);
     size_t i = 1;
     if (stmt->arg_exprs != NULL) {
 	LLItem *item;
@@ -90,16 +91,13 @@ static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt, char *pro
 	    SlashValue value = eval(interpreter, item->value);
 	    VERIFY_TRAIT_IMPL(to_str, value, "Could not take 'to_str' of type '%s'", value.T->name);
 	    SlashValue value_str_repr = value.T->to_str(interpreter, value);
-	    gc_shadow_push(&interpreter->gc, value_str_repr.obj);
 	    argv[i++] = AS_STR(value_str_repr)->str;
 	}
     }
 
-    for (size_t n = 0; n < argc - 1; n++)
-	gc_shadow_pop(&interpreter->gc);
-
     argv[i] = NULL;
     int exit_code = exec_program(&interpreter->stream_ctx, argv);
+    gc_barrier_end(&interpreter->gc);
     set_exit_code(interpreter, exit_code);
 }
 
@@ -190,9 +188,8 @@ static SlashValue eval_unary(Interpreter *interpreter, UnaryExpr *expr)
 
 static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
 {
+    gc_barrier_start(&interpreter->gc);
     SlashValue left = eval(interpreter, expr->left);
-    if (IS_OBJ(left))
-	gc_shadow_push(&interpreter->gc, left.obj);
     SlashValue right;
     SlashValue return_value;
 
@@ -200,17 +197,17 @@ static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
     if (expr->operator_ == t_and) {
 	if (!left.T->truthy(left)) {
 	    return_value = (SlashValue){ .T = &bool_type_info, .boolean = false };
-	    goto defer_shadow_pop;
+	    goto defer_gc_barrier_end;
 	}
 	right = eval(interpreter, expr->right);
 	return_value = (SlashValue){ .T = &bool_type_info, .boolean = right.T->truthy(right) };
-	goto defer_shadow_pop;
+	goto defer_gc_barrier_end;
     }
     right = eval(interpreter, expr->right);
     if (expr->operator_ == t_or) {
 	bool truthy = left.T->truthy(left) || right.T->truthy(right);
 	return_value = (SlashValue){ .T = &bool_type_info, .boolean = truthy };
-	goto defer_shadow_pop;
+	goto defer_gc_barrier_end;
     }
 
     /* range initializer */
@@ -219,13 +216,13 @@ static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
 	    REPORT_RUNTIME_ERROR("Bad range initializer");
 	SlashRange range = { .start = left.num, .end = right.num };
 	return_value = (SlashValue){ .T = &range_type_info, .range = range };
-	goto defer_shadow_pop;
+	goto defer_gc_barrier_end;
     }
 
     /* binary operators */
     if (expr->operator_ != t_in) {
 	return_value = eval_binary_operators(interpreter, left, right, expr->operator_);
-	goto defer_shadow_pop;
+	goto defer_gc_barrier_end;
     }
 
     /* left "IN" right */
@@ -234,9 +231,8 @@ static SlashValue eval_binary(Interpreter *interpreter, BinaryExpr *expr)
     return_value = (SlashValue){ .T = &bool_type_info, .boolean = rc };
 
 
-defer_shadow_pop:
-    if (IS_OBJ(left))
-	gc_shadow_pop(&interpreter->gc);
+defer_gc_barrier_end:
+    gc_barrier_end(&interpreter->gc);
     return return_value;
 }
 
@@ -303,11 +299,11 @@ static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
 
 static SlashValue eval_tuple(Interpreter *interpreter, SequenceExpr *expr)
 {
+    gc_barrier_start(&interpreter->gc);
     SlashTuple *tuple = (SlashTuple *)gc_new_T(interpreter, &tuple_type_info);
-    gc_shadow_push(&interpreter->gc, &tuple->obj);
     slash_tuple_init(interpreter, tuple, expr->seq.size);
     if (expr->seq.size == 0) {
-	gc_shadow_pop(&interpreter->gc);
+	gc_barrier_end(&interpreter->gc);
 	return AS_VALUE(tuple);
     }
 
@@ -319,7 +315,7 @@ static SlashValue eval_tuple(Interpreter *interpreter, SequenceExpr *expr)
 	tuple->items[i++] = element_value;
     }
 
-    gc_shadow_pop(&interpreter->gc);
+    gc_barrier_end(&interpreter->gc);
     return AS_VALUE(tuple);
 }
 
@@ -332,11 +328,11 @@ static SlashValue eval_str(Interpreter *interpreter, StrExpr *expr)
 
 static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
 {
+    gc_barrier_start(&interpreter->gc);
     SlashList *list = (SlashList *)gc_new_T(interpreter, &list_type_info);
-    gc_shadow_push(&interpreter->gc, &list->obj);
     slash_list_impl_init(interpreter, list);
     if (expr->exprs == NULL) {
-	gc_shadow_pop(&interpreter->gc);
+	gc_barrier_end(&interpreter->gc);
 	return AS_VALUE(list);
     }
 
@@ -347,7 +343,7 @@ static SlashValue eval_list(Interpreter *interpreter, ListExpr *expr)
 	slash_list_impl_append(interpreter, list, element_value);
     }
 
-    gc_shadow_pop(&interpreter->gc);
+    gc_barrier_end(&interpreter->gc);
     return AS_VALUE(list);
 }
 
@@ -377,11 +373,11 @@ static SlashValue eval_function(Interpreter *interpreter, FunctionExpr *expr)
 
 static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
 {
+    gc_barrier_start(&interpreter->gc);
     SlashMap *map = (SlashMap *)gc_new_T(interpreter, &map_type_info);
-    gc_shadow_push(&interpreter->gc, &map->obj);
     slash_map_impl_init(interpreter, map);
     if (expr->key_value_pairs == NULL) {
-	gc_shadow_pop(&interpreter->gc);
+	gc_barrier_end(&interpreter->gc);
 	return AS_VALUE(map);
     }
 
@@ -395,7 +391,7 @@ static SlashValue eval_map(Interpreter *interpreter, MapExpr *expr)
 	slash_map_impl_put(interpreter, map, k, v);
     }
 
-    gc_shadow_pop(&interpreter->gc);
+    gc_barrier_end(&interpreter->gc);
     return AS_VALUE(map);
 }
 
@@ -1150,6 +1146,7 @@ static void interpreter_reset_from_err(Interpreter *interpreter)
 {
     /* Pop everything from shadow stack as they are no longer in use */
     interpreter->gc.shadow_stack.size = 0;
+    interpreter->gc.barrier = 0;
 
     /* Free any old scopes */
     while (interpreter->scope != &interpreter->globals) {
