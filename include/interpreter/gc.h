@@ -22,7 +22,9 @@
 
 // #define DEBUG_STRESS_GC
 // #define DEBUG_LOG_GC
+
 #define GC_HEAP_GROW_FACTOR 2
+#define GC_MIN_RUN (2 << 24) // ̃~32mb
 
 
 typedef struct slash_type_info_t SlashTypeInfo; // Forward decl

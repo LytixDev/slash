@@ -79,6 +79,8 @@ static void gc_sweep(Interpreter *interpreter)
 static void gc_reset(GC *gc)
 {
     gc->next_run = gc->bytes_managing * GC_HEAP_GROW_FACTOR;
+    if (GC_MIN_RUN > gc->next_run)
+	gc->next_run = GC_MIN_RUN;
 
     for (LinkedListItem *item = gc->gc_objs.head; item != NULL; item = item->next) {
 	SlashObj *obj = item->data;
@@ -195,7 +197,7 @@ void gc_ctx_init(GC *gc)
     arraylist_init(&gc->shadow_stack, sizeof(SlashObj **));
 
     gc->bytes_managing = 0;
-    gc->next_run = 33554432; // ̃~32mb
+    gc->next_run = GC_MIN_RUN;
     gc->barrier = 0;
 }
 
