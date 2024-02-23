@@ -1,4 +1,4 @@
-#!/bin/slash
+#!/usr/local/bin/slash
 var successes = 0
 var tests = (find "test/" -name "*.slash")
 var tests_count = (echo $tests | wc -l)
