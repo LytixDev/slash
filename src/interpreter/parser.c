@@ -373,7 +373,7 @@ static Stmt *cmd_stmt(Parser *parser)
 
     stmt->arg_exprs = arena_ll_alloc(parser->ast_arena);
     while (!check_arg_end(parser))
-	arena_ll_append(stmt->arg_exprs, expression(parser));
+	arena_ll_append(stmt->arg_exprs, single(parser));
 
     return (Stmt *)stmt;
 }

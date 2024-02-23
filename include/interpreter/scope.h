@@ -59,6 +59,9 @@ void var_assign(StrView *var_name, Scope *scope, SlashValue *value);
 
 /* returns the variable (if exists) with its owning scope */
 ScopeAndValue var_get(Scope *scope, StrView *key);
+/* returns the variable if defined, or reports runtime error */
+ScopeAndValue var_get_or_runtime_error(Scope *scope, StrView *key);
+
 
 
 #endif /* SCOPE_H */

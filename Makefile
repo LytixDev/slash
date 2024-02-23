@@ -51,5 +51,10 @@ format:
 tidy:
 	clang-tidy $(SRCS) -- $(CFLAGS)
 
+install: $(TARGER)
+	@echo [INSTALL] $(TARGET) to /usr/local/bin
+	@sudo cp $(TARGET) /usr/local/bin
+	
+
 $(OBJDIR):
 	$(foreach dir, $(DIRS), $(shell mkdir -p $(OBJDIR)/$(dir)))

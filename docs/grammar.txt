@@ -50,7 +50,7 @@ pipeline_stmt   -> cmd_stmt ( "|" pipeline_stmt )* ;
 
 redirect_stmt   -> cmd_stmt ( ">" | ">>" | "<" ) expression ;
 
-cmd_stmt        -> ( TEXT_LIT | t_dot ) expression* ;
+cmd_stmt        -> ( TEXT_LIT | t_dot ) single* ;
 
 block           -> "{" declaration* "}" ;
 

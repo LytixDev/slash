@@ -244,7 +244,7 @@ static SlashValue eval_literal(Interpreter *interpreter, LiteralExpr *expr)
 
 static SlashValue eval_access(Interpreter *interpreter, AccessExpr *expr)
 {
-    ScopeAndValue sv = var_get(interpreter->scope, &expr->var_name);
+    ScopeAndValue sv = var_get_or_runtime_error(interpreter->scope, &expr->var_name);
     /* If variable is not defined, then return None. Same behaviour as POSIX sh I think */
     if (sv.value == NULL)
 	return NoneSingleton;
@@ -580,7 +580,7 @@ static void exec_seq_var(Interpreter *interpreter, SeqVarStmt *stmt)
 
 static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
 {
-    ScopeAndValue path = var_get(interpreter->scope, &(StrView){ .view = "PATH", .size = 4 });
+    ScopeAndValue path = var_get_or_runtime_error(interpreter->scope, &(StrView){ .view = "PATH", .size = 4 });
     if (!IS_STR(*path.value))
 	REPORT_RUNTIME_ERROR("PATH variable should be type '%s' not '%s'", str_type_info.name,
 			     path.value->T->name);
@@ -651,7 +651,7 @@ static void exec_subscript_assign(Interpreter *interpreter, AssignStmt *stmt)
     SlashValue access_index = eval(interpreter, subscript->access_value);
     SlashValue new_value = eval(interpreter, stmt->value);
 
-    ScopeAndValue current = var_get(interpreter->scope, &var_name);
+    ScopeAndValue current = var_get_or_runtime_error(interpreter->scope, &var_name);
     /* the underlying self who's index (access_index) we're trying to modify */
     SlashValue self = *current.value;
 
@@ -701,7 +701,7 @@ static void exec_assign_unpack(Interpreter *interpreter, AssignStmt *stmt)
 	AccessExpr *access = (AccessExpr *)item->value;
 	if (access->type != EXPR_ACCESS)
 	    REPORT_RUNTIME_ERROR("Can not assign to literal value");
-	ScopeAndValue variable = var_get(interpreter->scope, &access->var_name);
+	ScopeAndValue variable = var_get_or_runtime_error(interpreter->scope, &access->var_name);
 	var_assign(&access->var_name, variable.scope, &values[i++]);
     }
 }
@@ -723,10 +723,7 @@ static void exec_assign(Interpreter *interpreter, AssignStmt *stmt)
 
     AccessExpr *access = (AccessExpr *)stmt->var;
     StrView var_name = access->var_name;
-    ScopeAndValue variable = var_get(interpreter->scope, &var_name);
-    if (variable.value == NULL)
-	REPORT_RUNTIME_ERROR("Cannot modify undefined variable '%s'", "X");
-
+    ScopeAndValue variable = var_get_or_runtime_error(interpreter->scope, &var_name);
     SlashValue new_value = eval(interpreter, stmt->value);
 
     if (stmt->assignment_op == t_equal) {
@@ -849,9 +846,7 @@ static void exec_iter_loop_map(Interpreter *interpreter, IterLoopStmt *stmt, Sla
 
 static void exec_iter_loop_str(Interpreter *interpreter, IterLoopStmt *stmt, SlashStr *iterable)
 {
-    ScopeAndValue ifs_res = var_get(interpreter->scope, &(StrView){ .view = "IFS", .size = 3 });
-    if (ifs_res.value == NULL)
-	REPORT_RUNTIME_ERROR("No IFS variable found");
+    ScopeAndValue ifs_res = var_get_or_runtime_error(interpreter->scope, &(StrView){ .view = "IFS", .size = 3 });
     if (!IS_STR(*ifs_res.value))
 	REPORT_RUNTIME_ERROR("$IFS has to be of type 'str', but got '%s'", ifs_res.value->T->name);
 
