@@ -87,7 +87,7 @@ int builtin_which(Interpreter *interpreter, size_t argc, SlashValue *argv)
 	return 1;
     }
     SlashStr *param_str = AS_STR(to_str(interpreter, param));
-    ScopeAndValue path = var_get(interpreter->scope, &(StrView){ .view = "PATH", .size = 4 });
+    ScopeAndValue path = var_get_or_runtime_error(interpreter->scope, &(StrView){ .view = "PATH", .size = 4 });
     if (!IS_STR(*path.value)) {
 	fprintf(stderr, "which: PATH variable should be type '%s' not '%s'", str_type_info.name,
 		path.value->T->name);
