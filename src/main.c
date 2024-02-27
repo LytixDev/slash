@@ -42,7 +42,7 @@ void interactive(int argc, char **argv)
     prompt_init(&prompt, "-> ");
 
     while (prompt_run(&prompt)) {
-	Lexer lex_result = lex(prompt.buf, prompt.buf_len);
+	Lexer lex_result = lex(&ast_arena, prompt.buf, prompt.buf_len);
 	if (lex_result.had_error) {
 	    m_arena_clear(&ast_arena);
 	    arraylist_free(&lex_result.tokens);
@@ -108,7 +108,7 @@ int main(int argc, char **argv)
 #endif /* DEBUG_PERF */
 
     /* lex */
-    Lexer lex_result = lex(input, file_size);
+    Lexer lex_result = lex(NULL, input, file_size);
     if (lex_result.had_error) {
 	exit_code = 1;
 	goto defer_tokens;
