@@ -4,7 +4,8 @@ mkdir -p $dir
 var file_name = $dir + "/" + (date +%Y-%m-%d-%H%M%S) + ".png"
 
 if $1 == "-a" {
-    gnome-screenshot -a -f $file_name
+    notify-send -t 2000 "Taking screenshot ..." 
+    gnome-screenshot -a -f $file_name && echo "done"
 } else {
     scrot -F $file_name
 }

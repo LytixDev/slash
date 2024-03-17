@@ -28,7 +28,8 @@
 Builtin builtins[] = {
     { .name = "cd", .func = builtin_cd },	{ .name = "vars", .func = builtin_vars },
     { .name = "which", .func = builtin_which }, { .name = "exit", .func = builtin_exit },
-    { .name = "read", .func = builtin_read },	{ .name = ".", .func = builtin_dot }
+    { .name = "read", .func = builtin_read },	{ .name = ".", .func = builtin_dot },
+    { .name = "time", .func = builtin_time }
 };
 
 
@@ -87,7 +88,8 @@ int builtin_which(Interpreter *interpreter, size_t argc, SlashValue *argv)
 	return 1;
     }
     SlashStr *param_str = AS_STR(to_str(interpreter, param));
-    ScopeAndValue path = var_get_or_runtime_error(interpreter->scope, &(StrView){ .view = "PATH", .size = 4 });
+    ScopeAndValue path =
+	var_get_or_runtime_error(interpreter->scope, &(StrView){ .view = "PATH", .size = 4 });
     if (!IS_STR(*path.value)) {
 	fprintf(stderr, "which: PATH variable should be type '%s' not '%s'", str_type_info.name,
 		path.value->T->name);

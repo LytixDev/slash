@@ -52,6 +52,7 @@ int builtin_vars(Interpreter *interpreter, size_t argc, SlashValue *argv);
 int builtin_exit(Interpreter *interpreter, size_t argc, SlashValue *argv);
 int builtin_read(Interpreter *interpreter, size_t argc, SlashValue *argv);
 int builtin_dot(Interpreter *interpreter, size_t argc, SlashValue *argv);
+int builtin_time(Interpreter *interpreter, size_t argc, SlashValue *argv);
 
 
 #endif /* BUILTIN_H */

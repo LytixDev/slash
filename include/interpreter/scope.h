@@ -63,5 +63,4 @@ ScopeAndValue var_get(Scope *scope, StrView *key);
 ScopeAndValue var_get_or_runtime_error(Scope *scope, StrView *key);
 
 
-
 #endif /* SCOPE_H */

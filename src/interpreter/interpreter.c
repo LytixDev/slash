@@ -580,7 +580,8 @@ static void exec_seq_var(Interpreter *interpreter, SeqVarStmt *stmt)
 
 static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
 {
-    ScopeAndValue path = var_get_or_runtime_error(interpreter->scope, &(StrView){ .view = "PATH", .size = 4 });
+    ScopeAndValue path =
+	var_get_or_runtime_error(interpreter->scope, &(StrView){ .view = "PATH", .size = 4 });
     if (!IS_STR(*path.value))
 	REPORT_RUNTIME_ERROR("PATH variable should be type '%s' not '%s'", str_type_info.name,
 			     path.value->T->name);
@@ -600,6 +601,7 @@ static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
 	    return;
 	}
 
+	gc_barrier_start(&interpreter->gc);
 	size_t argc = stmt->arg_exprs->size;
 	SlashValue argv[argc];
 	LLItem *item = stmt->arg_exprs->head;
@@ -609,6 +611,7 @@ static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
 	    item = item->next;
 	}
 	which_result.builtin(interpreter, argc, argv);
+	gc_barrier_end(&interpreter->gc);
     }
 }
 
@@ -846,7 +849,8 @@ static void exec_iter_loop_map(Interpreter *interpreter, IterLoopStmt *stmt, Sla
 
 static void exec_iter_loop_str(Interpreter *interpreter, IterLoopStmt *stmt, SlashStr *iterable)
 {
-    ScopeAndValue ifs_res = var_get_or_runtime_error(interpreter->scope, &(StrView){ .view = "IFS", .size = 3 });
+    ScopeAndValue ifs_res =
+	var_get_or_runtime_error(interpreter->scope, &(StrView){ .view = "IFS", .size = 3 });
     if (!IS_STR(*ifs_res.value))
 	REPORT_RUNTIME_ERROR("$IFS has to be of type 'str', but got '%s'", ifs_res.value->T->name);
 
