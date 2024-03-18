@@ -19,6 +19,7 @@
 
 #include "interpreter/gc.h"
 #include "interpreter/scope.h"
+#include "lib/arena_ll.h"
 #include "nicc/nicc.h"
 #include "sac/sac.h"
 
@@ -69,5 +70,6 @@ void interpreter_init(Interpreter *interpreter, int argc, char **argv);
 void interpreter_free(Interpreter *interpreter);
 int interpreter_run(Interpreter *interpreter, ArrayList *statements);
 int interpret(ArrayList *statements, int argc, char **argv);
+void ast_ll_to_argv(Interpreter *interpreter, ArenaLL *ast_nodes, SlashValue **result);
 
 #endif /* INTERPRETER_H */

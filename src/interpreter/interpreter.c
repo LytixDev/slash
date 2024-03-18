@@ -592,27 +592,10 @@ static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
 	REPORT_RUNTIME_ERROR("Command '%s' not found", buf);
     }
 
-    if (which_result.type == WHICH_EXTERN) {
+    if (which_result.type == WHICH_EXTERN)
 	exec_program_stub(interpreter, stmt, which_result.path);
-    } else {
-	/* builtin */
-	if (stmt->arg_exprs == NULL) {
-	    which_result.builtin(interpreter, 0, NULL);
-	    return;
-	}
-
-	gc_barrier_start(&interpreter->gc);
-	size_t argc = stmt->arg_exprs->size;
-	SlashValue argv[argc];
-	LLItem *item = stmt->arg_exprs->head;
-	for (size_t i = 0; i < argc; i++) {
-	    SlashValue value = eval(interpreter, (Expr *)item->value);
-	    argv[i] = value;
-	    item = item->next;
-	}
-	which_result.builtin(interpreter, argc, argv);
-	gc_barrier_end(&interpreter->gc);
-    }
+    else
+	which_result.builtin(interpreter, stmt->arg_exprs);
 }
 
 static void exec_if(Interpreter *interpreter, IfStmt *stmt)
@@ -995,6 +978,19 @@ static void exec_abrupt_control_flow(Interpreter *interpreter, AbruptControlFlow
 	result.return_expr = stmt->return_expr;
     }
     interpreter->exec_res_ctx = result;
+}
+
+void ast_ll_to_argv(Interpreter *interpreter, ArenaLL *ast_nodes, SlashValue **result)
+{
+    gc_barrier_start(&interpreter->gc);
+    LLItem *item = ast_nodes->head;
+    for (size_t i = 0; i < ast_nodes->size; i++) {
+	SlashValue value = eval(interpreter, (Expr *)item->value);
+	result[i] = &value;
+	item = item->next;
+    }
+    result[ast_nodes->size] = NULL;
+    gc_barrier_end(&interpreter->gc);
 }
 
 static SlashValue eval(Interpreter *interpreter, Expr *expr)
