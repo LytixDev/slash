@@ -40,7 +40,6 @@ static void hashmap_get_keys_as_str_views(HashMap *map, StrView *return_ptr)
     }
 }
 
-
 int builtin_vars(Interpreter *interpreter, size_t argc, SlashValue *argv)
 {
     (void)argc;

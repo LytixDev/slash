@@ -96,8 +96,8 @@ static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt, char *pro
     }
 
     argv[i] = NULL;
-    int exit_code = exec_program(&interpreter->stream_ctx, argv);
     gc_barrier_end(&interpreter->gc);
+    int exit_code = exec_program(&interpreter->stream_ctx, argv);
     set_exit_code(interpreter, exit_code);
 }
 
