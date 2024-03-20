@@ -74,19 +74,19 @@ static ExecResult exec_block_body(Interpreter *interpreter, BlockStmt *stmt)
     return EXEC_NORMAL;
 }
 
-static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt, char *program_path)
+static void exec_program_stub(Interpreter *interpreter, char *program_path, ArenaLL *ast_nodes)
 {
     size_t argc = 1;
-    if (stmt->arg_exprs != NULL)
-	argc += stmt->arg_exprs->size;
+    if (ast_nodes != NULL)
+	argc += ast_nodes->size;
     char *argv[argc + 1]; // + 1 because last element is NULL
     argv[0] = program_path;
 
     gc_barrier_start(&interpreter->gc);
     size_t i = 1;
-    if (stmt->arg_exprs != NULL) {
+    if (ast_nodes != NULL) {
 	LLItem *item;
-	ARENA_LL_FOR_EACH(stmt->arg_exprs, item)
+	ARENA_LL_FOR_EACH(ast_nodes, item)
 	{
 	    SlashValue value = eval(interpreter, item->value);
 	    VERIFY_TRAIT_IMPL(to_str, value, "Could not take 'to_str' of type '%s'", value.T->name);
@@ -578,7 +578,7 @@ static void exec_seq_var(Interpreter *interpreter, SeqVarStmt *stmt)
     }
 }
 
-static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
+void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
 {
     ScopeAndValue path =
 	var_get_or_runtime_error(interpreter->scope, &(StrView){ .view = "PATH", .size = 4 });
@@ -593,7 +593,7 @@ static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
     }
 
     if (which_result.type == WHICH_EXTERN)
-	exec_program_stub(interpreter, stmt, which_result.path);
+	exec_program_stub(interpreter, which_result.path, stmt->arg_exprs);
     else
 	which_result.builtin(interpreter, stmt->arg_exprs);
 }

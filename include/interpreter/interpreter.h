@@ -17,6 +17,10 @@
 #ifndef INTERPRETER_H
 #define INTERPRETER_H
 
+#include <assert.h>
+#include <stdio.h>
+
+#include "interpreter/ast.h"
 #include "interpreter/gc.h"
 #include "interpreter/scope.h"
 #include "lib/arena_ll.h"
@@ -48,6 +52,10 @@ typedef struct {
 	.type = RT_NORMAL, .return_expr = NULL \
     }
 
+#define TODO(txt) assert(0 && (txt))
+#define TODO_LOG(txt) fprintf(stderr, "[TODO]: %s\n", txt)
+
+
 typedef struct {
     int read_fd; // the file descriptor we are reading from, defaulted to fileno(STDIN)
     int write_fd; // the file descriptor we are writing to, defaulted to fileno(STDOUT)
@@ -70,6 +78,8 @@ void interpreter_init(Interpreter *interpreter, int argc, char **argv);
 void interpreter_free(Interpreter *interpreter);
 int interpreter_run(Interpreter *interpreter, ArrayList *statements);
 int interpret(ArrayList *statements, int argc, char **argv);
+void exec_cmd(Interpreter *interpreter, CmdStmt *stmt);
 void ast_ll_to_argv(Interpreter *interpreter, ArenaLL *ast_nodes, SlashValue **result);
+
 
 #endif /* INTERPRETER_H */

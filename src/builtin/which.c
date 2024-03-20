@@ -26,11 +26,11 @@
 
 
 Builtin builtins[] = {
-    { .name = "which", .func = builtin_which }
+    { .name = "which", .func = builtin_which },
     //{ .name = "cd", .func = builtin_cd },	{ .name = "vars", .func = builtin_vars },
     //{ .name = "which", .func = builtin_which }, { .name = "exit", .func = builtin_exit },
     //{ .name = "read", .func = builtin_read },	{ .name = ".", .func = builtin_dot },
-    //{ .name = "time", .func = builtin_time }
+    { .name = "time", .func = builtin_time }
 };
 
 

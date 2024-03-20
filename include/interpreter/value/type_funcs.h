@@ -18,7 +18,7 @@
 #define SLASH_TYPE_FUNC_H
 
 #include "interpreter/error.h"
-#include "interpreter/interpreter.h"
+// #include "interpreter/interpreter.h"
 
 
 #define VERIFY_TRAIT_IMPL(trait_func_name, value, ...) \
@@ -31,6 +31,7 @@
 typedef struct slash_type_info_t SlashTypeInfo; // Forward decl
 typedef struct slash_obj_t SlashObj; // Forward decl
 typedef struct slash_value_t SlashValue; // Forward decl
+typedef struct interpreter_t Interpreter; // Forward decl
 
 
 /* Operators */
