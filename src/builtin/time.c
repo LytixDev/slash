@@ -17,6 +17,7 @@
 
 #include <stdio.h>
 #include <sys/resource.h>
+#include <sys/time.h>
 #include <time.h>
 
 #include "interpreter/ast.h"
@@ -32,8 +33,8 @@ int builtin_time(Interpreter *interpreter, ArenaLL *ast_nodes)
 	return 1;
     }
 
-    struct timespec start, end;
-    clock_gettime(CLOCK_MONOTONIC, &start);
+    struct timeval t0, t1;
+    gettimeofday(&t0, 0);
     struct rusage start_usage;
     getrusage(RUSAGE_SELF, &start_usage);
 
@@ -53,11 +54,11 @@ int builtin_time(Interpreter *interpreter, ArenaLL *ast_nodes)
     CmdStmt cmd = { .type = STMT_CMD, .cmd_name = cmd_name.text_lit, .arg_exprs = ast_nodes };
     exec_cmd(interpreter, &cmd);
 
+    gettimeofday(&t1, 0);
     struct rusage end_usage;
     getrusage(RUSAGE_CHILDREN, &end_usage);
 
-    clock_gettime(CLOCK_MONOTONIC, &end);
-    double real_time = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 100000.0;
+    double real_time = (t1.tv_sec - t0.tv_sec) + (t1.tv_usec - t0.tv_usec) / 1000000.0;
     double user_time = (double)(end_usage.ru_utime.tv_sec + end_usage.ru_utime.tv_usec / 1000000.0);
     double sys_time = (double)(end_usage.ru_stime.tv_sec + end_usage.ru_stime.tv_usec / 1000000.0);
     printf("\nreal\t%.3f\n", real_time);
