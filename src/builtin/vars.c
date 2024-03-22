@@ -40,10 +40,9 @@ static void hashmap_get_keys_as_str_views(HashMap *map, StrView *return_ptr)
     }
 }
 
-int builtin_vars(Interpreter *interpreter, size_t argc, SlashValue *argv)
+int builtin_vars(Interpreter *interpreter, ArenaLL *ast_nodes)
 {
-    (void)argc;
-    (void)argv;
+    (void)ast_nodes;
     for (Scope *scope = interpreter->scope; scope != NULL; scope = scope->enclosing) {
 	HashMap map = scope->values;
 	StrView keys[map.len];

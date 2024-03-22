@@ -74,7 +74,7 @@ static ExecResult exec_block_body(Interpreter *interpreter, BlockStmt *stmt)
     return EXEC_NORMAL;
 }
 
-static void exec_program_stub(Interpreter *interpreter, char *program_path, ArenaLL *ast_nodes)
+void exec_program_stub(Interpreter *interpreter, char *program_path, ArenaLL *ast_nodes)
 {
     size_t argc = 1;
     if (ast_nodes != NULL)

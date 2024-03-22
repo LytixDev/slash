@@ -47,11 +47,11 @@ typedef struct {
 
 WhichResult which(StrView cmd, char *PATH);
 int builtin_which(Interpreter *interpreter, ArenaLL *ast_nodes);
-// int builtin_cd(Interpreter *interpreter, size_t argc, SlashValue *argv);
-// int builtin_vars(Interpreter *interpreter, size_t argc, SlashValue *argv);
-// int builtin_exit(Interpreter *interpreter, size_t argc, SlashValue *argv);
-// int builtin_read(Interpreter *interpreter, size_t argc, SlashValue *argv);
-// int builtin_dot(Interpreter *interpreter, size_t argc, SlashValue *argv);
+int builtin_cd(Interpreter *interpreter, ArenaLL *ast_nodes);
+int builtin_vars(Interpreter *interpreter, ArenaLL *ast_nodes);
+int builtin_exit(Interpreter *interpreter, ArenaLL *ast_nodes);
+int builtin_read(Interpreter *interpreter, ArenaLL *ast_nodes);
+int builtin_dot(Interpreter *interpreter, ArenaLL *ast_nodes);
 int builtin_time(Interpreter *interpreter, ArenaLL *ast_nodes);
 
 

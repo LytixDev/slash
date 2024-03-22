@@ -32,12 +32,6 @@ int builtin_time(Interpreter *interpreter, ArenaLL *ast_nodes)
 	fprintf(stderr, "time: no argument received");
 	return 1;
     }
-
-    struct timeval t0, t1;
-    gettimeofday(&t0, 0);
-    struct rusage start_usage;
-    getrusage(RUSAGE_SELF, &start_usage);
-
     /* Build CmdStmt */
     Expr *first = (Expr *)ast_nodes->head->value;
     assert(first->type == EXPR_LITERAL);
@@ -45,11 +39,15 @@ int builtin_time(Interpreter *interpreter, ArenaLL *ast_nodes)
     assert(IS_TEXT_LIT(cmd_name));
 
     ast_nodes->size--;
-    if (ast_nodes->size == 0) {
+    if (ast_nodes->size == 0)
 	ast_nodes = NULL;
-    } else {
+    else
 	ast_nodes->head = ast_nodes->head->next;
-    }
+
+    struct timeval t0, t1;
+    gettimeofday(&t0, 0);
+    struct rusage start_usage;
+    getrusage(RUSAGE_SELF, &start_usage);
 
     CmdStmt cmd = { .type = STMT_CMD, .cmd_name = cmd_name.text_lit, .arg_exprs = ast_nodes };
     exec_cmd(interpreter, &cmd);

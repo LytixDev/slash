@@ -21,13 +21,16 @@
 #include "interpreter/value/slash_value.h"
 
 
-int builtin_exit(Interpreter *interpreter, size_t argc, SlashValue *argv)
+int builtin_exit(Interpreter *interpreter, ArenaLL *ast_nodes)
 {
-    (void)interpreter;
-    if (argc == 0)
+    if (ast_nodes == NULL)
 	exit(0);
 
-    SlashValue arg = argv[0];
+    size_t argc = ast_nodes->size;
+    SlashValue *argv[argc + 1];
+    ast_ll_to_argv(interpreter, ast_nodes, argv);
+
+    SlashValue arg = *argv[0];
     if (IS_NUM(arg))
 	exit(arg.num);
 

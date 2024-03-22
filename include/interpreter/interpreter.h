@@ -78,8 +78,10 @@ void interpreter_init(Interpreter *interpreter, int argc, char **argv);
 void interpreter_free(Interpreter *interpreter);
 int interpreter_run(Interpreter *interpreter, ArrayList *statements);
 int interpret(ArrayList *statements, int argc, char **argv);
+
 void exec_cmd(Interpreter *interpreter, CmdStmt *stmt);
 void ast_ll_to_argv(Interpreter *interpreter, ArenaLL *ast_nodes, SlashValue **result);
+void exec_program_stub(Interpreter *interpreter, char *program_path, ArenaLL *ast_nodes);
 
 
 #endif /* INTERPRETER_H */

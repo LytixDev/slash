@@ -26,38 +26,26 @@
 /*
  * '.' builtin is used to execute commands from a specified file
  */
-int builtin_dot(Interpreter *interpreter, size_t argc, SlashValue *argv)
+int builtin_dot(Interpreter *interpreter, ArenaLL *ast_nodes)
 {
-    if (argc == 0) {
+    if (ast_nodes == NULL) {
 	fprintf(stderr, ".: not enough arguments\n");
 	return 1;
     }
 
-    char *exec_argv[argc + 1]; // NULL terminated
-    exec_argv[argc] = NULL;
+    /* Eval first argument */
+    Expr *first = (Expr *)ast_nodes->head->value;
+    assert(first->type == EXPR_LITERAL);
+    SlashValue cmd_name = ((LiteralExpr *)first)->value;
+    assert(IS_TEXT_LIT(cmd_name));
 
-    gc_barrier_start(&interpreter->gc);
-    VERIFY_TRAIT_IMPL(to_str, argv[0], ".: could not take to_str of type '%s'", argv[0].T->name);
-    TraitToStr to_str = argv[0].T->to_str;
-    SlashStr *program_str = AS_STR(to_str(interpreter, argv[0]));
-    /* prepend './' to first argument */
-    char program_name[program_str->len + 3]; // + 2 (for './) and + 1 for null termination
-    program_name[0] = '.';
-    program_name[1] = '/';
-    strncpy(program_name + 2, program_str->str, program_str->len);
-    program_name[program_str->len + 2] = 0;
-    exec_argv[0] = program_name;
+    ast_nodes->size--;
+    if (ast_nodes->size == 0)
+	ast_nodes = NULL;
+    else
+	ast_nodes->head = ast_nodes->head->next;
 
-    for (size_t i = 1; i < argc; i++) {
-	VERIFY_TRAIT_IMPL(to_str, argv[i], ".: could not take to_str of type '%s'",
-			  argv[i].T->name);
-	to_str = argv[i].T->to_str;
-	SlashStr *param_str = AS_STR(to_str(interpreter, argv[i]));
-	exec_argv[i] = param_str->str;
-    }
-
-    int rc = exec_program(&interpreter->stream_ctx, exec_argv);
-    gc_barrier_end(&interpreter->gc);
-
-    return rc;
+    str_view_to_buf_cstr(cmd_name.text_lit);
+    exec_program_stub(interpreter, buf, ast_nodes);
+    return interpreter->prev_exit_code;
 }

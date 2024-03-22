@@ -24,19 +24,23 @@
 #include "interpreter/value/slash_value.h"
 
 
-int builtin_read(Interpreter *interpreter, size_t argc, SlashValue *argv)
+int builtin_read(Interpreter *interpreter, ArenaLL *ast_nodes)
 {
     /* Usage: takes one argument, variable. */
-
-    if (argc == 0) {
+    if (ast_nodes == NULL) {
 	fprintf(stderr, "read: no argument received");
 	return 1;
     }
-    if (argc > 1) {
+    if (ast_nodes->size > 1) {
 	fprintf(stderr, "read: too many arguments received, expected one");
 	return 1;
     }
-    SlashValue arg = argv[0];
+
+    size_t argc = ast_nodes->size;
+    SlashValue *argv[argc + 1];
+    ast_ll_to_argv(interpreter, ast_nodes, argv);
+
+    SlashValue arg = *argv[0];
     if (!IS_TEXT_LIT(arg)) {
 	fprintf(stderr, "read: expected argument to be text, not '%s'", arg.T->name);
 	return 1;
@@ -45,7 +49,7 @@ int builtin_read(Interpreter *interpreter, size_t argc, SlashValue *argv)
     Prompt prompt;
     prompt_init(&prompt, ">>>");
     prompt_run(&prompt);
-    StrView input = (StrView){ .view = prompt.buf, .size = prompt.buf_len };
+    StrView input = (StrView){ .view = prompt.buf, .size = prompt.buf_len - 2 };
 
     SlashObj *str = gc_new_T(interpreter, &str_type_info);
     slash_str_init_from_view(interpreter, (SlashStr *)str, &input);
