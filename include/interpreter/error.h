@@ -21,7 +21,6 @@
 #include <setjmp.h>
 #include <stdio.h> // stderr
 
-#include "interpreter/interpreter.h"
 #include "interpreter/lexer.h"
 #include "interpreter/parser.h"
 

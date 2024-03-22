@@ -26,9 +26,10 @@
 
 
 Builtin builtins[] = {
-    { .name = "cd", .func = builtin_cd },	{ .name = "vars", .func = builtin_vars },
-    { .name = "which", .func = builtin_which }, { .name = "exit", .func = builtin_exit },
-    { .name = "read", .func = builtin_read },	{ .name = ".", .func = builtin_dot }
+    { .name = "which", .func = builtin_which }, { .name = "cd", .func = builtin_cd },
+    { .name = "vars", .func = builtin_vars },	{ .name = "exit", .func = builtin_exit },
+    { .name = "read", .func = builtin_read },	{ .name = ".", .func = builtin_dot },
+    { .name = "time", .func = builtin_time }
 };
 
 
@@ -73,21 +74,26 @@ static void which_internal(WhichResult *mutable_result, char *PATH, char *comman
     mutable_result->type = WHICH_NOT_FOUND;
 }
 
-int builtin_which(Interpreter *interpreter, size_t argc, SlashValue *argv)
+
+int builtin_which(Interpreter *interpreter, ArenaLL *ast_nodes)
 {
-    if (argc == 0) {
+    if (ast_nodes == NULL) {
 	fprintf(stderr, "which: no argument received");
 	return 1;
     }
+    size_t argc = ast_nodes->size;
+    SlashValue *argv[argc + 1];
+    ast_ll_to_argv(interpreter, ast_nodes, argv);
 
-    SlashValue param = argv[0];
+    SlashValue param = *argv[0];
     TraitToStr to_str = param.T->to_str;
     if (to_str == NULL) {
 	fprintf(stderr, "which: could not take to_str of type '%s'", param.T->name);
 	return 1;
     }
     SlashStr *param_str = AS_STR(to_str(interpreter, param));
-    ScopeAndValue path = var_get_or_runtime_error(interpreter->scope, &(StrView){ .view = "PATH", .size = 4 });
+    ScopeAndValue path =
+	var_get_or_runtime_error(interpreter->scope, &(StrView){ .view = "PATH", .size = 4 });
     if (!IS_STR(*path.value)) {
 	fprintf(stderr, "which: PATH variable should be type '%s' not '%s'", str_type_info.name,
 		path.value->T->name);

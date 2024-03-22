@@ -74,19 +74,19 @@ static ExecResult exec_block_body(Interpreter *interpreter, BlockStmt *stmt)
     return EXEC_NORMAL;
 }
 
-static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt, char *program_path)
+void exec_program_stub(Interpreter *interpreter, char *program_path, ArenaLL *ast_nodes)
 {
     size_t argc = 1;
-    if (stmt->arg_exprs != NULL)
-	argc += stmt->arg_exprs->size;
+    if (ast_nodes != NULL)
+	argc += ast_nodes->size;
     char *argv[argc + 1]; // + 1 because last element is NULL
     argv[0] = program_path;
 
     gc_barrier_start(&interpreter->gc);
     size_t i = 1;
-    if (stmt->arg_exprs != NULL) {
+    if (ast_nodes != NULL) {
 	LLItem *item;
-	ARENA_LL_FOR_EACH(stmt->arg_exprs, item)
+	ARENA_LL_FOR_EACH(ast_nodes, item)
 	{
 	    SlashValue value = eval(interpreter, item->value);
 	    VERIFY_TRAIT_IMPL(to_str, value, "Could not take 'to_str' of type '%s'", value.T->name);
@@ -96,8 +96,8 @@ static void exec_program_stub(Interpreter *interpreter, CmdStmt *stmt, char *pro
     }
 
     argv[i] = NULL;
-    int exit_code = exec_program(&interpreter->stream_ctx, argv);
     gc_barrier_end(&interpreter->gc);
+    int exit_code = exec_program(&interpreter->stream_ctx, argv);
     set_exit_code(interpreter, exit_code);
 }
 
@@ -578,9 +578,10 @@ static void exec_seq_var(Interpreter *interpreter, SeqVarStmt *stmt)
     }
 }
 
-static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
+void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
 {
-    ScopeAndValue path = var_get_or_runtime_error(interpreter->scope, &(StrView){ .view = "PATH", .size = 4 });
+    ScopeAndValue path =
+	var_get_or_runtime_error(interpreter->scope, &(StrView){ .view = "PATH", .size = 4 });
     if (!IS_STR(*path.value))
 	REPORT_RUNTIME_ERROR("PATH variable should be type '%s' not '%s'", str_type_info.name,
 			     path.value->T->name);
@@ -591,25 +592,10 @@ static void exec_cmd(Interpreter *interpreter, CmdStmt *stmt)
 	REPORT_RUNTIME_ERROR("Command '%s' not found", buf);
     }
 
-    if (which_result.type == WHICH_EXTERN) {
-	exec_program_stub(interpreter, stmt, which_result.path);
-    } else {
-	/* builtin */
-	if (stmt->arg_exprs == NULL) {
-	    which_result.builtin(interpreter, 0, NULL);
-	    return;
-	}
-
-	size_t argc = stmt->arg_exprs->size;
-	SlashValue argv[argc];
-	LLItem *item = stmt->arg_exprs->head;
-	for (size_t i = 0; i < argc; i++) {
-	    SlashValue value = eval(interpreter, (Expr *)item->value);
-	    argv[i] = value;
-	    item = item->next;
-	}
-	which_result.builtin(interpreter, argc, argv);
-    }
+    if (which_result.type == WHICH_EXTERN)
+	exec_program_stub(interpreter, which_result.path, stmt->arg_exprs);
+    else
+	which_result.builtin(interpreter, stmt->arg_exprs);
 }
 
 static void exec_if(Interpreter *interpreter, IfStmt *stmt)
@@ -846,7 +832,8 @@ static void exec_iter_loop_map(Interpreter *interpreter, IterLoopStmt *stmt, Sla
 
 static void exec_iter_loop_str(Interpreter *interpreter, IterLoopStmt *stmt, SlashStr *iterable)
 {
-    ScopeAndValue ifs_res = var_get_or_runtime_error(interpreter->scope, &(StrView){ .view = "IFS", .size = 3 });
+    ScopeAndValue ifs_res =
+	var_get_or_runtime_error(interpreter->scope, &(StrView){ .view = "IFS", .size = 3 });
     if (!IS_STR(*ifs_res.value))
 	REPORT_RUNTIME_ERROR("$IFS has to be of type 'str', but got '%s'", ifs_res.value->T->name);
 
@@ -991,6 +978,19 @@ static void exec_abrupt_control_flow(Interpreter *interpreter, AbruptControlFlow
 	result.return_expr = stmt->return_expr;
     }
     interpreter->exec_res_ctx = result;
+}
+
+void ast_ll_to_argv(Interpreter *interpreter, ArenaLL *ast_nodes, SlashValue **result)
+{
+    gc_barrier_start(&interpreter->gc);
+    LLItem *item = ast_nodes->head;
+    for (size_t i = 0; i < ast_nodes->size; i++) {
+	SlashValue value = eval(interpreter, (Expr *)item->value);
+	result[i] = &value;
+	item = item->next;
+    }
+    result[ast_nodes->size] = NULL;
+    gc_barrier_end(&interpreter->gc);
 }
 
 static SlashValue eval(Interpreter *interpreter, Expr *expr)

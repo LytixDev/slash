@@ -16,24 +16,23 @@
  */
 
 #include <stdio.h>
-#include <unistd.h>
+#include <sys/resource.h>
+#include <sys/time.h>
+#include <time.h>
 
-#include "interpreter/exec.h"
+#include "interpreter/ast.h"
 #include "interpreter/interpreter.h"
 #include "interpreter/value/slash_str.h"
 #include "interpreter/value/slash_value.h"
 
-/*
- * '.' builtin is used to execute commands from a specified file
- */
-int builtin_dot(Interpreter *interpreter, ArenaLL *ast_nodes)
+
+int builtin_time(Interpreter *interpreter, ArenaLL *ast_nodes)
 {
     if (ast_nodes == NULL) {
-	fprintf(stderr, ".: not enough arguments\n");
+	fprintf(stderr, "time: no argument received");
 	return 1;
     }
-
-    /* Eval first argument */
+    /* Build CmdStmt */
     Expr *first = (Expr *)ast_nodes->head->value;
     assert(first->type == EXPR_LITERAL);
     SlashValue cmd_name = ((LiteralExpr *)first)->value;
@@ -45,7 +44,24 @@ int builtin_dot(Interpreter *interpreter, ArenaLL *ast_nodes)
     else
 	ast_nodes->head = ast_nodes->head->next;
 
-    str_view_to_buf_cstr(cmd_name.text_lit);
-    exec_program_stub(interpreter, buf, ast_nodes);
+    struct timeval t0, t1;
+    gettimeofday(&t0, 0);
+    struct rusage start_usage;
+    getrusage(RUSAGE_SELF, &start_usage);
+
+    CmdStmt cmd = { .type = STMT_CMD, .cmd_name = cmd_name.text_lit, .arg_exprs = ast_nodes };
+    exec_cmd(interpreter, &cmd);
+
+    gettimeofday(&t1, 0);
+    struct rusage end_usage;
+    getrusage(RUSAGE_CHILDREN, &end_usage);
+
+    double real_time = (t1.tv_sec - t0.tv_sec) + (t1.tv_usec - t0.tv_usec) / 1000000.0;
+    double user_time = (double)(end_usage.ru_utime.tv_sec + end_usage.ru_utime.tv_usec / 1000000.0);
+    double sys_time = (double)(end_usage.ru_stime.tv_sec + end_usage.ru_stime.tv_usec / 1000000.0);
+    printf("\nreal\t%.3f\n", real_time);
+    printf("user\t%.3f\n", user_time);
+    printf("sys\t%.3f\n", sys_time);
+
     return interpreter->prev_exit_code;
 }
