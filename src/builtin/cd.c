@@ -23,14 +23,18 @@
 #include "interpreter/value/slash_value.h"
 
 
-int builtin_cd(Interpreter *interpreter, size_t argc, SlashValue *argv)
+int builtin_cd(Interpreter *interpreter, ArenaLL *ast_nodes)
 {
-    if (argc == 0) {
+    if (ast_nodes == NULL) {
 	fprintf(stderr, "cd: no argument received\n");
 	return 1;
     }
 
-    SlashValue param = argv[0];
+    size_t argc = ast_nodes->size;
+    SlashValue *argv[argc + 1];
+    ast_ll_to_argv(interpreter, ast_nodes, argv);
+
+    SlashValue param = *argv[0];
     VERIFY_TRAIT_IMPL(to_str, param, ".: could not take to_str of type '%s'", param.T->name);
     TraitToStr to_str = param.T->to_str;
     SlashStr *param_str = AS_STR(to_str(interpreter, param));

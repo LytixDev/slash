@@ -177,6 +177,7 @@ bool prompt_run(Prompt *prompt)
 	prompt_show(prompt);
     }
 
+    // TODO: exit builtin means this branch is never taken
     if (strcmp(prompt->buf, "exit") == 0)
 	return false;
 
