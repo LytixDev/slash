@@ -99,8 +99,6 @@ typedef struct slash_type_info_t {
     TraitHash hash;
 
     /* Object params */
-    ObjInit init;
-    ObjFree free;
     size_t obj_size; // Size of the object in bytes
 } SlashTypeInfo;
 

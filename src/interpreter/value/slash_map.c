@@ -18,7 +18,6 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "interpreter/error.h"
 #include "interpreter/gc.h"
 #include "interpreter/value/slash_map.h"
 #include "interpreter/value/slash_value.h"
@@ -206,14 +205,14 @@ void slash_map_impl_get_keys(SlashMap *map, SlashValue *return_ptr)
     }
 }
 
-void slash_map_impl_print(SlashMap map)
+void slash_map_impl_print(Interpreter *interpreter, SlashMap map)
 {
     SlashValue key, value;
     SlashMapBucket bucket;
     SlashMapEntry entry;
     size_t entries_found = 0;
 
-    printf("@[");
+    SLASH_PRINT(&interpreter->stream_ctx, "@[");
     for (size_t i = 0; i < N_BUCKETS(map.total_buckets_log2); i++) {
 	bucket = map.buckets[i];
 	for (size_t j = 0; j < HM_BUCKET_SIZE; j++) {
@@ -225,13 +224,13 @@ void slash_map_impl_print(SlashMap map)
 	    key = entry.key;
 	    value = entry.value;
 
-	    key.T->print(key);
+	    key.T->print(interpreter, key);
 	    printf(": ");
-	    value.T->print(value);
+	    value.T->print(interpreter, value);
 	    if (entries_found == map.len)
 		break;
-	    printf(", ");
+	    SLASH_PRINT(&interpreter->stream_ctx, ",");
 	}
     }
-    printf("]");
+    SLASH_PRINT(&interpreter->stream_ctx, "]");
 }

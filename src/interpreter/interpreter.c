@@ -509,15 +509,15 @@ static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
 	return;
 
     TraitPrint trait_print = value.T->print;
-    assert(trait_print != NULL);
-    trait_print(value);
+    VERIFY_TRAIT_IMPL(print, value, "TODO");
+    trait_print(interpreter, value);
     ///* edge case: if last char printed was a newline then we don't bother printing one */
     // if (value.type == SLASH_OBJ && value.obj->type == SLASH_OBJ_STR) {
     //     SlashStr *str = (SlashStr *)value.obj;
     //     if (slash_str_last_char(str) == '\n')
     //         return;
     // }
-    putchar('\n');
+    SLASH_PRINT(&interpreter->stream_ctx, "\n");
 }
 
 static void exec_var(Interpreter *interpreter, VarStmt *stmt)

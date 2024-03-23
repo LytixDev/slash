@@ -38,10 +38,10 @@ SlashValue bool_unary_not(SlashValue self)
     return (SlashValue){ .T = &bool_type_info, .boolean = !self.boolean };
 }
 
-void bool_print(SlashValue self)
+void bool_print(Interpreter *interpreter, SlashValue self)
 {
     assert(IS_BOOL(self));
-    printf("%s", self.boolean == true ? "true" : "false");
+    SLASH_PRINT(&interpreter->stream_ctx, "%s", self.boolean == true ? "true" : "false");
 }
 
 SlashValue bool_to_str(Interpreter *interpreter, SlashValue self)
@@ -152,13 +152,13 @@ SlashValue num_unary_not(SlashValue self)
     return (SlashValue){ .T = &bool_type_info, .boolean = !is_truthy(self) };
 }
 
-void num_print(SlashValue self)
+void num_print(Interpreter *interpreter, SlashValue self)
 {
     assert(IS_NUM(self));
     if (self.num == (int)self.num)
-	printf("%d", (int)self.num);
+	SLASH_PRINT(&interpreter->stream_ctx, "%d", (int)self.num);
     else
-	printf("%f", self.num);
+	SLASH_PRINT(&interpreter->stream_ctx, "%f", self.num);
 }
 
 SlashValue num_to_str(Interpreter *interpreter, SlashValue self)
@@ -211,10 +211,10 @@ int num_hash(SlashValue self)
 /*
  * range impl
  */
-void range_print(SlashValue self)
+void range_print(Interpreter *interpreter, SlashValue self)
 {
     assert(IS_RANGE(self));
-    printf("%d -> %d", self.range.start, self.range.end);
+    SLASH_PRINT(&interpreter->stream_ctx, "%d -> %d", self.range.start, self.range.end);
 }
 
 SlashValue range_to_str(Interpreter *interpreter, SlashValue self)
@@ -317,11 +317,11 @@ SlashValue text_lit_to_str(Interpreter *interpreter, SlashValue self)
 /*
  * function impl
  */
-void function_print(SlashValue self)
+void function_print(Interpreter *interpreter, SlashValue self)
 {
     assert(IS_FUNCTION(self));
     (void)self;
-    printf("<function>");
+    SLASH_PRINT(&interpreter->stream_ctx, "<function>");
 }
 
 
@@ -334,10 +334,10 @@ SlashValue map_unary_not(SlashValue self)
     return (SlashValue){ .T = &bool_type_info, .boolean = !self.T->truthy(self) };
 }
 
-void map_print(SlashValue self)
+void map_print(Interpreter *interpreter, SlashValue self)
 {
     assert(IS_MAP(self));
-    slash_map_impl_print(*AS_MAP(self));
+    slash_map_impl_print(interpreter, *AS_MAP(self));
 }
 
 typedef SlashValue (*TraitToStr)(Interpreter *interpreter, SlashValue self);
@@ -421,19 +421,19 @@ SlashValue list_unary_not(SlashValue self)
     return (SlashValue){ .T = &bool_type_info, .boolean = !self.T->truthy(self) };
 }
 
-void list_print(SlashValue self)
+void list_print(Interpreter *interpreter, SlashValue self)
 {
     assert(IS_LIST(self));
     SlashList *underlying = AS_LIST(self);
-    putchar('[');
+    SLASH_PRINT(&interpreter->stream_ctx, "[");
     for (size_t i = 0; i < underlying->len; i++) {
 	SlashValue item = underlying->items[i];
 	assert(item.T->print != NULL);
-	item.T->print(item);
+	item.T->print(interpreter, item);
 	if (i != underlying->len - 1)
 	    printf(", ");
     }
-    putchar(']');
+    SLASH_PRINT(&interpreter->stream_ctx, "]");
 }
 
 // TODO: we have no easy mechanism to build a string rn.
@@ -545,18 +545,18 @@ SlashValue tuple_unary_not(SlashValue self)
     return (SlashValue){ .T = &bool_type_info, .boolean = !self.T->truthy(self) };
 }
 
-void tuple_print(SlashValue self)
+void tuple_print(Interpreter *interpreter, SlashValue self)
 {
     assert(IS_TUPLE(self));
     SlashTuple *tuple = AS_TUPLE(self);
-    putchar('(');
+    SLASH_PRINT(&interpreter->stream_ctx, "(");
     for (size_t i = 0; i < tuple->len; i++) {
 	SlashValue this = tuple->items[i];
-	this.T->print(this);
+	this.T->print(interpreter, this);
 	if (i != tuple->len - 1 || i == 0)
-	    printf(", ");
+	    SLASH_PRINT(&interpreter->stream_ctx, ",");
     }
-    putchar(')');
+    SLASH_PRINT(&interpreter->stream_ctx, "(");
 }
 
 typedef SlashValue (*TraitToStr)(Interpreter *interpreter, SlashValue self);
@@ -645,10 +645,10 @@ SlashValue str_plus(Interpreter *interpreter, SlashValue self, SlashValue other)
     return AS_VALUE(new);
 }
 
-void str_print(SlashValue self)
+void str_print(Interpreter *interpreter, SlashValue self)
 {
     assert(IS_STR(self));
-    printf("\"%s\"", AS_STR(self)->str);
+    SLASH_PRINT(&interpreter->stream_ctx, "\"%s\"", AS_STR(self)->str);
 }
 
 SlashValue str_to_str(Interpreter *interpreter, SlashValue self)
@@ -689,11 +689,11 @@ int str_hash(SlashValue self)
 /*
  * none impl
  */
-void none_print(SlashValue self)
+void none_print(Interpreter *interpreter, SlashValue self)
 {
     (void)self;
     assert(IS_NONE(self));
-    printf("none");
+    SLASH_PRINT(&interpreter->stream_ctx, "none");
 }
 
 bool none_truthy(SlashValue self)
@@ -733,8 +733,6 @@ SlashTypeInfo bool_type_info = { .name = "bool",
 				 .eq = bool_eq,
 				 .cmp = bool_cmp,
 				 .hash = bool_hash,
-				 .init = NULL,
-				 .free = NULL,
 				 .obj_size = 0 };
 
 SlashTypeInfo num_type_info = { .name = "num",
@@ -756,8 +754,6 @@ SlashTypeInfo num_type_info = { .name = "num",
 				.eq = num_eq,
 				.cmp = num_cmp,
 				.hash = num_hash,
-				.init = NULL,
-				.free = NULL,
 				.obj_size = 0 };
 
 SlashTypeInfo range_type_info = { .name = "range",
@@ -779,8 +775,6 @@ SlashTypeInfo range_type_info = { .name = "range",
 				  .eq = range_eq,
 				  .cmp = NULL,
 				  .hash = NULL,
-				  .init = NULL,
-				  .free = NULL,
 				  .obj_size = 0 };
 
 SlashTypeInfo text_lit_type_info = { .name = "text",
@@ -802,8 +796,6 @@ SlashTypeInfo text_lit_type_info = { .name = "text",
 				     .eq = NULL,
 				     .cmp = NULL,
 				     .hash = NULL,
-				     .init = NULL,
-				     .free = NULL,
 				     .obj_size = 0 };
 
 SlashTypeInfo function_type_info = { .name = "function",
@@ -825,8 +817,6 @@ SlashTypeInfo function_type_info = { .name = "function",
 				     .eq = NULL,
 				     .cmp = NULL,
 				     .hash = NULL,
-				     .init = NULL,
-				     .free = NULL,
 				     .obj_size = 0 };
 
 SlashTypeInfo map_type_info = { .name = "map",
@@ -848,8 +838,6 @@ SlashTypeInfo map_type_info = { .name = "map",
 				.eq = map_eq,
 				.cmp = NULL,
 				.hash = NULL,
-				.init = NULL,
-				.free = NULL,
 				.obj_size = sizeof(SlashMap) };
 
 SlashTypeInfo list_type_info = { .name = "list",
@@ -871,8 +859,6 @@ SlashTypeInfo list_type_info = { .name = "list",
 				 .eq = list_eq,
 				 .cmp = NULL,
 				 .hash = NULL,
-				 .init = NULL,
-				 .free = NULL,
 				 .obj_size = sizeof(SlashList) };
 
 SlashTypeInfo tuple_type_info = { .name = "tuple",
@@ -894,8 +880,6 @@ SlashTypeInfo tuple_type_info = { .name = "tuple",
 				  .eq = tuple_eq,
 				  .cmp = NULL,
 				  .hash = tuple_hash,
-				  .init = NULL,
-				  .free = NULL,
 				  .obj_size = sizeof(SlashTuple) };
 
 SlashTypeInfo str_type_info = { .name = "str",
@@ -917,8 +901,6 @@ SlashTypeInfo str_type_info = { .name = "str",
 				.eq = str_eq,
 				.cmp = NULL,
 				.hash = str_hash,
-				.init = NULL,
-				.free = NULL,
 				.obj_size = sizeof(SlashStr) };
 
 SlashTypeInfo none_type_info = { .name = "none",
@@ -940,8 +922,6 @@ SlashTypeInfo none_type_info = { .name = "none",
 				 .eq = none_eq,
 				 .cmp = NULL,
 				 .hash = NULL,
-				 .init = NULL,
-				 .free = NULL,
 				 .obj_size = 0 };
 
 

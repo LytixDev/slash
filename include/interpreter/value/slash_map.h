@@ -81,4 +81,4 @@ bool slash_map_impl_rm(SlashMap *map, SlashValue key);
 void slash_map_impl_get_values(SlashMap *map, SlashValue *return_ptr);
 void slash_map_impl_get_keys(SlashMap *map, SlashValue *return_ptr);
 
-void slash_map_impl_print(SlashMap map);
+void slash_map_impl_print(Interpreter *interpreter, SlashMap map);

@@ -57,7 +57,7 @@ int builtin_vars(Interpreter *interpreter, ArenaLL *ast_nodes)
 	    SLASH_PRINT(&interpreter->stream_ctx, "%s", buf);
 	    putchar('=');
 	    VERIFY_TRAIT_IMPL(print, *value, "print not defined for type '%s'", value->T->name);
-	    value->T->print(*value);
+	    value->T->print(interpreter, *value);
 	    putchar('\n');
 	}
     }
