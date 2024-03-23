@@ -62,7 +62,7 @@ static void gc_sweep(Interpreter *interpreter)
 	    TraitPrint print_func = obj->T->print;
 	    assert(print_func != NULL);
 	    SlashValue value = AS_VALUE(obj);
-	    print_func(value);
+	    print_func(interpreter, value);
 	    putchar('\n');
 #endif
 	    gc_sweep_obj(interpreter, obj);
@@ -88,41 +88,40 @@ static void gc_reset(GC *gc)
     }
 }
 
-static void gc_visit_obj(GC *gc, SlashObj *obj)
+static void gc_visit_obj(Interpreter *interpreter, SlashObj *obj)
 {
     assert(obj != NULL);
     if (obj->gc_marked)
 	return;
     obj->gc_marked = true;
-    arraylist_append(&gc->gray_stack, &obj);
+    arraylist_append(&interpreter->gc.gray_stack, &obj);
 
 #ifdef DEBUG_LOG_GC
     printf("%p mark ", (void *)obj);
     TraitPrint print_func = obj->T->print;
     assert(print_func != NULL);
     SlashValue value = AS_VALUE(obj);
-    print_func(value);
+    print_func(interpreter, value);
     putchar('\n');
 #endif
 }
 
-static void gc_visit_value(GC *gc, SlashValue *value)
+static void gc_visit_value(Interpreter *interpreter, SlashValue *value)
 {
     if (IS_OBJ(*value) && value->obj->gc_managed)
-	gc_visit_obj(gc, value->obj);
+	gc_visit_obj(interpreter, value->obj);
 }
 
-static void gc_blacken_obj(GC *gc, SlashObj *obj)
+static void gc_blacken_obj(Interpreter *interpreter, SlashObj *obj)
 {
     SlashValue value = AS_VALUE(obj);
-    (void)gc;
     (void)value;
 
 #ifdef DEBUG_LOG_GC
     printf("%p blacken ", (void *)obj);
     TraitPrint print_func = obj->T->print;
     assert(print_func != NULL);
-    print_func(value);
+    print_func(interpreter, value);
     putchar('\n');
 #endif
 
@@ -134,20 +133,20 @@ static void gc_blacken_obj(GC *gc, SlashObj *obj)
 	SlashValue keys[map->len];
 	slash_map_impl_get_keys(map, keys);
 	for (size_t i = 0; i < map->len; i++) {
-	    gc_visit_value(gc, &keys[i]);
+	    gc_visit_value(interpreter, &keys[i]);
 	    SlashValue v = slash_map_impl_get(map, keys[i]);
-	    gc_visit_value(gc, &v);
+	    gc_visit_value(interpreter, &v);
 	}
     } else if (IS_LIST(value)) {
 	SlashList *list = AS_LIST(value);
 	for (size_t i = 0; i < list->len; i++) {
 	    SlashValue v = slash_list_impl_get(list, i);
-	    gc_visit_value(gc, &v);
+	    gc_visit_value(interpreter, &v);
 	}
     } else if (IS_TUPLE(value)) {
 	SlashTuple *tuple = AS_TUPLE(value);
 	for (size_t i = 0; i < tuple->len; i++)
-	    gc_visit_value(gc, &tuple->items[i]);
+	    gc_visit_value(interpreter, &tuple->items[i]);
     } else if (IS_STR(value)) {
 	return;
     } else {
@@ -160,7 +159,7 @@ static void gc_mark_roots(Interpreter *interpreter)
     GC *gc = &interpreter->gc;
     /* Mark all objects in shadow stack */
     for (size_t i = 0; i < gc->shadow_stack.size; i++)
-	gc_visit_obj(gc, *(SlashObj **)arraylist_get(&gc->shadow_stack, i));
+	gc_visit_obj(interpreter, *(SlashObj **)arraylist_get(&gc->shadow_stack, i));
 
     /* mark all reachable objects */
     for (Scope *scope = interpreter->scope; scope != NULL; scope = scope->enclosing) {
@@ -172,16 +171,16 @@ static void gc_mark_roots(Interpreter *interpreter)
 	hashmap_get_values(&scope->values, (void **)values);
 
 	for (size_t i = 0; i < scope->values.len; i++)
-	    gc_visit_value(gc, values[i]);
+	    gc_visit_value(interpreter, values[i]);
     }
 }
 
-static void gc_trace_references(GC *gc)
+static void gc_trace_references(Interpreter *interpreter)
 {
     SlashObj *obj;
-    while (gc->gray_stack.size != 0) {
-	arraylist_pop_and_copy(&gc->gray_stack, &obj);
-	gc_blacken_obj(gc, obj);
+    while (interpreter->gc.gray_stack.size != 0) {
+	arraylist_pop_and_copy(&interpreter->gc.gray_stack, &obj);
+	gc_blacken_obj(interpreter, obj);
     }
 }
 
@@ -262,7 +261,7 @@ void gc_run(Interpreter *interpreter)
     printf("-- gc begin\n");
 #endif
     gc_mark_roots(interpreter);
-    gc_trace_references(&interpreter->gc);
+    gc_trace_references(interpreter);
 #ifdef DEBUG_LOG_GC
     printf("-- gc sweep\n");
 #endif
@@ -301,8 +300,9 @@ void gc_shadow_push(GC *gc, SlashObj *obj)
     arraylist_append(&gc->shadow_stack, &obj);
 }
 
-void gc_shadow_pop(GC *gc)
+void gc_shadow_pop(Interpreter *interpreter)
 {
+    GC *gc = &interpreter->gc;
 #ifdef DEBUG_LOG_GC
     SlashObj **obj_ptr = arraylist_get(&gc->shadow_stack, gc->shadow_stack.size - 1);
     SlashObj *obj = *obj_ptr;
@@ -310,7 +310,7 @@ void gc_shadow_pop(GC *gc)
     TraitPrint print_func = obj->T->print;
     assert(print_func != NULL);
     SlashValue value = AS_VALUE(obj);
-    print_func(value);
+    print_func(interpreter, value);
     putchar('\n');
 #endif /* DEBUG_LOG_GC */
     /* Since we are using the ArrayList as a stack we simply decrement its size */

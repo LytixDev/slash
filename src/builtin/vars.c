@@ -55,10 +55,10 @@ int builtin_vars(Interpreter *interpreter, ArenaLL *ast_nodes)
 	    SlashValue *value = values[i];
 	    str_view_to_buf_cstr(key); // creates temporary buf variable
 	    SLASH_PRINT(&interpreter->stream_ctx, "%s", buf);
-	    putchar('=');
+	    SLASH_PRINT(&interpreter->stream_ctx, "=");
 	    VERIFY_TRAIT_IMPL(print, *value, "print not defined for type '%s'", value->T->name);
 	    value->T->print(interpreter, *value);
-	    putchar('\n');
+	    SLASH_PRINT(&interpreter->stream_ctx, "\n");
 	}
     }
 
