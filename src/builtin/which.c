@@ -78,7 +78,7 @@ static void which_internal(WhichResult *mutable_result, char *PATH, char *comman
 int builtin_which(Interpreter *interpreter, ArenaLL *ast_nodes)
 {
     if (ast_nodes == NULL) {
-	fprintf(stderr, "which: no argument received");
+	SLASH_PRINT_ERR(&interpreter->stream_ctx, "which: no argument received");
 	return 1;
     }
     size_t argc = ast_nodes->size;
@@ -88,15 +88,17 @@ int builtin_which(Interpreter *interpreter, ArenaLL *ast_nodes)
     SlashValue param = *argv[0];
     TraitToStr to_str = param.T->to_str;
     if (to_str == NULL) {
-	fprintf(stderr, "which: could not take to_str of type '%s'", param.T->name);
+	SLASH_PRINT_ERR(&interpreter->stream_ctx, "which: could not take to_str of type '%s'",
+			param.T->name);
 	return 1;
     }
     SlashStr *param_str = AS_STR(to_str(interpreter, param));
     ScopeAndValue path =
 	var_get_or_runtime_error(interpreter->scope, &(StrView){ .view = "PATH", .size = 4 });
     if (!IS_STR(*path.value)) {
-	fprintf(stderr, "which: PATH variable should be type '%s' not '%s'", str_type_info.name,
-		path.value->T->name);
+	SLASH_PRINT_ERR(&interpreter->stream_ctx,
+			"which: PATH variable should be type '%s' not '%s'", str_type_info.name,
+			path.value->T->name);
 	return 1;
     }
 
@@ -106,13 +108,13 @@ int builtin_which(Interpreter *interpreter, ArenaLL *ast_nodes)
     int return_code = 0;
     switch (which_result.type) {
     case WHICH_BUILTIN:
-	printf("%s: slash builtin\n", param_str->str);
+	SLASH_PRINT(&interpreter->stream_ctx, "%s: slash builtin\n", param_str->str);
 	break;
     case WHICH_EXTERN:
-	printf("%s\n", which_result.path);
+	SLASH_PRINT(&interpreter->stream_ctx, "%s\n", which_result.path);
 	break;
     case WHICH_NOT_FOUND:
-	printf("%s not found\n", param_str->str);
+	SLASH_PRINT(&interpreter->stream_ctx, "%s not found\n", param_str->str);
 	return_code = 1;
 	break;
     }

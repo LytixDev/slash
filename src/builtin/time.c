@@ -29,7 +29,7 @@
 int builtin_time(Interpreter *interpreter, ArenaLL *ast_nodes)
 {
     if (ast_nodes == NULL) {
-	fprintf(stderr, "time: no argument received");
+	SLASH_PRINT_ERR(&interpreter->stream_ctx, "time: no argument received");
 	return 1;
     }
     /* Build CmdStmt */

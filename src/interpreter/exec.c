@@ -49,11 +49,11 @@ int exec_program(StreamCtx *stream_ctx, char **argv)
     int status;
     pid_t new_pid = fork();
     if (new_pid == 0) {
-	if (stream_ctx->read_fd != STDIN_FILENO) {
-	    dup2(stream_ctx->read_fd, STDIN_FILENO);
+	if (stream_ctx->in_fd != STDIN_FILENO) {
+	    dup2(stream_ctx->in_fd, STDIN_FILENO);
 	}
-	if (stream_ctx->write_fd != STDOUT_FILENO) {
-	    dup2(stream_ctx->write_fd, STDOUT_FILENO);
+	if (stream_ctx->out_fd != STDOUT_FILENO) {
+	    dup2(stream_ctx->out_fd, STDOUT_FILENO);
 	}
 
 	close_active_fds(&stream_ctx->active_fds);

@@ -55,10 +55,14 @@ typedef struct {
 #define TODO(txt) assert(0 && (txt))
 #define TODO_LOG(txt) fprintf(stderr, "[TODO]: %s\n", txt)
 
+#define SLASH_PRINT(__stream_ctx, ...) dprintf((__stream_ctx)->out_fd, __VA_ARGS__)
+#define SLASH_PRINT_ERR(__stream_ctx, ...) dprintf((__stream_ctx)->err_fd, __VA_ARGS__)
+
 
 typedef struct {
-    int read_fd; // the file descriptor we are reading from, defaulted to fileno(STDIN)
-    int write_fd; // the file descriptor we are writing to, defaulted to fileno(STDOUT)
+    int in_fd; // defaults to fileno(STDIN)
+    int out_fd; // defaults to fileno(STDOUT)
+    int err_fd; // defaults to fileno(STDERR)
     ArrayList active_fds; // list/stack of open file descriptors that need to be closed on fork()
 } StreamCtx;
 
