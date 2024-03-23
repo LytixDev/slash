@@ -84,7 +84,7 @@ int main(int argc, char **argv)
     /* -c flag executes next argv as source code */
     if (strcmp(argv[1], "-c") == 0) {
 	if (argc == 2) {
-	    fprintf(stderr, "Argument expected for the -c flag\n");
+	    REPORT_IMPL("Argument expected for the -c flag\n");
 	    return 2;
 	}
 
