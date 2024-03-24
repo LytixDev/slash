@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2023 Nicolai Brand (https://lytix.dev)
+ *  Copyright (C) 2023-2024 Nicolai Brand (https://lytix.dev)
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,13 +16,16 @@
  */
 #include <assert.h>
 #include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 
-#include "interpreter/error.h"
 #include "interpreter/gc.h"
+#include "interpreter/interpreter.h"
 #include "interpreter/value/slash_map.h"
 #include "interpreter/value/slash_value.h"
 #include "interpreter/value/type_funcs.h"
+#include "nicc/nicc.h"
 
 
 static inline uint8_t map_hash_extra(int hash)
@@ -206,14 +209,14 @@ void slash_map_impl_get_keys(SlashMap *map, SlashValue *return_ptr)
     }
 }
 
-void slash_map_impl_print(SlashMap map)
+void slash_map_impl_print(Interpreter *interpreter, SlashMap map)
 {
     SlashValue key, value;
     SlashMapBucket bucket;
     SlashMapEntry entry;
     size_t entries_found = 0;
 
-    printf("@[");
+    SLASH_PRINT(&interpreter->stream_ctx, "@[");
     for (size_t i = 0; i < N_BUCKETS(map.total_buckets_log2); i++) {
 	bucket = map.buckets[i];
 	for (size_t j = 0; j < HM_BUCKET_SIZE; j++) {
@@ -225,13 +228,13 @@ void slash_map_impl_print(SlashMap map)
 	    key = entry.key;
 	    value = entry.value;
 
-	    key.T->print(key);
-	    printf(": ");
-	    value.T->print(value);
+	    key.T->print(interpreter, key);
+	    SLASH_PRINT(&interpreter->stream_ctx, ": ");
+	    value.T->print(interpreter, value);
 	    if (entries_found == map.len)
 		break;
-	    printf(", ");
+	    SLASH_PRINT(&interpreter->stream_ctx, ",");
 	}
     }
-    printf("]");
+    SLASH_PRINT(&interpreter->stream_ctx, "]");
 }

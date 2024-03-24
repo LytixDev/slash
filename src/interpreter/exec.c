@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2022-2023 Nicolai Brand, originally a part of the Valery project.
+ *  Copyright (C) 2022-2024 Nicolai Brand, originally a part of the Valery project.
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -14,6 +14,8 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <stdlib.h>
+#include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #ifdef EXEC_DEBUG
@@ -49,11 +51,11 @@ int exec_program(StreamCtx *stream_ctx, char **argv)
     int status;
     pid_t new_pid = fork();
     if (new_pid == 0) {
-	if (stream_ctx->read_fd != STDIN_FILENO) {
-	    dup2(stream_ctx->read_fd, STDIN_FILENO);
+	if (stream_ctx->in_fd != STDIN_FILENO) {
+	    dup2(stream_ctx->in_fd, STDIN_FILENO);
 	}
-	if (stream_ctx->write_fd != STDOUT_FILENO) {
-	    dup2(stream_ctx->write_fd, STDOUT_FILENO);
+	if (stream_ctx->out_fd != STDOUT_FILENO) {
+	    dup2(stream_ctx->out_fd, STDOUT_FILENO);
 	}
 
 	close_active_fds(&stream_ctx->active_fds);

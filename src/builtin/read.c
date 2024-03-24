@@ -18,21 +18,25 @@
 #include <stdio.h>
 
 #include "interactive/prompt.h"
+#include "interpreter/gc.h"
 #include "interpreter/interpreter.h"
 #include "interpreter/scope.h"
 #include "interpreter/value/slash_str.h"
 #include "interpreter/value/slash_value.h"
+#include "lib/arena_ll.h"
+#include "lib/str_view.h"
 
 
 int builtin_read(Interpreter *interpreter, ArenaLL *ast_nodes)
 {
     /* Usage: takes one argument, variable. */
     if (ast_nodes == NULL) {
-	fprintf(stderr, "read: no argument received");
+	SLASH_PRINT_ERR(&interpreter->stream_ctx, "read: no argument received\n");
 	return 1;
     }
     if (ast_nodes->size > 1) {
-	fprintf(stderr, "read: too many arguments received, expected one");
+	SLASH_PRINT_ERR(&interpreter->stream_ctx,
+			"read: too many arguments received, expected one\n");
 	return 1;
     }
 
@@ -42,7 +46,8 @@ int builtin_read(Interpreter *interpreter, ArenaLL *ast_nodes)
 
     SlashValue arg = *argv[0];
     if (!IS_TEXT_LIT(arg)) {
-	fprintf(stderr, "read: expected argument to be text, not '%s'", arg.T->name);
+	SLASH_PRINT_ERR(&interpreter->stream_ctx, "read: expected argument to be text, not '%s'\n",
+			arg.T->name);
 	return 1;
     }
 

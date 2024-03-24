@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2023 Nicolai Brand (https://lytix.dev)
+ *  Copyright (C) 2023-2024 Nicolai Brand (https://lytix.dev)
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -15,6 +15,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <assert.h>
+#include <stdint.h>
 #include <stdio.h>
 
 #include "interpreter/scope.h"
