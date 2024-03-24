@@ -20,6 +20,9 @@
 #include "interpreter/interpreter.h"
 #include "interpreter/scope.h"
 #include "interpreter/value/slash_value.h"
+#include "interpreter/value/type_funcs.h"
+#include "lib/arena_ll.h"
+#include "lib/str_view.h"
 #include "nicc/nicc.h"
 
 

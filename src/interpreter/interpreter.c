@@ -14,7 +14,9 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <assert.h>
 #include <setjmp.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -33,6 +35,7 @@
 #include "interpreter/value/slash_map.h"
 #include "interpreter/value/slash_str.h"
 #include "interpreter/value/slash_value.h"
+#include "interpreter/value/type_funcs.h"
 #include "lib/arena_ll.h"
 #include "lib/str_builder.h"
 #include "lib/str_view.h"
@@ -672,7 +675,7 @@ static void exec_assign_unpack(Interpreter *interpreter, AssignStmt *stmt)
     /* early eval all values on the right side of assignment */
     SlashValue values[right->seq.size];
     size_t i = 0;
-    LLItem *item = right->seq.head;
+    LLItem *item;
     ARENA_LL_FOR_EACH(&right->seq, item)
     {
 	// TODO: can have problems with GC?
@@ -680,7 +683,6 @@ static void exec_assign_unpack(Interpreter *interpreter, AssignStmt *stmt)
     }
 
     i = 0;
-    item = left->seq.head;
     ARENA_LL_FOR_EACH(&left->seq, item)
     {
 	AccessExpr *access = (AccessExpr *)item->value;

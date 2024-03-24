@@ -14,9 +14,12 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <assert.h>
+#include <setjmp.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "interpreter/error.h"
 #include "interpreter/lexer.h"
@@ -52,9 +55,8 @@ static char *offending_line(char *src, size_t line_no)
 static ErrBuf offending_line_from_offset(char *line, size_t offset)
 {
     char *start = line; /* first char in line */
-
-    char *end = line + offset; /* first char before previous newline */
-    for (end = line + offset; *end != EOF; end++) {
+    char *end = line + offset;
+    for (; *end != EOF; end++) {
 	if (*end == '\n') {
 	    break;
 	}

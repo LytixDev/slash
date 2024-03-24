@@ -15,6 +15,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <assert.h>
 #include <stdio.h>
 #include <sys/resource.h>
 #include <sys/time.h>
@@ -22,8 +23,8 @@
 
 #include "interpreter/ast.h"
 #include "interpreter/interpreter.h"
-#include "interpreter/value/slash_str.h"
 #include "interpreter/value/slash_value.h"
+#include "lib/arena_ll.h"
 
 
 int builtin_time(Interpreter *interpreter, ArenaLL *ast_nodes)

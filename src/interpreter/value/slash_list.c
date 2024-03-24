@@ -16,9 +16,9 @@
  */
 #include <assert.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdlib.h>
 
-#include "interpreter/error.h"
 #include "interpreter/gc.h"
 #include "interpreter/value/slash_list.h"
 #include "interpreter/value/slash_value.h"

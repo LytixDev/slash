@@ -15,18 +15,25 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <assert.h>
 #include <math.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "interpreter/error.h"
 #include "interpreter/gc.h"
 #include "interpreter/interpreter.h"
+#include "interpreter/scope.h"
 #include "interpreter/value/slash_list.h"
 #include "interpreter/value/slash_map.h"
 #include "interpreter/value/slash_str.h"
 #include "interpreter/value/slash_value.h"
+#include "interpreter/value/type_funcs.h"
 #include "lib/str_builder.h"
+#include "lib/str_view.h"
 
 
 /*

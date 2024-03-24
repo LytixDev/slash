@@ -16,12 +16,17 @@
  */
 #include <dirent.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 
 #include "builtin/builtin.h"
 #include "interpreter/interpreter.h"
+#include "interpreter/scope.h"
 #include "interpreter/value/slash_str.h"
+#include "interpreter/value/slash_value.h"
+#include "interpreter/value/type_funcs.h"
+#include "lib/arena_ll.h"
 #include "lib/str_view.h"
 
 

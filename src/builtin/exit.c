@@ -15,10 +15,12 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <unistd.h>
+#include <stdlib.h>
 
 #include "interpreter/interpreter.h"
 #include "interpreter/value/slash_value.h"
+#include "lib/arena_ll.h"
+#include "lib/str_view.h"
 
 
 int builtin_exit(Interpreter *interpreter, ArenaLL *ast_nodes)

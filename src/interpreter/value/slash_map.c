@@ -16,12 +16,16 @@
  */
 #include <assert.h>
 #include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "interpreter/gc.h"
+#include "interpreter/interpreter.h"
 #include "interpreter/value/slash_map.h"
 #include "interpreter/value/slash_value.h"
 #include "interpreter/value/type_funcs.h"
+#include "nicc/nicc.h"
 
 
 static inline uint8_t map_hash_extra(int hash)
@@ -225,7 +229,7 @@ void slash_map_impl_print(Interpreter *interpreter, SlashMap map)
 	    value = entry.value;
 
 	    key.T->print(interpreter, key);
-	    printf(": ");
+	    SLASH_PRINT(&interpreter->stream_ctx, ": ");
 	    value.T->print(interpreter, value);
 	    if (entries_found == map.len)
 		break;

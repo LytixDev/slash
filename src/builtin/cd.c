@@ -21,6 +21,8 @@
 #include "interpreter/interpreter.h"
 #include "interpreter/value/slash_str.h"
 #include "interpreter/value/slash_value.h"
+#include "interpreter/value/type_funcs.h"
+#include "lib/arena_ll.h"
 
 
 int builtin_cd(Interpreter *interpreter, ArenaLL *ast_nodes)

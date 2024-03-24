@@ -14,10 +14,13 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <assert.h>
+#include <stdbool.h>
 #include <stdlib.h>
 
 #include "interpreter/error.h"
 #include "interpreter/gc.h"
+#include "interpreter/scope.h"
 #include "interpreter/value/slash_list.h"
 #include "interpreter/value/slash_map.h"
 #include "interpreter/value/slash_str.h"
@@ -300,9 +303,8 @@ void gc_shadow_push(GC *gc, SlashObj *obj)
     arraylist_append(&gc->shadow_stack, &obj);
 }
 
-void gc_shadow_pop(Interpreter *interpreter)
+void gc_shadow_pop(GC *gc)
 {
-    GC *gc = &interpreter->gc;
 #ifdef DEBUG_LOG_GC
     SlashObj **obj_ptr = arraylist_get(&gc->shadow_stack, gc->shadow_stack.size - 1);
     SlashObj *obj = *obj_ptr;

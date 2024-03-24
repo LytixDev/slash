@@ -15,6 +15,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <stdarg.h>
+#include <stdbool.h>
+#include <stdlib.h>
 
 #include "interpreter/ast.h"
 #include "interpreter/error.h"

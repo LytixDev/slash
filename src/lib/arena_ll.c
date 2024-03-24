@@ -15,6 +15,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <assert.h>
+#include <stdlib.h>
 
 #include "lib/arena_ll.h"
 #include "sac/sac.h"
