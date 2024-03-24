@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2023 Nicolai Brand (https://lytix.dev)
+ *  Copyright (C) 2023-2024 Nicolai Brand (https://lytix.dev)
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,7 +16,9 @@
  */
 #include <math.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "lib/str_view.h"

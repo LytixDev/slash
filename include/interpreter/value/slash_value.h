@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2023 Nicolai Brand (https://lytix.dev)
+ *  Copyright (C) 2023-2024 Nicolai Brand (https://lytix.dev)
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -99,8 +99,6 @@ typedef struct slash_type_info_t {
     TraitHash hash;
 
     /* Object params */
-    ObjInit init;
-    ObjFree free;
     size_t obj_size; // Size of the object in bytes
 } SlashTypeInfo;
 

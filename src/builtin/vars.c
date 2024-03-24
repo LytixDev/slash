@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2023 Nicolai Brand (https://lytix.dev)
+ *  Copyright (C) 2023-2024 Nicolai Brand (https://lytix.dev)
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,6 +20,9 @@
 #include "interpreter/interpreter.h"
 #include "interpreter/scope.h"
 #include "interpreter/value/slash_value.h"
+#include "interpreter/value/type_funcs.h"
+#include "lib/arena_ll.h"
+#include "lib/str_view.h"
 #include "nicc/nicc.h"
 
 
@@ -54,11 +57,11 @@ int builtin_vars(Interpreter *interpreter, ArenaLL *ast_nodes)
 	    StrView key = keys[i];
 	    SlashValue *value = values[i];
 	    str_view_to_buf_cstr(key); // creates temporary buf variable
-	    printf("%s", buf);
-	    putchar('=');
+	    SLASH_PRINT(&interpreter->stream_ctx, "%s", buf);
+	    SLASH_PRINT(&interpreter->stream_ctx, "=");
 	    VERIFY_TRAIT_IMPL(print, *value, "print not defined for type '%s'", value->T->name);
-	    value->T->print(*value);
-	    putchar('\n');
+	    value->T->print(interpreter, *value);
+	    SLASH_PRINT(&interpreter->stream_ctx, "\n");
 	}
     }
 

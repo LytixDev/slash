@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2023 Nicolai Brand (https://lytix.dev)
+ *  Copyright (C) 2023-2024 Nicolai Brand (https://lytix.dev)
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -14,7 +14,9 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <assert.h>
 #include <setjmp.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -33,6 +35,7 @@
 #include "interpreter/value/slash_map.h"
 #include "interpreter/value/slash_str.h"
 #include "interpreter/value/slash_value.h"
+#include "interpreter/value/type_funcs.h"
 #include "lib/arena_ll.h"
 #include "lib/str_builder.h"
 #include "lib/str_view.h"
@@ -262,19 +265,18 @@ static SlashValue eval_subscript(Interpreter *interpreter, SubscriptExpr *expr)
 
 static SlashValue eval_subshell(Interpreter *interpreter, SubshellExpr *expr)
 {
-    /* pipe output will be written to */
     int fd[2];
     pipe(fd);
 
     StreamCtx *stream_ctx = &interpreter->stream_ctx;
-    int original_write_fd = stream_ctx->write_fd;
+    int original_write_fd = stream_ctx->out_fd;
     /* set the write fd to the newly created pipe */
-    stream_ctx->write_fd = fd[STREAM_WRITE_END];
+    stream_ctx->out_fd = fd[STREAM_WRITE_END];
 
     exec(interpreter, expr->stmt);
     close(fd[1]);
     /* restore original write fd */
-    stream_ctx->write_fd = original_write_fd;
+    stream_ctx->out_fd = original_write_fd;
 
     ArenaTmp scratch_arena = m_arena_tmp_init(&interpreter->arena);
     size_t bytes_read = 0;
@@ -510,15 +512,15 @@ static void exec_expr(Interpreter *interpreter, ExpressionStmt *stmt)
 	return;
 
     TraitPrint trait_print = value.T->print;
-    assert(trait_print != NULL);
-    trait_print(value);
+    VERIFY_TRAIT_IMPL(print, value, "TODO");
+    trait_print(interpreter, value);
     ///* edge case: if last char printed was a newline then we don't bother printing one */
     // if (value.type == SLASH_OBJ && value.obj->type == SLASH_OBJ_STR) {
     //     SlashStr *str = (SlashStr *)value.obj;
     //     if (slash_str_last_char(str) == '\n')
     //         return;
     // }
-    putchar('\n');
+    SLASH_PRINT(&interpreter->stream_ctx, "\n");
 }
 
 static void exec_var(Interpreter *interpreter, VarStmt *stmt)
@@ -673,7 +675,7 @@ static void exec_assign_unpack(Interpreter *interpreter, AssignStmt *stmt)
     /* early eval all values on the right side of assignment */
     SlashValue values[right->seq.size];
     size_t i = 0;
-    LLItem *item = right->seq.head;
+    LLItem *item;
     ARENA_LL_FOR_EACH(&right->seq, item)
     {
 	// TODO: can have problems with GC?
@@ -681,7 +683,6 @@ static void exec_assign_unpack(Interpreter *interpreter, AssignStmt *stmt)
     }
 
     i = 0;
-    item = left->seq.head;
     ARENA_LL_FOR_EACH(&left->seq, item)
     {
 	AccessExpr *access = (AccessExpr *)item->value;
@@ -727,23 +728,23 @@ static void exec_pipeline(Interpreter *interpreter, PipelineStmt *stmt)
 
     StreamCtx *stream_ctx = &interpreter->stream_ctx;
     /* store a copy of the final write file descriptor */
-    int final_out_fd = stream_ctx->write_fd;
+    int final_out_fd = stream_ctx->out_fd;
 
-    stream_ctx->write_fd = fd[STREAM_WRITE_END];
+    stream_ctx->out_fd = fd[STREAM_WRITE_END];
     exec_cmd(interpreter, stmt->left);
 
     /* push fie descriptors onto active_fds list/stack */
     arraylist_append(&stream_ctx->active_fds, &fd[0]);
     arraylist_append(&stream_ctx->active_fds, &fd[1]);
 
-    stream_ctx->write_fd = final_out_fd;
-    stream_ctx->read_fd = fd[STREAM_READ_END];
+    stream_ctx->out_fd = final_out_fd;
+    stream_ctx->in_fd = fd[STREAM_READ_END];
 
     exec(interpreter, stmt->right);
 
     /* pop file descriptors from list/stack */
-    arraylist_rm(&stream_ctx->active_fds, stream_ctx->active_fds.size - 1);
-    arraylist_rm(&stream_ctx->active_fds, stream_ctx->active_fds.size - 1);
+    arraylist_pop(&stream_ctx->active_fds);
+    arraylist_pop(&stream_ctx->active_fds);
 }
 
 static void exec_assert(Interpreter *interpreter, AssertStmt *stmt)
@@ -930,8 +931,8 @@ static void exec_redirect(Interpreter *interpreter, BinaryStmt *stmt)
 
     char *file_name = AS_STR(to_str(interpreter, value))->str;
     StreamCtx *stream_ctx = &interpreter->stream_ctx;
-    int og_read = stream_ctx->read_fd;
-    int og_write = stream_ctx->write_fd;
+    int og_read = stream_ctx->in_fd;
+    int og_write = stream_ctx->out_fd;
 
     bool new_write_fd = true;
     FILE *file = NULL;
@@ -951,13 +952,13 @@ static void exec_redirect(Interpreter *interpreter, BinaryStmt *stmt)
     }
 
     if (new_write_fd)
-	stream_ctx->write_fd = fileno(file);
+	stream_ctx->out_fd = fileno(file);
     else
-	stream_ctx->read_fd = fileno(file);
+	stream_ctx->in_fd = fileno(file);
     exec_cmd(interpreter, (CmdStmt *)stmt->left);
     fclose(file);
-    stream_ctx->read_fd = og_read;
-    stream_ctx->write_fd = og_write;
+    stream_ctx->in_fd = og_read;
+    stream_ctx->out_fd = og_write;
 }
 
 static void exec_binary(Interpreter *interpreter, BinaryStmt *stmt)
@@ -1121,7 +1122,9 @@ void interpreter_init(Interpreter *interpreter, int argc, char **argv)
     assert(none_type_info.eq != NULL && none_type_info.truthy != NULL);
 
     /* Init default StreamCtx */
-    StreamCtx stream_ctx = { .read_fd = STDIN_FILENO, .write_fd = STDOUT_FILENO };
+    StreamCtx stream_ctx = { .in_fd = STDIN_FILENO,
+			     .out_fd = STDOUT_FILENO,
+			     .err_fd = STDERR_FILENO };
     arraylist_init(&stream_ctx.active_fds, sizeof(int));
     interpreter->stream_ctx = stream_ctx;
 
@@ -1152,7 +1155,9 @@ static void interpreter_reset_from_err(Interpreter *interpreter)
 
     /* Reset stream_ctx */
     arraylist_free(&interpreter->stream_ctx.active_fds);
-    StreamCtx stream_ctx = { .read_fd = STDIN_FILENO, .write_fd = STDOUT_FILENO };
+    StreamCtx stream_ctx = { .in_fd = STDIN_FILENO,
+			     .out_fd = STDOUT_FILENO,
+			     .err_fd = STDERR_FILENO };
     arraylist_init(&stream_ctx.active_fds, sizeof(int));
     interpreter->stream_ctx = stream_ctx;
 

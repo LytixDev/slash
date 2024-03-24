@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2023 Nicolai Brand (https://lytix.dev)
+ *  Copyright (C) 2023-2024 Nicolai Brand (https://lytix.dev)
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -46,7 +46,7 @@ typedef SlashValue (*OpUnaryMinus)(SlashValue self);
 typedef SlashValue (*OpUnaryNot)(SlashValue self);
 
 /* Traits */
-typedef void (*TraitPrint)(SlashValue self);
+typedef void (*TraitPrint)(Interpreter *interpreter, SlashValue self);
 typedef SlashValue (*TraitToStr)(Interpreter *interpreter, SlashValue self);
 typedef SlashValue (*TraitItemGet)(Interpreter *interpreter, SlashValue self, SlashValue other);
 typedef void (*TraitItemAssign)(Interpreter *interpreter, SlashValue self, SlashValue index,
@@ -57,9 +57,5 @@ typedef bool (*TraitTruthy)(SlashValue self);
 typedef bool (*TraitEq)(SlashValue self, SlashValue other);
 typedef int (*TraitCmp)(SlashValue self, SlashValue other);
 typedef int (*TraitHash)(SlashValue self);
-
-/* Object lifetime */
-typedef void (*ObjInit)(SlashObj *obj);
-typedef void (*ObjFree)(SlashObj *obj);
 
 #endif /* SLASH_TYPE_FUNC_H */

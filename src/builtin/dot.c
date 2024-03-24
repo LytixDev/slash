@@ -15,13 +15,14 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <assert.h>
 #include <stdio.h>
-#include <unistd.h>
 
-#include "interpreter/exec.h"
+#include "interpreter/ast.h"
 #include "interpreter/interpreter.h"
-#include "interpreter/value/slash_str.h"
 #include "interpreter/value/slash_value.h"
+#include "lib/arena_ll.h"
+#include "lib/str_view.h"
 
 /*
  * '.' builtin is used to execute commands from a specified file
@@ -29,7 +30,7 @@
 int builtin_dot(Interpreter *interpreter, ArenaLL *ast_nodes)
 {
     if (ast_nodes == NULL) {
-	fprintf(stderr, ".: not enough arguments\n");
+	SLASH_PRINT_ERR(&interpreter->stream_ctx, ".: not enough arguments\n");
 	return 1;
     }
 
