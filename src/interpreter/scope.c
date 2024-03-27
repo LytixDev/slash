@@ -48,6 +48,15 @@ static void define_scope_alloced_var(Scope *scope, StrView *key, char *cstr)
     var_define(scope, key, &AS_VALUE(str));
 }
 
+
+#define SET_GLOBAL_STR(__scope, __name, __value)                        \
+    do {                                                                \
+	StrView __key = { .view = (__name), .size = strlen((__name)) }; \
+	char *__cstr = scope_alloc(__scope, strlen((__value)));         \
+	memcpy(__cstr, (__value), strlen((__value)));                   \
+	define_scope_alloced_var(__scope, &__key, __cstr);              \
+    } while (0)
+
 static void set_globals(Scope *scope)
 {
     assert(scope->enclosing == NULL);
@@ -60,10 +69,12 @@ static void set_globals(Scope *scope)
 	define_scope_alloced_var(scope, &key, env_entry + pos + 1);
     }
 
-    StrView ifs_key = { .view = "IFS", .size = 3 };
-    char *ifs_cstr = scope_alloc(scope, 3);
-    memcpy(ifs_cstr, "\n\t ", 3);
-    define_scope_alloced_var(scope, &ifs_key, ifs_cstr);
+    SET_GLOBAL_STR(scope, "IFS", "\n\t ");
+    SET_GLOBAL_STR(scope, "SLASH_VERSION", "0.0.1_beta");
+
+    /* Define '$?' that holds the value of the previous exit code */
+    SlashValue exit_code_value = { .T = &num_type_info, .num = 0 };
+    var_define(scope, &(StrView){ .view = "?", .size = 1 }, &exit_code_value);
 }
 
 static void scope_init_argv(Scope *scope, int argc, char **argv)
@@ -84,9 +95,6 @@ void scope_init_globals(Scope *scope, Arena *arena, int argc, char **argv)
     hashmap_init(&scope->values);
     set_globals(scope);
     scope_init_argv(scope, argc, argv);
-    /* Define '$?' that holds the value of the previous exit code */
-    SlashValue exit_code_value = { .T = &num_type_info, .num = 0 };
-    var_define(scope, &(StrView){ .view = "?", .size = 1 }, &exit_code_value);
 }
 
 void scope_init(Scope *scope, Scope *enclosing)
