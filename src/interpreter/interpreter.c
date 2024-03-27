@@ -981,16 +981,15 @@ static void exec_abrupt_control_flow(Interpreter *interpreter, AbruptControlFlow
     interpreter->exec_res_ctx = result;
 }
 
-void ast_ll_to_argv(Interpreter *interpreter, ArenaLL *ast_nodes, SlashValue **result)
+void ast_ll_to_argv(Interpreter *interpreter, ArenaLL *ast_nodes, SlashValue *result)
 {
     gc_barrier_start(&interpreter->gc);
     LLItem *item = ast_nodes->head;
     for (size_t i = 0; i < ast_nodes->size; i++) {
 	SlashValue value = eval(interpreter, (Expr *)item->value);
-	result[i] = &value;
+	result[i] = value;
 	item = item->next;
     }
-    result[ast_nodes->size] = NULL;
     gc_barrier_end(&interpreter->gc);
 }
 
