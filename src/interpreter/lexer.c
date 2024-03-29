@@ -546,8 +546,11 @@ StateFn lex_string(Lexer *lexer)
                     str_builder_append_char(&sb, '\n');
                     break;
                 default:
-                    backup(lexer);
-                    report_lex_err(lexer, true, "Unknown espace sequence");
+                    report_lex_err(lexer, true, "Unknown escape sequence");
+                    /* Error occured. Continue parsing after string is terminated. */
+                    while ((c = next(lexer)) != '"')
+                        ;
+                    ignore(lexer);
                     return STATE_FN(lex_any);
             }
 
@@ -559,11 +562,6 @@ StateFn lex_string(Lexer *lexer)
         }
     }
 
-    /* backup final qoute */
-    //backup(lexer);
-    //emit(lexer, t_dt_str);
-    /* advance past final qoute and ignore it */
-    //next(lexer);
     StrView str = str_builder_complete(&sb);
     Token token = { .type = t_dt_str,
 		    .lexeme = str,

@@ -78,28 +78,47 @@ int main(int argc, char **argv)
     }
 
     int exit_code;
-    char *file_path = argv[1];
+    size_t input_size;
+    char *input;
 
-    struct stat st;
-    if (stat(file_path, &st) != 0) {
-	REPORT_IMPL("Could not stat file '%s'\n", file_path);
-	return 1;
-    }
-    size_t file_size = st.st_size;
+    /* -c flag executes next argv as source code */
+    if (strcmp(argv[1], "-c") == 0) {
+	if (argc == 2) {
+	    REPORT_IMPL("Argument expected for the -c flag\n");
+	    return 2;
+	}
 
-    char *input = malloc(sizeof(char) * (file_size + 1));
-    FILE *fp = fopen(file_path, "r");
-    if (fp == NULL) {
-	REPORT_IMPL("Could not open file '%s'\n", file_path);
-	exit_code = 1;
-	goto defer_input;
+	input_size = strlen(argv[2]);
+	input = malloc(sizeof(char) * (input_size + 2));
+	memcpy(input, argv[2], input_size);
+	input[input_size] = '\n';
+	input[input_size + 1] = 0;
+    } else {
+	/* Treat next agument as a filename */
+	char *file_path = argv[1];
+
+	struct stat st;
+	if (stat(file_path, &st) != 0) {
+	    REPORT_IMPL("Could not stat file '%s'\n", file_path);
+	    return 1;
+	}
+	input_size = st.st_size;
+	input = malloc(sizeof(char) * (input_size + 1));
+	input[input_size] = 0;
+	FILE *fp = fopen(file_path, "r");
+	if (fp == NULL) {
+	    REPORT_IMPL("Could not open file '%s'\n", file_path);
+	    exit_code = 1;
+	    goto defer_input;
+	}
+	if (fread(input, sizeof(char), st.st_size, fp) != input_size) {
+	    REPORT_IMPL("Could not read file '%s'\n", file_path);
+	    exit_code = 1;
+	    goto defer_input;
+	}
+	fclose(fp);
     }
-    if (fread(input, sizeof(char), st.st_size, fp) != file_size) {
-	REPORT_IMPL("Could not read file '%s'\n", file_path);
-	exit_code = 1;
-	goto defer_input;
-    }
-    input[file_size] = 0;
+
 
 #ifdef DEBUG_PERF
     double lex_elapsed, parse_elapsed, interpret_elapsed;
@@ -108,7 +127,9 @@ int main(int argc, char **argv)
 #endif /* DEBUG_PERF */
 
     /* lex */
-    Lexer lex_result = lex(NULL, input, file_size);
+    Arena ast_arena;
+    ast_arena_init(&ast_arena);
+    Lexer lex_result = lex(&ast_arena, input, input_size);
     if (lex_result.had_error) {
 	exit_code = 1;
 	goto defer_tokens;
@@ -127,8 +148,6 @@ int main(int argc, char **argv)
 #endif /* DEBUG_PERF */
 
     /* parse */
-    Arena ast_arena;
-    ast_arena_init(&ast_arena);
     StmtsOrErr stmts = parse(&ast_arena, &lex_result.tokens, input);
     if (stmts.had_error) {
 	exit_code = 1;
@@ -166,12 +185,11 @@ int main(int argc, char **argv)
 
     /* clean up */
 defer_stms:
-    ast_arena_release(&ast_arena);
     arraylist_free(&stmts.stmts);
 defer_tokens:
+    ast_arena_release(&ast_arena);
     arraylist_free(&lex_result.tokens);
 
-    fclose(fp);
 defer_input:
     free(input);
 
