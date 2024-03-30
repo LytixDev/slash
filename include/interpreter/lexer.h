@@ -20,8 +20,8 @@
 #include <stdint.h>
 
 #include "lib/str_view.h"
-#include "sac/sac.h"
 #include "nicc/nicc.h"
+#include "sac/sac.h"
 
 
 #define STATE_FN(___state_fn) \

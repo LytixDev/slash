@@ -47,12 +47,16 @@ int builtin_dot(Interpreter *interpreter, ArenaLL *ast_nodes)
     strncpy(program_name + 1, cmd_name.text_lit.view, cmd_name.text_lit.size);
     program_name[cmd_name.text_lit.size + 1] = 0;
 
-    ast_nodes->size--;
-    if (ast_nodes->size == 0)
-	ast_nodes = NULL;
-    else
-	ast_nodes->head = ast_nodes->head->next;
+    TODO_LOG("dot builtin: Check if specified file exists and is executable");
 
-    exec_program_stub(interpreter, program_name, ast_nodes);
+    ArenaLL ast_nodes_cpy = { .size = ast_nodes->size - 1 };
+    if (ast_nodes_cpy.size == 0) {
+	exec_program_stub(interpreter, program_name, NULL);
+    } else {
+	ast_nodes_cpy.head = ast_nodes->head->next;
+	ast_nodes_cpy.tail = ast_nodes->tail;
+	exec_program_stub(interpreter, program_name, &ast_nodes_cpy);
+    }
+
     return interpreter->prev_exit_code;
 }
