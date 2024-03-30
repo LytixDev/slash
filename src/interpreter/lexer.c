@@ -530,37 +530,36 @@ StateFn lex_string(Lexer *lexer)
     str_builder_init(&sb, lexer->arena);
     char c;
     while ((c = next(lexer)) != '"') {
-        switch (c) {
-        case EOF:
-        case '\n':
+	switch (c) {
+	case EOF:
+	case '\n':
 	    backup(lexer);
 	    report_lex_err(lexer, true, "Unterminated string literal");
 	    return STATE_FN(lex_any);
-        case '\\': {
-            char next_char = next(lexer);
+	case '\\': {
+	    char next_char = next(lexer);
 
-            switch (next_char) {
-                case '"':
-                    str_builder_append_char(&sb, next_char);
-                    break;
-                case 'n':
-                    str_builder_append_char(&sb, '\n');
-                    break;
-                default:
-                    report_lex_err(lexer, true, "Unknown escape sequence");
-                    /* Error occured. Continue parsing after string is terminated. */
-                    while ((c = next(lexer)) != '"')
-                        ;
-                    ignore(lexer);
-                    return STATE_FN(lex_any);
-            }
+	    switch (next_char) {
+	    case '"':
+		str_builder_append_char(&sb, next_char);
+		break;
+	    case 'n':
+		str_builder_append_char(&sb, '\n');
+		break;
+	    default:
+		report_lex_err(lexer, true, "Unknown escape sequence");
+		/* Error occured. Continue parsing after string is terminated. */
+		while ((c = next(lexer)) != '"')
+		    ;
+		ignore(lexer);
+		return STATE_FN(lex_any);
+	    }
 
-            break;
-        }
-        default:
-            str_builder_append_char(&sb, c);
-
-        }
+	    break;
+	}
+	default:
+	    str_builder_append_char(&sb, c);
+	}
     }
 
     StrView str = str_builder_complete(&sb);
@@ -634,7 +633,7 @@ Lexer lex(Arena *arena, char *input, size_t input_size)
 		    .start = 0,
 		    .line_count = 0,
 		    .pos_in_line = 0,
-                    .arena = arena };
+		    .arena = arena };
     keywords_init(&lexer.keywords);
     arraylist_init(&lexer.tokens, sizeof(Token));
 

@@ -90,7 +90,7 @@ int builtin_which(Interpreter *interpreter, ArenaLL *ast_nodes)
     SlashValue argv[argc];
     ast_ll_to_argv(interpreter, ast_nodes, argv);
 
-    SlashValue param = *argv[0];
+    SlashValue param = argv[0];
     TraitToStr to_str = param.T->to_str;
     if (to_str == NULL) {
 	SLASH_PRINT_ERR(&interpreter->stream_ctx, "which: could not take to_str of type '%s'",
