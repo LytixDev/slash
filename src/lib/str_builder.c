@@ -61,5 +61,6 @@ char str_builder_peek(StrBuilder *sb)
 StrView str_builder_complete(StrBuilder *sb)
 {
     str_builder_append_char(sb, '\0');
+    sb->len--; // Do not count null terminator as a part of the str len
     return (StrView){ .view = sb->buffer, .size = sb->len };
 }

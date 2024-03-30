@@ -41,10 +41,10 @@ int builtin_read(Interpreter *interpreter, ArenaLL *ast_nodes)
     }
 
     size_t argc = ast_nodes->size;
-    SlashValue *argv[argc + 1];
+    SlashValue argv[argc];
     ast_ll_to_argv(interpreter, ast_nodes, argv);
 
-    SlashValue arg = *argv[0];
+    SlashValue arg = argv[0];
     if (!IS_TEXT_LIT(arg)) {
 	SLASH_PRINT_ERR(&interpreter->stream_ctx, "read: expected argument to be text, not '%s'\n",
 			arg.T->name);

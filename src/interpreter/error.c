@@ -87,6 +87,9 @@ void report_lex_err(Lexer *lexer, bool print_offending, char *msg)
     }
 
     lexer->had_error = true;
+#ifdef DEBUG_LEXER
+    tokens_print(&lexer->tokens);
+#endif /* DEBUG_LEXER */
 }
 
 void report_parse_err(Parser *parser, char *msg)

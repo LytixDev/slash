@@ -20,6 +20,7 @@
 
 #include "interpreter/error.h"
 #include "interpreter/lexer.h"
+#include "lib/str_builder.h"
 #include "lib/str_view.h"
 #include "nicc/nicc.h"
 
@@ -523,23 +524,54 @@ StateFn lex_string(Lexer *lexer)
 {
     /* ignore starting qoute */
     ignore(lexer);
+    size_t str_start = lexer->pos_in_line;
 
+    StrBuilder sb;
+    str_builder_init(&sb, lexer->arena);
     char c;
     while ((c = next(lexer)) != '"') {
-	if (c == EOF || c == '\n') {
+	switch (c) {
+	case EOF:
+	case '\n':
 	    backup(lexer);
 	    report_lex_err(lexer, true, "Unterminated string literal");
 	    return STATE_FN(lex_any);
+	case '\\': {
+	    char next_char = next(lexer);
+
+	    switch (next_char) {
+	    case '"':
+		str_builder_append_char(&sb, next_char);
+		break;
+	    case 'n':
+		str_builder_append_char(&sb, '\n');
+		break;
+	    default:
+		report_lex_err(lexer, true, "Unknown escape sequence");
+		/* Error occured. Continue parsing after string is terminated. */
+		while ((c = next(lexer)) != '"')
+		    ;
+		ignore(lexer);
+		return STATE_FN(lex_any);
+	    }
+
+	    break;
+	}
+	default:
+	    str_builder_append_char(&sb, c);
 	}
     }
 
-    /* backup final qoute */
-    backup(lexer);
-    emit(lexer, t_dt_str);
-    /* advance past final qoute and ignore it */
-    next(lexer);
-    ignore(lexer);
+    StrView str = str_builder_complete(&sb);
+    Token token = { .type = t_dt_str,
+		    .lexeme = str,
+		    .line = lexer->line_count,
+		    /* A single token can not span across multiple lines, so this is fine . */
+		    .start = str_start,
+		    .end = lexer->pos_in_line - 1 };
+    arraylist_append(&lexer->tokens, &token);
 
+    ignore(lexer);
     return STATE_FN(lex_any);
 }
 
@@ -592,7 +624,7 @@ static void run(Lexer *lexer)
 	state = state.fn(lexer);
 }
 
-Lexer lex(char *input, size_t input_size)
+Lexer lex(Arena *arena, char *input, size_t input_size)
 {
     Lexer lexer = { .had_error = false,
 		    .input = input,
@@ -600,7 +632,8 @@ Lexer lex(char *input, size_t input_size)
 		    .pos = 0,
 		    .start = 0,
 		    .line_count = 0,
-		    .pos_in_line = 0 };
+		    .pos_in_line = 0,
+		    .arena = arena };
     keywords_init(&lexer.keywords);
     arraylist_init(&lexer.tokens, sizeof(Token));
 

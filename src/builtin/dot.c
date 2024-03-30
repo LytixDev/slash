@@ -18,6 +18,7 @@
 #include <assert.h>
 #include <stdio.h>
 
+
 #include "interpreter/ast.h"
 #include "interpreter/interpreter.h"
 #include "interpreter/value/slash_value.h"
@@ -40,13 +41,22 @@ int builtin_dot(Interpreter *interpreter, ArenaLL *ast_nodes)
     SlashValue cmd_name = ((LiteralExpr *)first)->value;
     assert(IS_TEXT_LIT(cmd_name));
 
-    ast_nodes->size--;
-    if (ast_nodes->size == 0)
-	ast_nodes = NULL;
-    else
-	ast_nodes->head = ast_nodes->head->next;
+    /* prepend '.' to first argument */
+    char program_name[cmd_name.text_lit.size + 2]; // + 1 for '.' and + 1 for null termination
+    program_name[0] = '.';
+    strncpy(program_name + 1, cmd_name.text_lit.view, cmd_name.text_lit.size);
+    program_name[cmd_name.text_lit.size + 1] = 0;
 
-    str_view_to_buf_cstr(cmd_name.text_lit);
-    exec_program_stub(interpreter, buf, ast_nodes);
+    TODO_LOG("dot builtin: Check if specified file exists and is executable");
+
+    ArenaLL ast_nodes_cpy = { .size = ast_nodes->size - 1 };
+    if (ast_nodes_cpy.size == 0) {
+	exec_program_stub(interpreter, program_name, NULL);
+    } else {
+	ast_nodes_cpy.head = ast_nodes->head->next;
+	ast_nodes_cpy.tail = ast_nodes->tail;
+	exec_program_stub(interpreter, program_name, &ast_nodes_cpy);
+    }
+
     return interpreter->prev_exit_code;
 }
