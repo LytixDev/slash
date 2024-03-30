@@ -525,10 +525,12 @@ StateFn lex_string(Lexer *lexer)
     /* ignore starting qoute */
     ignore(lexer);
     size_t str_start = lexer->pos_in_line;
+    size_t str_end;
 
     StrBuilder sb;
     str_builder_init(&sb, lexer->arena);
     char c;
+continue_str_lexing:
     while ((c = next(lexer)) != '"') {
 	switch (c) {
 	case EOF:
@@ -562,13 +564,35 @@ StateFn lex_string(Lexer *lexer)
 	}
     }
 
+    str_end = lexer->pos_in_line - 1;
+
+    /* Handle multiline string */
+    accept_run(lexer, " \t\v");
+    if (match(lexer, '\\')) {
+	accept_run(lexer, " \t\v");
+	if (!match(lexer, '\n')) {
+	    ignore(lexer);
+	    report_lex_err(lexer, true, "Unexpected character after string continuiation");
+	    return STATE_FN(lex_any);
+	}
+
+	/* TODO: Multiline tokens */
+
+	accept_run(lexer, " \t\v");
+	if (!match(lexer, '"')) {
+	    ignore(lexer);
+	    report_lex_err(lexer, true, "Expected multiline string");
+	    return STATE_FN(lex_any);
+	}
+	goto continue_str_lexing;
+    }
+
     StrView str = str_builder_complete(&sb);
     Token token = { .type = t_dt_str,
 		    .lexeme = str,
 		    .line = lexer->line_count,
-		    /* A single token can not span across multiple lines, so this is fine . */
 		    .start = str_start,
-		    .end = lexer->pos_in_line - 1 };
+		    .end = str_end };
     arraylist_append(&lexer->tokens, &token);
 
     ignore(lexer);
