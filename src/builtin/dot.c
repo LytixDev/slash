@@ -18,10 +18,8 @@
 #include <assert.h>
 #include <stdio.h>
 
-<<<<<<< HEAD
-=======
+
 #include "interpreter/ast.h"
->>>>>>> e1e21c4 (fix: always use fds from stream_ctx (#110))
 #include "interpreter/interpreter.h"
 #include "interpreter/value/slash_value.h"
 #include "lib/arena_ll.h"

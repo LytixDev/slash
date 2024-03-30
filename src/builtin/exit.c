@@ -31,7 +31,6 @@ int builtin_exit(Interpreter *interpreter, ArenaLL *ast_nodes)
     size_t argc = ast_nodes->size;
     SlashValue argv[argc];
     ast_ll_to_argv(interpreter, ast_nodes, argv);
-
     SlashValue arg = argv[0];
     if (IS_NUM(arg))
 	exit(arg.num);
