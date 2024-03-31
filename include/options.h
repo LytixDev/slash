@@ -36,7 +36,7 @@
 #define ERROR_BUF_MAX_LEN 2048 // Max characters to print of a line
 
 /* Parser options */
-#define MAX_PARSE_ERRORS 1
+#define MAX_PARSE_ERRORS 64
 
 /* GC options */
 #define GC_HEAP_GROW_FACTOR 2
