@@ -576,12 +576,21 @@ continue_str_lexing:
 	    return STATE_FN(lex_any);
 	}
 
-	/* TODO: Multiline tokens */
-
+	/*
+	 * We just matched a newline, therefore me must increment the line_count.
+	 * All tokens, but these multine strings span across one line and one line only.
+	 * As such, the token type assumes each token is on one single line. For multline strings,
+	 * this becomes the final line.
+	 */
+	lexer->line_count++;
+	lexer->pos_in_line = 0;
+	/* Ignore any identation before the next string */
 	accept_run(lexer, " \t\v");
+	lexer->start = lexer->pos - 1;
+
 	if (!match(lexer, '"')) {
+	    report_lex_err(lexer, true, "Expected double qoute to continue multiline string");
 	    ignore(lexer);
-	    report_lex_err(lexer, true, "Expected multiline string");
 	    return STATE_FN(lex_any);
 	}
 	goto continue_str_lexing;
