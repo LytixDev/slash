@@ -33,8 +33,24 @@
 #ifndef REPORT_FILE
 #define REPORT_FILE stderr
 #endif
+#define ERROR_BUF_MAX_LEN 2048 // Max characters to print of a line
 
-/* GC opts */
+/* ANSI codes */
+#define ANSI_COLOR_START_BLACK "\033[30m"
+#define ANSI_COLOR_START_RED "\033[31m"
+#define ANSI_COLOR_START_GREEN "\033[32m"
+#define ANSI_COLOR_START_YELLOW "\033[33m"
+#define ANSI_COLOR_START_BLUE "\033[34m"
+#define ANSI_COLOR_START_MAGENTA "\033[35m"
+#define ANSI_COLOR_START_CYAN "\033[36m"
+#define ANSI_COLOR_START_WHITE "\033[37m"
+#define ANSI_COLOR_START_DEFAULT "\033[39m"
+#define ANSI_COLOR_END "\033[0m"
+#define ANSI_BOLD_START "\033[1m"
+#define ANSI_BOLD_END "\033[22m"
+
+
+/* GC options */
 #define GC_HEAP_GROW_FACTOR 2
 #define GC_MIN_RUN (2 << 24) // ̃~32mb
 
