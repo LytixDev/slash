@@ -17,19 +17,12 @@
 #ifndef ERROR_H
 #define ERROR_H
 
-#include <assert.h>
 #include <setjmp.h>
-#include <stdio.h> // stderr
 
 #include "interpreter/lexer.h"
 #include "interpreter/parser.h"
+#include "options.h" // REPORT_FILE
 
-
-#define ASSERT_NOT_REACHED assert(0 && "panic: unreachable code reached")
-
-#ifndef REPORT_FILE
-#define REPORT_FILE stderr
-#endif
 
 #define REPORT_IMPL(...) fprintf(REPORT_FILE, __VA_ARGS__)
 

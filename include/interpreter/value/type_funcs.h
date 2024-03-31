@@ -18,7 +18,6 @@
 #define SLASH_TYPE_FUNC_H
 
 #include "interpreter/error.h"
-// #include "interpreter/interpreter.h"
 
 
 #define VERIFY_TRAIT_IMPL(trait_func_name, value, ...) \

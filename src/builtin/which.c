@@ -28,6 +28,7 @@
 #include "interpreter/value/type_funcs.h"
 #include "lib/arena_ll.h"
 #include "lib/str_view.h"
+#include "options.h"
 
 
 Builtin builtins[] = {

@@ -19,8 +19,7 @@
 
 #include "interpreter/interpreter.h"
 #include "lib/arena_ll.h"
-
-#define PROGRAM_PATH_MAX_LEN 512
+#include "options.h"
 
 
 typedef int (*BuiltinFunc)(Interpreter *interpreter, ArenaLL *ast_nodes);

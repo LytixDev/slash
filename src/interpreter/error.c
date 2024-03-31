@@ -25,6 +25,7 @@
 #include "interpreter/lexer.h"
 #include "interpreter/parser.h"
 #include "nicc/nicc.h"
+#include "options.h"
 
 
 typedef struct {
