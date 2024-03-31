@@ -26,6 +26,7 @@
 #include "lib/arena_ll.h"
 #include "lib/str_view.h"
 #include "nicc/nicc.h"
+#include "options.h"
 #include "sac/sac.h"
 
 
@@ -74,6 +75,7 @@ static Expr *grouping(Parser *parser);
 static Expr *func_def(Parser *parser);
 static ArenaLL arguments(Parser *parser);
 
+static void handle_parse_err(Parser *parser, char *msg);
 
 /* util/helper functions */
 static Token *peek(Parser *parser)
@@ -103,7 +105,7 @@ static Token *advance(Parser *parser)
 static void backup(Parser *parser)
 {
     if (parser->token_pos == 0)
-	report_parse_err(parser, "Internal error: attempted to backup() at pos = 0");
+	handle_parse_err(parser, "Internal error: attempted to backup() at pos = 0");
     parser->token_pos--;
 }
 
@@ -145,9 +147,9 @@ static bool check_either(Parser *parser, int step, unsigned int n, ...)
 static Token *consume(Parser *parser, TokenType expected, char *err_msg)
 {
     if (!check_single(parser, expected, 0)) {
-	report_parse_err(parser, err_msg);
-	/* we need to "unconsume" the token */
-	parser->token_pos--;
+	handle_parse_err(parser, err_msg);
+	/* we need to "unconsume" the token before we later advance again */
+	backup(parser);
     }
 
     return advance(parser);
@@ -189,6 +191,19 @@ static bool match_either(Parser *parser, unsigned int n, ...)
 
 #define match(parser, ...) match_either(parser, VA_NUMBER_OF_ARGS(__VA_ARGS__), __VA_ARGS__)
 
+
+static void handle_parse_err(Parser *parser, char *msg)
+{
+    parser->n_errors++;
+    if (parser->n_errors >= MAX_PARSE_ERRORS) {
+	report_parse_err(parser, msg);
+	REPORT_IMPL("TOO MANY PARSE ERRORS. Quitting now ...\n");
+	TODO_LOG("Gracfully quit after deciding to stop parsing.");
+	exit(1);
+    }
+    report_parse_err(parser, msg);
+    advance(parser);
+}
 
 /* grammar functions */
 static void newline(Parser *parser)
@@ -637,7 +652,7 @@ static Expr *single(Parser *parser)
 	CastExpr *expr = (CastExpr *)expr_alloc(parser->ast_arena, EXPR_CAST);
 	expr->expr = left;
 	if (!match(parser, t_ident)) {
-	    report_parse_err(parser, "Expected identifier after cast");
+	    handle_parse_err(parser, "Expected identifier after cast");
 	    /* move past token and continue as normal */
 	    parser->token_pos++;
 	    return NULL;
@@ -731,7 +746,7 @@ static Expr *primary(Parser *parser)
 	return func_def(parser);
 
     if (!match(parser, t_dt_str, t_dt_text_lit)) {
-	report_parse_err(parser, "Not a valid primary type");
+	handle_parse_err(parser, "Not a valid primary type");
 	return NULL;
     }
 
@@ -852,9 +867,12 @@ static ArenaLL arguments(Parser *parser)
 
 StmtsOrErr parse(Arena *ast_arena, ArrayList *tokens, char *input)
 {
-    Parser parser = {
-	.ast_arena = ast_arena, .tokens = tokens, .token_pos = 0, .input = input, .had_error = false
-    };
+    Parser parser = { .ast_arena = ast_arena,
+		      .tokens = tokens,
+		      .token_pos = 0,
+		      .input = input,
+		      .had_error = false,
+		      .n_errors = 0 };
     ArrayList statements;
     arraylist_init(&statements, sizeof(Stmt *));
 

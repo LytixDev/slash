@@ -35,6 +35,22 @@
 #endif
 #define ERROR_BUF_MAX_LEN 2048 // Max characters to print of a line
 
+/* Parser options */
+#define MAX_PARSE_ERRORS 1
+
+/* GC options */
+#define GC_HEAP_GROW_FACTOR 2
+#define GC_MIN_RUN (2 << 24) // ̃~32mb
+
+/* Misc. */
+#define PROGRAM_PATH_MAX_LEN 512
+
+
+/* Maintenance */
+#define ASSERT_NOT_REACHED assert(0 && "panic: unreachable code reached")
+#define TODO(txt) assert(0 && (txt))
+#define TODO_LOG(txt) fprintf(stderr, "[TODO] @ %s:%d: %s\n", __FILE__, __LINE__, txt)
+
 /* ANSI codes */
 #define ANSI_COLOR_START_BLACK "\033[30m"
 #define ANSI_COLOR_START_RED "\033[31m"
@@ -48,20 +64,6 @@
 #define ANSI_COLOR_END "\033[0m"
 #define ANSI_BOLD_START "\033[1m"
 #define ANSI_BOLD_END "\033[22m"
-
-
-/* GC options */
-#define GC_HEAP_GROW_FACTOR 2
-#define GC_MIN_RUN (2 << 24) // ̃~32mb
-
-/* Misc. */
-#define PROGRAM_PATH_MAX_LEN 512
-
-
-/* Maintenance */
-#define ASSERT_NOT_REACHED assert(0 && "panic: unreachable code reached")
-#define TODO(txt) assert(0 && (txt))
-#define TODO_LOG(txt) fprintf(stderr, "[TODO]: %s\n", txt)
 
 
 #endif /* OPTIONS_H */

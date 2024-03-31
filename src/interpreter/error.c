@@ -85,6 +85,21 @@ static ErrBuf offending_line_from_offset(char *input_start, size_t offset)
     return (ErrBuf){ .alloced_buffer = buffer, .left_offset = (input_start + offset) - line_start };
 }
 
+static void err_buf_print(ErrBuf bf, size_t err_token_len)
+{
+    REPORT_IMPL(">%s\n ", bf.alloced_buffer);
+    // NOTE(Nicolai): A lot of calls to REPORT_IMPL.
+    //                Could be optimized, however reporting errors fast is not super critical.
+    for (size_t i = 0; i < bf.left_offset; i++)
+	REPORT_IMPL(" ");
+
+    REPORT_IMPL(ANSI_COLOR_START_RED);
+    for (size_t i = 0; i < err_token_len; i++)
+	REPORT_IMPL("^");
+    REPORT_IMPL(ANSI_COLOR_END);
+    REPORT_IMPL("\n");
+}
+
 void report_lex_err(Lexer *lexer, bool print_offending, char *msg)
 {
     lexer->had_error = true;
@@ -100,25 +115,16 @@ void report_lex_err(Lexer *lexer, bool print_offending, char *msg)
 	return;
 
     ErrBuf bf = offending_line_from_offset(lexer->input, lexer->start);
-    REPORT_IMPL(">%s\n ", bf.alloced_buffer);
+    err_buf_print(bf, err_token_len);
     free(bf.alloced_buffer);
-    // NOTE(Nicolai): A lot of calls to REPORT_IMPL.
-    //                Could be optimized, however reporting errors fast is not super critical.
-    for (size_t i = 0; i < bf.left_offset; i++)
-	REPORT_IMPL(" ");
-
-    REPORT_IMPL(ANSI_COLOR_START_RED);
-    for (size_t i = 0; i < err_token_len; i++)
-	REPORT_IMPL("^");
-    REPORT_IMPL(ANSI_COLOR_END);
-    REPORT_IMPL("\n");
 }
 
 void report_parse_err(Parser *parser, char *msg)
 {
     parser->had_error = true;
     Token *failed = arraylist_get(parser->tokens, parser->token_pos);
-    REPORT_IMPL("[line %zu]: Error during parsing: %s\n", failed->line + 1, msg);
+    REPORT_IMPL("%s[line %zu]%s: Error during parsing: %s\n", ANSI_BOLD_START, failed->line + 1,
+		ANSI_BOLD_END, msg);
 
     char *line = offending_line(parser->input, failed->line);
     if (line == NULL) {
@@ -127,12 +133,6 @@ void report_parse_err(Parser *parser, char *msg)
     }
 
     ErrBuf bf = offending_line_from_offset(line, failed->start);
-    REPORT_IMPL(">%s\n ", bf.alloced_buffer);
+    err_buf_print(bf, failed->end - failed->start);
     free(bf.alloced_buffer);
-
-    for (size_t i = 0; i < failed->start; i++)
-	REPORT_IMPL(" ");
-    for (size_t i = 0; i < failed->end - failed->start; i++)
-	REPORT_IMPL("^");
-    REPORT_IMPL("\n");
 }

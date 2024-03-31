@@ -30,6 +30,7 @@ typedef struct {
     size_t token_pos; // index of current token being processed
     char *input; // handle to the source code
     bool had_error;
+    size_t n_errors;
 } Parser;
 
 typedef struct {
