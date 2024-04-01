@@ -664,6 +664,41 @@ SlashValue str_to_str(Interpreter *interpreter, SlashValue self)
     return self;
 }
 
+
+// SlashValue range_item_get(Interpreter *interpreter, SlashValue self, SlashValue other)
+SlashValue str_item_get(Interpreter *interpreter, SlashValue self, SlashValue other)
+{
+    assert(IS_STR(self));
+    SlashStr *str = AS_STR(self);
+
+    size_t start = 0;
+    size_t end = 0;
+
+    if (IS_NUM(other)) {
+	if (!NUM_IS_INT(other))
+	    REPORT_RUNTIME_ERROR("Index can not be a floating point number: '%f", other.num);
+	start = other.num;
+	end = start + 1;
+	if (start >= str->len)
+	    REPORT_RUNTIME_ERROR(
+		"Index out of range. String has len '%zu', tried to get item at index '%zu'",
+		str->len, start);
+    } else if (IS_RANGE(other)) {
+	start = other.range.start;
+	end = other.range.end;
+	if (start > end)
+	    REPORT_RUNTIME_ERROR("Reversed range can not be used to get item from string");
+    } else {
+	REPORT_RUNTIME_ERROR("Can not use '%s' as an index", other.T->name);
+    }
+
+    SlashStr *new = (SlashStr *)gc_new_T(interpreter, &str_type_info);
+    gc_barrier_start(&interpreter->gc);
+    slash_str_init_from_slice(interpreter, new, str->str + start, end - start);
+    gc_barrier_end(&interpreter->gc);
+    return AS_VALUE(new);
+}
+
 bool str_truthy(SlashValue self)
 {
     assert(IS_STR(self));
@@ -901,7 +936,7 @@ SlashTypeInfo str_type_info = { .name = "str",
 				.unary_not = NULL,
 				.print = str_print,
 				.to_str = str_to_str,
-				.item_get = NULL,
+				.item_get = str_item_get,
 				.item_assign = NULL,
 				.item_in = NULL,
 				.truthy = str_truthy,
