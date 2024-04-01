@@ -26,6 +26,7 @@
 #include "interpreter/value/slash_str.h"
 #include "interpreter/value/slash_value.h"
 #include "nicc/nicc.h"
+#include "options.h"
 
 #ifdef DEBUG_LOG_GC
 #include <stdio.h>

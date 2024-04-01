@@ -586,9 +586,10 @@ continue_str_lexing:
 	lexer->pos_in_line = 0;
 	/* Ignore any identation before the next string */
 	accept_run(lexer, " \t\v");
-	lexer->start = lexer->pos - 1;
+	lexer->start = lexer->pos;
 
 	if (!match(lexer, '"')) {
+	    lexer->pos++; // Gives an underline where the double qoute should be in the error msg
 	    report_lex_err(lexer, true, "Expected double qoute to continue multiline string");
 	    ignore(lexer);
 	    return STATE_FN(lex_any);

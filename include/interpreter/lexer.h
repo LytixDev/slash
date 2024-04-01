@@ -17,8 +17,6 @@
 #ifndef LEXER_H
 #define LEXER_H
 
-#include <stdint.h>
-
 #include "lib/str_view.h"
 #include "nicc/nicc.h"
 #include "sac/sac.h"

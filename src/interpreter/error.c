@@ -25,6 +25,7 @@
 #include "interpreter/lexer.h"
 #include "interpreter/parser.h"
 #include "nicc/nicc.h"
+#include "options.h"
 
 
 typedef struct {
@@ -52,51 +53,78 @@ static char *offending_line(char *src, size_t line_no)
     return NULL;
 }
 
-static ErrBuf offending_line_from_offset(char *line, size_t offset)
+/*
+ * Creates an ErrBuf where the buffer is the entire line where the error occured.
+ */
+static ErrBuf offending_line_from_offset(char *input_start, size_t offset)
 {
-    char *start = line; /* first char in line */
-    char *end = line + offset;
-    for (; *end != EOF; end++) {
-	if (*end == '\n') {
+    /* Edge case where the error was the last character in the input */
+    if (*(input_start + offset + 1) == 0)
+	offset--;
+    char *line_start = input_start + offset;
+    char *line_end = input_start + offset;
+    for (; line_start != input_start; line_start--) {
+	if (*line_start == '\n') {
+	    line_start++;
 	    break;
 	}
     }
-    // TODO: we can define a max len just for safety
-    assert(end > start);
-    size_t len = end - start;
+    for (; *line_end != EOF; line_end++) {
+	if (*line_end == '\n') {
+	    break;
+	}
+    }
+
+    assert(line_end - line_start > 0);
+    size_t len = line_end - line_start;
+    if (len > ERROR_BUF_MAX_LEN)
+	len = ERROR_BUF_MAX_LEN;
     char *buffer = malloc(sizeof(char) * (len + 1));
-    memcpy(buffer, start, len);
+    memcpy(buffer, line_start, len);
     buffer[len] = 0;
-    return (ErrBuf){ .alloced_buffer = buffer, .left_offset = (line + offset) - start };
+    return (ErrBuf){ .alloced_buffer = buffer, .left_offset = (input_start + offset) - line_start };
+}
+
+static void err_buf_print(ErrBuf bf, size_t err_token_len)
+{
+    REPORT_IMPL(">%s\n ", bf.alloced_buffer);
+    // NOTE(Nicolai): A lot of calls to REPORT_IMPL.
+    //                Could be optimized, however reporting errors fast is not super critical.
+    for (size_t i = 0; i < bf.left_offset; i++)
+	REPORT_IMPL(" ");
+
+    REPORT_IMPL(ANSI_COLOR_START_RED);
+    for (size_t i = 0; i < err_token_len; i++)
+	REPORT_IMPL("^");
+    REPORT_IMPL(ANSI_COLOR_END);
+    REPORT_IMPL("\n");
 }
 
 void report_lex_err(Lexer *lexer, bool print_offending, char *msg)
 {
-    REPORT_IMPL("[line %zu]: %s\n", lexer->line_count + 1, msg);
-    if (print_offending) {
-	ErrBuf bf = offending_line_from_offset(lexer->input, lexer->start);
-	REPORT_IMPL(">%s\n ", bf.alloced_buffer);
-	free(bf.alloced_buffer);
-
-	// TODO: a lot of wasted calls to REPORT_IMPL
-	for (size_t i = 0; i < bf.left_offset; i++)
-	    REPORT_IMPL(" ");
-	for (size_t i = 0; i < lexer->pos - lexer->start; i++)
-	    REPORT_IMPL("^");
-	REPORT_IMPL("\n");
-    }
-
     lexer->had_error = true;
 #ifdef DEBUG_LEXER
+    REPORT_IMPL("Current token dump:\n");
     tokens_print(&lexer->tokens);
 #endif /* DEBUG_LEXER */
+
+    REPORT_IMPL("%s[line %zu]:%s %s\n", ANSI_BOLD_START, lexer->line_count + 1, ANSI_BOLD_END, msg);
+    REPORT_IMPL(ANSI_BOLD_END);
+    size_t err_token_len = lexer->pos - lexer->start;
+    if (!print_offending || err_token_len < 1)
+	return;
+
+    ErrBuf bf = offending_line_from_offset(lexer->input, lexer->start);
+    err_buf_print(bf, err_token_len);
+    free(bf.alloced_buffer);
 }
 
 void report_parse_err(Parser *parser, char *msg)
 {
     parser->had_error = true;
     Token *failed = arraylist_get(parser->tokens, parser->token_pos);
-    REPORT_IMPL("[line %zu]: Error during parsing: %s\n", failed->line + 1, msg);
+    REPORT_IMPL("%s[line %zu]%s: Error during parsing: %s\n", ANSI_BOLD_START, failed->line + 1,
+		ANSI_BOLD_END, msg);
 
     char *line = offending_line(parser->input, failed->line);
     if (line == NULL) {
@@ -105,12 +133,6 @@ void report_parse_err(Parser *parser, char *msg)
     }
 
     ErrBuf bf = offending_line_from_offset(line, failed->start);
-    REPORT_IMPL(">%s\n ", bf.alloced_buffer);
+    err_buf_print(bf, failed->end - failed->start);
     free(bf.alloced_buffer);
-
-    for (size_t i = 0; i < failed->start; i++)
-	REPORT_IMPL(" ");
-    for (size_t i = 0; i < failed->end - failed->start; i++)
-	REPORT_IMPL("^");
-    REPORT_IMPL("\n");
 }

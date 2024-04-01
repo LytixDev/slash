@@ -24,6 +24,7 @@
 #include "interpreter/value/slash_value.h"
 #include "lib/arena_ll.h"
 #include "lib/str_view.h"
+#include "options.h"
 
 /*
  * '.' builtin is used to execute commands from a specified file

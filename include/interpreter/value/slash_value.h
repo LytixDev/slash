@@ -19,7 +19,6 @@
 
 #include <stdbool.h>
 
-#include "interpreter/lexer.h"
 #include "interpreter/value/type_funcs.h"
 #include "lib/arena_ll.h"
 #include "sac/sac.h"

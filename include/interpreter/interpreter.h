@@ -52,9 +52,6 @@ typedef struct {
 	.type = RT_NORMAL, .return_expr = NULL \
     }
 
-#define TODO(txt) assert(0 && (txt))
-#define TODO_LOG(txt) fprintf(stderr, "[TODO]: %s\n", txt)
-
 #define SLASH_PRINT(__stream_ctx, ...) dprintf((__stream_ctx)->out_fd, __VA_ARGS__)
 #define SLASH_PRINT_ERR(__stream_ctx, ...) dprintf((__stream_ctx)->err_fd, __VA_ARGS__)
 
