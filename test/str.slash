@@ -2,7 +2,8 @@
 {
     var a = "hello World!"
     # item get
-    # assert $a[0] == "h"
+    assert $a[0] == "h"
+    assert $a[..5] == "hello"
     # item assign
     # $a[0] = "H"
     # assert $a[0] == "H"
