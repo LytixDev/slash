@@ -155,7 +155,6 @@ SlashValue num_unary_not(SlashValue self)
 {
     assert(IS_NUM(self));
     TraitTruthy is_truthy = self.T->truthy;
-    assert(is_truthy != NULL);
     return (SlashValue){ .T = &bool_type_info, .boolean = !is_truthy(self) };
 }
 
@@ -652,6 +651,13 @@ SlashValue str_plus(Interpreter *interpreter, SlashValue self, SlashValue other)
     return AS_VALUE(new);
 }
 
+SlashValue str_unary_not(SlashValue self)
+{
+    assert(IS_STR(self));
+    TraitTruthy is_truthy = self.T->truthy;
+    return (SlashValue){ .T = &bool_type_info, .boolean = !is_truthy(self) };
+}
+
 void str_print(Interpreter *interpreter, SlashValue self)
 {
     assert(IS_STR(self));
@@ -664,19 +670,68 @@ SlashValue str_to_str(Interpreter *interpreter, SlashValue self)
     return self;
 }
 
+
+// SlashValue range_item_get(Interpreter *interpreter, SlashValue self, SlashValue other)
+SlashValue str_item_get(Interpreter *interpreter, SlashValue self, SlashValue other)
+{
+    assert(IS_STR(self));
+    SlashStr *str = AS_STR(self);
+
+    size_t start = 0;
+    size_t end = 0;
+
+    if (IS_NUM(other)) {
+	if (!NUM_IS_INT(other))
+	    REPORT_RUNTIME_ERROR("Index can not be a floating point number: '%f", other.num);
+	start = other.num;
+	end = start + 1;
+	if (start >= str->len)
+	    REPORT_RUNTIME_ERROR(
+		"Index out of range. String has len '%zu', tried to get item at index '%zu'",
+		str->len, start);
+    } else if (IS_RANGE(other)) {
+	start = other.range.start;
+	end = other.range.end;
+	if (start > end)
+	    REPORT_RUNTIME_ERROR("Reversed range can not be used to get item from string");
+    } else {
+	REPORT_RUNTIME_ERROR("Can not use '%s' as an index", other.T->name);
+    }
+
+    SlashStr *new = (SlashStr *)gc_new_T(interpreter, &str_type_info);
+    gc_barrier_start(&interpreter->gc);
+    slash_str_init_from_slice(interpreter, new, str->str + start, end - start);
+    gc_barrier_end(&interpreter->gc);
+    return AS_VALUE(new);
+}
+
+bool str_item_in(SlashValue self, SlashValue other)
+{
+    assert(IS_STR(self) && IS_STR(other));
+    char *haystack = AS_STR(self)->str;
+    char *needle = AS_STR(other)->str;
+    char *end_ptr = strstr(haystack, needle);
+    return end_ptr != NULL;
+}
+
 bool str_truthy(SlashValue self)
 {
     assert(IS_STR(self));
     return AS_STR(self)->len != 0;
 }
 
+int str_cmp(SlashValue self, SlashValue other)
+{
+    assert(IS_STR(self) && IS_STR(other));
+    return strcmp(AS_STR(self)->str, AS_STR(other)->str);
+}
+
 bool str_eq(SlashValue self, SlashValue other)
 {
     assert(IS_STR(self) && IS_STR(other));
-    // TODO: we can do better
-    SlashStr *a = AS_STR(self);
-    SlashStr *b = AS_STR(other);
-    return strcmp(a->str, b->str) == 0;
+    // NOTE(Nicolai): Easy potential optimisation would be a comparison that returns early
+    //                on the first character that is now the same.
+    return str_cmp(self, other) == 0;
 }
 
 int str_hash(SlashValue self)
@@ -898,15 +953,15 @@ SlashTypeInfo str_type_info = { .name = "str",
 				.pow = NULL,
 				.mod = NULL,
 				.unary_minus = NULL,
-				.unary_not = NULL,
+				.unary_not = str_unary_not,
 				.print = str_print,
 				.to_str = str_to_str,
-				.item_get = NULL,
+				.item_get = str_item_get,
 				.item_assign = NULL,
-				.item_in = NULL,
+				.item_in = str_item_in,
 				.truthy = str_truthy,
 				.eq = str_eq,
-				.cmp = NULL,
+				.cmp = str_cmp,
 				.hash = str_hash,
 				.obj_size = sizeof(SlashStr) };
 

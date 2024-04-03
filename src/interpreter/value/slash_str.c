@@ -14,6 +14,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+#include <assert.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -50,6 +51,7 @@ void slash_str_init_from_concat(Interpreter *interpreter, SlashStr *str, SlashSt
 
 void slash_str_init_from_alloced_cstr(SlashStr *str, char *cstr)
 {
+    assert(cstr != NULL);
     str->len = strlen(cstr);
     str->str = cstr;
     str->obj.gc_managed = false;

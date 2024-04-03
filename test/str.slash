@@ -1,26 +1,13 @@
-# test every trait
 {
     var a = "hello World!"
     # item get
-    # assert $a[0] == "h"
+    assert $a[0] == "h"
+    assert $a[..5] == "hello"
     # item assign
     # $a[0] = "H"
     # assert $a[0] == "H"
     # item in
     # assert ("Hello" in $a) and ("World!" in $a)
-    # truthy
-    if "" {
-        assert false
-    } else {
-        assert true
-    }
-    if "something" {
-        assert true
-    } else {
-        assert false
-    }
-    # equality
-    #assert $a == "Hello World!"
 }
 
 # test every method
@@ -38,3 +25,18 @@
 
 assert "hello"\
        "world" == "helloworld"
+
+# string comparison
+assert "hello" == "hello"
+assert "b" > "a"
+assert "a" >= "a"
+assert "aaa" > "AAA"
+
+# truthyness
+assert not ""
+assert "something is true"
+
+# a in b
+assert "Hello" in "Hello World"
+assert not ("Foo" in "Bar")
+assert "" in "something"
