@@ -52,8 +52,8 @@ static void define_scope_alloced_var(Scope *scope, StrView *key, char *cstr)
 #define SET_GLOBAL_STR(__scope, __name, __value)                        \
     do {                                                                \
 	StrView __key = { .view = (__name), .size = strlen((__name)) }; \
-	char *__cstr = scope_alloc(__scope, strlen((__value)));         \
-	memcpy(__cstr, (__value), strlen((__value)));                   \
+	char *__cstr = scope_alloc(__scope, strlen((__value)) + 1);     \
+	memcpy(__cstr, (__value), strlen((__value)) + 1);               \
 	define_scope_alloced_var(__scope, &__key, __cstr);              \
     } while (0)
 
@@ -70,7 +70,11 @@ static void set_globals(Scope *scope)
     }
 
     SET_GLOBAL_STR(scope, "IFS", "\n\t ");
+#ifdef DEBUG
+    SET_GLOBAL_STR(scope, "SLASH_VERSION", "0.0.1_beta_debug");
+#else
     SET_GLOBAL_STR(scope, "SLASH_VERSION", "0.0.1_beta");
+#endif /* DEBUG*/
 
     /* Define '$?' that holds the value of the previous exit code */
     SlashValue exit_code_value = { .T = &num_type_info, .num = 0 };
