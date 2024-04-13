@@ -17,7 +17,6 @@
 #ifndef INTERPRETER_H
 #define INTERPRETER_H
 
-#include <assert.h>
 #include <stdio.h>
 
 #include "interpreter/ast.h"
@@ -72,6 +71,7 @@ typedef struct interpreter_t {
     HashMap type_register;
     int prev_exit_code;
     ExecResult exec_res_ctx;
+    int source_line; // file number we are currently interpreting
 } Interpreter;
 
 

@@ -995,6 +995,7 @@ void ast_ll_to_argv(Interpreter *interpreter, ArenaLL *ast_nodes, SlashValue *re
 
 static SlashValue eval(Interpreter *interpreter, Expr *expr)
 {
+    interpreter->source_line = expr->source_line;
     switch (expr->type) {
     case EXPR_UNARY:
 	return eval_unary(interpreter, (UnaryExpr *)expr);
@@ -1128,6 +1129,7 @@ void interpreter_init(Interpreter *interpreter, int argc, char **argv)
     interpreter->stream_ctx = stream_ctx;
 
     interpreter->exec_res_ctx = EXEC_NORMAL;
+    interpreter->source_line = -1;
 }
 
 void interpreter_free(Interpreter *interpreter)
@@ -1161,6 +1163,7 @@ static void interpreter_reset_from_err(Interpreter *interpreter)
     interpreter->stream_ctx = stream_ctx;
 
     interpreter->exec_res_ctx = EXEC_NORMAL;
+    interpreter->source_line = -1;
 }
 
 int interpreter_run(Interpreter *interpreter, ArrayList *statements)
