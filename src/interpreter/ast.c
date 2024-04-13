@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2023 Nicolai Brand (https://lytix.dev)
+ *  Copyright (C) 2023-2024 Nicolai Brand (https://lytix.dev)
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -332,79 +332,77 @@ void ast_arena_release(Arena *ast_arena)
 
 
 /* ast print */
-static void ast_print_expr(Expr *expr);
-static void ast_print_stmt(Stmt *stmt);
+static void ast_print_expr(Expr *expr, int depth);
+static void ast_print_stmt(Stmt *stmt, int depth);
 
-static void ast_print_sequence(SequenceExpr *expr)
+static void ast_print_depth(int depth)
+{
+    if (depth == -1)
+	return;
+    putchar('\n');
+    for (int i = 0; i < depth * 2; i++)
+	putchar(' ');
+}
+
+static void ast_print_sequence(SequenceExpr *expr, int depth)
 {
     LLItem *item;
     ARENA_LL_FOR_EACH(&expr->seq, item)
     {
-	ast_print_expr(item->value);
+	ast_print_expr(item->value, depth);
     }
 }
 
-static void ast_print_unary(UnaryExpr *expr)
+static void ast_print_unary(UnaryExpr *expr, int depth)
 {
     printf("%s ", token_type_str_map[expr->operator_]);
-    ast_print_expr(expr->right);
+    ast_print_expr(expr->right, depth);
 }
 
-static void ast_print_binary(BinaryExpr *expr)
+static void ast_print_binary(BinaryExpr *expr, int depth)
 {
-    ast_print_expr(expr->left);
+    ast_print_expr(expr->left, depth);
+    ast_print_depth(depth);
     printf(" %s ", token_type_str_map[expr->operator_]);
-    ast_print_expr(expr->right);
+    ast_print_expr(expr->right, depth);
 }
 
-static void ast_print_literal(LiteralExpr *expr)
+static void ast_print_literal(LiteralExpr *expr, int depth)
 {
-    (void)expr;
-    printf("literal");
-    // switch (expr->value.type) {
-    // case SLASH_SHIDENT:
-    //     str_view_print(expr->value.shident);
-    //     break;
-
-    // case SLASH_NUM:
-    //     printf("%f", expr->value.num);
-    //     break;
-
-    // case SLASH_BOOL:
-    //     printf("%s", expr->value.boolean == true ? "true" : "false");
-    //     break;
-
-    // case SLASH_RANGE:
-    //     ast_print_range_literal(&expr->value.range);
-    //     break;
-
-    // default:
-    //     printf("bad literal type");
-    // }
+    (void)depth;
+    SlashValue literal = expr->value;
+    if (IS_BOOL(literal))
+	printf("%s", literal.boolean == true ? "true" : "false");
+    else if (IS_NUM(literal))
+	printf("%f", literal.num);
+    else if (IS_RANGE(literal))
+	printf("%d -> %d", literal.range.start, literal.range.end);
+    else if (IS_TEXT_LIT(literal))
+	str_view_print(literal.text_lit);
 }
 
-static void ast_print_access(AccessExpr *expr)
+static void ast_print_access(AccessExpr *expr, int depth)
 {
     str_view_print(expr->var_name);
 }
 
-static void ast_print_item_access(SubscriptExpr *expr)
+static void ast_print_item_access(SubscriptExpr *expr, int depth)
 {
-    ast_print_expr(expr->expr);
+    ast_print_expr(expr->expr, depth);
     putchar('[');
-    ast_print_expr(expr->access_value);
+    ast_print_expr(expr->access_value, depth);
     putchar(']');
 }
 
-static void ast_print_list(ListExpr *expr)
+static void ast_print_list(ListExpr *expr, int depth)
 {
     if (expr->exprs == NULL)
 	return;
 
-    ast_print_sequence(expr->exprs);
+    ast_print_sequence(expr->exprs, depth);
 }
 
-static void ast_print_map(MapExpr *expr)
+static void ast_print_map(MapExpr *expr, int depth)
 {
     if (expr->key_value_pairs == NULL)
 	return;
@@ -414,15 +412,15 @@ static void ast_print_map(MapExpr *expr)
     ARENA_LL_FOR_EACH(expr->key_value_pairs, item)
     {
 	pair = item->value;
-	ast_print_expr(pair->key);
+	ast_print_expr(pair->key, depth);
 	printf(":");
-	ast_print_expr(pair->value);
+	ast_print_expr(pair->value, depth);
     }
 }
 
-static void ast_print_method(MethodExpr *expr)
+static void ast_print_method(MethodExpr *expr, int depth)
 {
-    ast_print_expr(expr->obj);
+    ast_print_expr(expr->obj, depth);
     putchar('.');
     str_view_print(expr->method_name);
     putchar('(');
@@ -431,32 +429,52 @@ static void ast_print_method(MethodExpr *expr)
 	LLItem *item;
 	ARENA_LL_FOR_EACH(&expr->args->seq, item)
 	{
-	    ast_print_expr(item->value);
+	    ast_print_expr(item->value, depth);
 	}
     }
     putchar(')');
 }
 
-static void ast_print_grouping(GroupingExpr *expr)
+static void ast_print_grouping(GroupingExpr *expr, int depth)
 {
     putchar('(');
-    ast_print_expr(expr->expr);
+    ast_print_expr(expr->expr, depth);
     putchar(')');
 }
 
-static void ast_print_expression(ExpressionStmt *stmt)
+static void ast_print_str(StrExpr *expr, int depth)
 {
-    ast_print_expr(stmt->expression);
+    str_view_print(expr->view);
 }
 
-static void ast_print_var(VarStmt *stmt)
+static void ast_print_function(FunctionExpr *expr, int depth)
+{
+    ast_print_stmt((Stmt *)expr->body, depth);
+}
+
+static void ast_print_cast(CastExpr *expr, int depth)
+{
+    ast_print_expr(expr->expr, depth);
+    ast_print_depth(depth);
+    printf("AS");
+    ast_print_depth(depth);
+    str_view_print(expr->type_name);
+    ast_print_depth(depth);
+}
+
+static void ast_print_expression(ExpressionStmt *stmt, int depth)
+{
+    ast_print_expr(stmt->expression, depth);
+}
+
+static void ast_print_var(VarStmt *stmt, int depth)
 {
     str_view_print(stmt->name);
     printf(" = ");
-    ast_print_expr(stmt->initializer);
+    ast_print_expr(stmt->initializer, depth);
 }
 
-static void ast_print_seq_var(SeqVarStmt *stmt)
+static void ast_print_seq_var(SeqVarStmt *stmt, int depth)
 {
     LLItem *item;
     ARENA_LL_FOR_EACH(&stmt->names, item)
@@ -465,142 +483,178 @@ static void ast_print_seq_var(SeqVarStmt *stmt)
 	printf(", ");
     }
     printf(" = ");
-    ast_print_expr(stmt->initializer);
+    ast_print_expr(stmt->initializer, depth);
 }
 
-static void ast_print_cmd(CmdStmt *stmt)
+static void ast_print_cmd(CmdStmt *stmt, int depth)
 {
     str_view_print(stmt->cmd_name);
     if (stmt->arg_exprs == NULL)
 	return;
 
-    printf(", ");
     LLItem *item;
     ARENA_LL_FOR_EACH(stmt->arg_exprs, item)
     {
-	ast_print_expr(item->value);
+	ast_print_expr(item->value, depth);
     }
 }
 
-static void ast_print_if(IfStmt *stmt)
+static void ast_print_if(IfStmt *stmt, int depth)
 {
-    ast_print_expr(stmt->condition);
+    ast_print_expr(stmt->condition, depth);
 
-    printf(" then_branch ");
+    ast_print_depth(depth);
+    printf("THEN");
 
-    ast_print_stmt(stmt->then_branch);
+    ast_print_stmt(stmt->then_branch, depth);
     if (stmt->else_branch != NULL) {
-	printf(" else_branch ");
-	ast_print_stmt(stmt->else_branch);
+	ast_print_depth(depth);
+	printf("ELSE");
+	ast_print_stmt(stmt->else_branch, depth);
     }
 }
 
-static void ast_print_block(BlockStmt *stmt)
+static void ast_print_block(BlockStmt *stmt, int depth)
 {
     LLItem *item;
     ARENA_LL_FOR_EACH(stmt->statements, item)
     {
-	ast_print_stmt(item->value);
+	ast_print_stmt(item->value, depth);
     }
 }
 
-static void ast_print_loop(LoopStmt *stmt)
+static void ast_print_loop(LoopStmt *stmt, int depth)
 {
-    ast_print_expr(stmt->condition);
-    ast_print_block(stmt->body_block);
+    ast_print_expr(stmt->condition, depth);
+    ast_print_block(stmt->body_block, depth);
 }
 
-static void ast_print_iter_loop(IterLoopStmt *stmt)
+static void ast_print_iter_loop(IterLoopStmt *stmt, int depth)
 {
+    printf("ITERABLE: ");
     str_view_print(stmt->var_name);
-    printf(" = iter.");
-    ast_print_expr(stmt->underlying_iterable);
-    ast_print_block(stmt->body_block);
+    printf(" = ");
+    ast_print_expr(stmt->underlying_iterable, depth);
+    ast_print_stmt((Stmt *)stmt->body_block, depth);
 }
 
-static void ast_print_assign(AssignStmt *stmt)
+static void ast_print_assign(AssignStmt *stmt, int depth)
 {
-    ast_print_expr(stmt->var);
+    ast_print_expr(stmt->var, depth);
     if (stmt->assignment_op == t_equal)
 	printf(" = ");
     else if (stmt->assignment_op == t_plus_equal)
 	printf(" += ");
     else
 	printf(" -= ");
-    ast_print_expr(stmt->value);
+    ast_print_expr(stmt->value, depth);
 }
 
-static void ast_print_pipeline(PipelineStmt *stmt)
+static void ast_print_pipeline(PipelineStmt *stmt, int depth)
 {
-    ast_print_stmt((Stmt *)stmt->left);
-    printf(" | ");
-    ast_print_stmt((Stmt *)stmt->right);
+    ast_print_stmt((Stmt *)stmt->left, depth);
+    ast_print_depth(depth);
+    printf("|");
+    ast_print_stmt((Stmt *)stmt->right, depth);
 }
 
-static void ast_print_assert(AssertStmt *stmt)
+static void ast_print_assert(AssertStmt *stmt, int depth)
 {
-    printf("ASSERT");
-    ast_print_expr((Expr *)stmt->expr);
+    ast_print_expr((Expr *)stmt->expr, depth);
 }
 
-static void ast_print_binary_stmt(BinaryStmt *stmt)
+static void ast_print_binary_stmt(BinaryStmt *stmt, int depth)
 {
-    ast_print_stmt(stmt->left);
+    ast_print_stmt(stmt->left, depth);
     printf(" %s ", token_type_str_map[stmt->operator_]);
     if (stmt->operator_ == t_anp_anp || stmt->operator_ == t_pipe_pipe)
-	ast_print_stmt(stmt->right_stmt);
+	ast_print_stmt(stmt->right_stmt, depth);
     else
-	ast_print_expr(stmt->right_expr);
+	ast_print_expr(stmt->right_expr, depth);
 }
 
-static void ast_print_expr(Expr *expr)
+static void ast_print_abrupt(AbruptControlFlowStmt *stmt, int depth)
 {
+    ast_print_depth(depth);
+    switch (stmt->ctrlf_type) {
+    case t_return: {
+	printf("RETURN ");
+	if (stmt->return_expr != NULL)
+	    ast_print_expr(stmt->return_expr, -1);
+	break;
+    }
+    case t_continue:
+	printf("CONTINUE");
+	break;
+    case t_break:
+	printf("BREAK");
+	break;
+    default:
+	break;
+    }
+}
+
+static void ast_print_expr(Expr *expr, int depth)
+{
+    ast_print_depth(depth);
     printf("%s", expr_type_str_map[expr->type]);
     putchar('[');
 
     switch (expr->type) {
     case EXPR_UNARY:
-	ast_print_unary((UnaryExpr *)expr);
+	ast_print_unary((UnaryExpr *)expr, depth + 1);
 	break;
 
     case EXPR_BINARY:
-	ast_print_binary((BinaryExpr *)expr);
+	ast_print_binary((BinaryExpr *)expr, depth + 1);
 	break;
 
     case EXPR_LITERAL:
-	ast_print_literal((LiteralExpr *)expr);
+	ast_print_literal((LiteralExpr *)expr, depth + 1);
 	break;
 
     case EXPR_ACCESS:
-	ast_print_access((AccessExpr *)expr);
+	ast_print_access((AccessExpr *)expr, depth + 1);
 	break;
 
     case EXPR_SUBSCRIPT:
-	ast_print_item_access((SubscriptExpr *)expr);
+	ast_print_item_access((SubscriptExpr *)expr, depth + 1);
 	break;
 
     case EXPR_SUBSHELL:
-	ast_print_stmt(((SubshellExpr *)expr)->stmt);
+	ast_print_stmt(((SubshellExpr *)expr)->stmt, depth + 1);
 	break;
 
     case EXPR_LIST:
-	ast_print_list((ListExpr *)expr);
+	ast_print_list((ListExpr *)expr, depth + 1);
 	break;
 
     case EXPR_MAP:
-	ast_print_map((MapExpr *)expr);
+	ast_print_map((MapExpr *)expr, depth + 1);
 	break;
 
     case EXPR_METHOD:
-	ast_print_method((MethodExpr *)expr);
+	ast_print_method((MethodExpr *)expr, depth + 1);
 	break;
 
     case EXPR_SEQUENCE:
-	ast_print_sequence((SequenceExpr *)expr);
+	ast_print_sequence((SequenceExpr *)expr, depth + 1);
 	break;
 
     case EXPR_GROUPING:
-	ast_print_grouping((GroupingExpr *)expr);
+	ast_print_grouping((GroupingExpr *)expr, depth + 1);
+	break;
+
+    case EXPR_STR:
+	ast_print_str((StrExpr *)expr, depth + 1);
+	break;
+
+    case EXPR_FUNCTION:
+	ast_print_function((FunctionExpr *)expr, depth + 1);
+	break;
+
+    case EXPR_CAST:
+	ast_print_cast((CastExpr *)expr, depth + 1);
 	break;
 
     default:
@@ -610,64 +664,70 @@ static void ast_print_expr(Expr *expr)
     putchar(']');
 }
 
-static void ast_print_stmt(Stmt *stmt)
+static void ast_print_stmt(Stmt *stmt, int depth)
 {
+    ast_print_depth(depth);
     printf("%s", stmt_type_str_map[stmt->type]);
     putchar('{');
 
     switch (stmt->type) {
     case STMT_EXPRESSION:
-	ast_print_expression((ExpressionStmt *)stmt);
+	ast_print_expression((ExpressionStmt *)stmt, depth + 1);
 	break;
 
     case STMT_VAR:
-	ast_print_var((VarStmt *)stmt);
+	ast_print_var((VarStmt *)stmt, depth + 1);
 	break;
 
     case STMT_SEQ_VAR:
-	ast_print_seq_var((SeqVarStmt *)stmt);
+	ast_print_seq_var((SeqVarStmt *)stmt, depth + 1);
 	break;
 
     case STMT_CMD:
-	ast_print_cmd((CmdStmt *)stmt);
+	ast_print_cmd((CmdStmt *)stmt, depth + 1);
 	break;
 
     case STMT_BLOCK:
-	ast_print_block((BlockStmt *)stmt);
+	ast_print_block((BlockStmt *)stmt, depth + 1);
 	break;
 
     case STMT_LOOP:
-	ast_print_loop((LoopStmt *)stmt);
+	ast_print_loop((LoopStmt *)stmt, depth + 1);
 	break;
 
     case STMT_ITER_LOOP:
-	ast_print_iter_loop((IterLoopStmt *)stmt);
+	ast_print_iter_loop((IterLoopStmt *)stmt, depth + 1);
 	break;
 
     case STMT_IF:
-	ast_print_if((IfStmt *)stmt);
+	ast_print_if((IfStmt *)stmt, depth + 1);
 	break;
 
     case STMT_ASSIGN:
-	ast_print_assign((AssignStmt *)stmt);
+	ast_print_assign((AssignStmt *)stmt, depth + 1);
 	break;
 
     case STMT_PIPELINE:
-	ast_print_pipeline((PipelineStmt *)stmt);
+	ast_print_pipeline((PipelineStmt *)stmt, depth + 1);
 	break;
 
     case STMT_ASSERT:
-	ast_print_assert((AssertStmt *)stmt);
+	ast_print_assert((AssertStmt *)stmt, depth + 1);
 	break;
 
     case STMT_BINARY:
-	ast_print_binary_stmt((BinaryStmt *)stmt);
+	ast_print_binary_stmt((BinaryStmt *)stmt, depth + 1);
+	break;
+
+    case STMT_ABRUPT_CONTROL_FLOW:
+	ast_print_abrupt((AbruptControlFlowStmt *)stmt, depth + 1);
 	break;
 
     default:
 	printf("ast-stmt type not handled");
     }
 
+    ast_print_depth(depth);
     putchar('}');
 }
 
@@ -677,11 +737,8 @@ void ast_print(ArrayList *ast_heads)
 
     size_t size = ast_heads->size;
     for (size_t i = 0; i < size; i++) {
-	ast_print_stmt(*(Stmt **)arraylist_get(ast_heads, i));
-	if (i != size - 1) {
-	    printf("\n\n");
-	} else {
-	    printf("\n");
-	}
+	ast_print_stmt(*(Stmt **)arraylist_get(ast_heads, i), 0);
+	putchar('\n');
     }
+    putchar('\n');
 }
