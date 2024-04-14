@@ -31,6 +31,7 @@ typedef struct {
     char *input; // handle to the source code
     bool had_error;
     size_t n_errors;
+    int source_line;
 } Parser;
 
 typedef struct {

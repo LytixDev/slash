@@ -70,11 +70,12 @@ char *stmt_type_str_map[STMT_ENUM_COUNT] = {
 };
 
 
-Expr *expr_alloc(Arena *ast_arena, ExprType type)
+Expr *expr_alloc(Arena *ast_arena, ExprType type, int file_no)
 {
     size_t size = expr_size_table[type];
     Expr *expr = m_arena_alloc(ast_arena, size);
     expr->type = type;
+    expr->source_line = file_no;
     return expr;
 }
 
@@ -91,7 +92,7 @@ Expr *expr_copy(Arena *arena, Expr *to_copy)
     if (to_copy == NULL)
 	return NULL;
 
-    Expr *copy = expr_alloc(arena, to_copy->type);
+    Expr *copy = expr_alloc(arena, to_copy->type, to_copy->source_line);
     switch (to_copy->type) {
     case EXPR_UNARY: {
 	((UnaryExpr *)copy)->operator_ = ((UnaryExpr *)to_copy)->operator_;
@@ -382,6 +383,7 @@ static void ast_print_literal(LiteralExpr *expr, int depth)
 
 static void ast_print_access(AccessExpr *expr, int depth)
 {
+    (void)depth;
     str_view_print(expr->var_name);
 }
 
@@ -443,6 +445,7 @@ static void ast_print_grouping(GroupingExpr *expr, int depth)
 
 static void ast_print_str(StrExpr *expr, int depth)
 {
+    (void)depth;
     str_view_print(expr->view);
 }
 

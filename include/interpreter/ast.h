@@ -69,6 +69,7 @@ extern char *stmt_type_str_map[STMT_ENUM_COUNT];
  */
 typedef struct expr_t {
     ExprType type;
+    int source_line;
 } Expr;
 
 typedef struct {
@@ -253,7 +254,7 @@ typedef struct {
 
 
 /* functions */
-Expr *expr_alloc(Arena *ast_arena, ExprType type);
+Expr *expr_alloc(Arena *ast_arena, ExprType type, int file_no);
 Stmt *stmt_alloc(Arena *ast_arena, StmtType type);
 Stmt *stmt_copy(Arena *arena, Stmt *to_copy);
 Expr *expr_copy(Arena *arena, Expr *to_copy);

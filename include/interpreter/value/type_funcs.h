@@ -23,7 +23,7 @@
 #define VERIFY_TRAIT_IMPL(trait_func_name, value, ...) \
     do {                                               \
 	if ((value).T->trait_func_name == NULL)        \
-	    REPORT_RUNTIME_ERROR(__VA_ARGS__);         \
+	    REPORT_RUNTIME_ERROR_OPAQUE(__VA_ARGS__);  \
     } while (0);
 
 

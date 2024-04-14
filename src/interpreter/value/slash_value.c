@@ -116,7 +116,7 @@ SlashValue num_div(SlashValue self, SlashValue other)
 {
     assert(IS_NUM(self) && IS_NUM(other));
     if (other.num == 0)
-	REPORT_RUNTIME_ERROR("Division by zero error");
+	REPORT_RUNTIME_ERROR_OPAQUE("Division by zero error");
     return (SlashValue){ .T = &num_type_info, .num = self.num / other.num };
 }
 
@@ -124,7 +124,7 @@ SlashValue num_int_div(SlashValue self, SlashValue other)
 {
     assert(IS_NUM(self) && IS_NUM(other));
     if (other.num == 0)
-	REPORT_RUNTIME_ERROR("Division by zero error");
+	REPORT_RUNTIME_ERROR_OPAQUE("Division by zero error");
     return (SlashValue){ .T = &num_type_info, .num = (int)(self.num / other.num) };
 }
 
@@ -138,7 +138,7 @@ SlashValue num_mod(SlashValue self, SlashValue other)
 {
     assert(IS_NUM(self) && IS_NUM(other));
     if (other.num == 0)
-	REPORT_RUNTIME_ERROR("Modulo by zero error");
+	REPORT_RUNTIME_ERROR_OPAQUE("Modulo by zero error");
     double m = fmod(self.num, other.num);
     /* same behaviour as we tend to see in maths */
     m = m < 0 && other.num > 0 ? m + other.num : m;
