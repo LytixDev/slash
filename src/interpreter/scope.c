@@ -161,7 +161,7 @@ ScopeAndValue var_get_or_runtime_error(Scope *scope, StrView *key)
     ScopeAndValue sv = var_get(scope, key);
     if (sv.value == NULL) {
 	str_view_to_buf_cstr(*key);
-	REPORT_RUNTIME_ERROR("Variable '%s' is not defined", buf);
+	REPORT_RUNTIME_ERROR_OPAQUE("Variable '%s' is not defined", buf);
     }
     return sv;
 }

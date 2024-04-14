@@ -383,6 +383,7 @@ static void ast_print_literal(LiteralExpr *expr, int depth)
 
 static void ast_print_access(AccessExpr *expr, int depth)
 {
+    (void)depth;
     str_view_print(expr->var_name);
 }
 
@@ -444,6 +445,7 @@ static void ast_print_grouping(GroupingExpr *expr, int depth)
 
 static void ast_print_str(StrExpr *expr, int depth)
 {
+    (void)depth;
     str_view_print(expr->view);
 }
 

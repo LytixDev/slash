@@ -477,7 +477,7 @@ static SlashValue eval_call(Interpreter *interpreter, CallExpr *expr)
     /* Arity check */
     if (function.params.size != call_params_size)
 	REPORT_RUNTIME_ERROR("Function 'FOO' takes '%zu' arguments, but '%zu' where given",
-			     function.params.size, call_params_size)
+			     function.params.size, call_params_size);
 
     Scope *function_scope = scope_alloc(interpreter->scope, sizeof(Scope));
     scope_init(function_scope, interpreter->scope);
@@ -995,7 +995,7 @@ void ast_ll_to_argv(Interpreter *interpreter, ArenaLL *ast_nodes, SlashValue *re
 
 static SlashValue eval(Interpreter *interpreter, Expr *expr)
 {
-    interpreter->source_line = expr->source_line;
+    interpreter->source_line = expr->source_line + 1; // NOTE(Nicolai): 0 indexed
     switch (expr->type) {
     case EXPR_UNARY:
 	return eval_unary(interpreter, (UnaryExpr *)expr);

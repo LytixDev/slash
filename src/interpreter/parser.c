@@ -468,7 +468,8 @@ static Expr *expression(Parser *parser)
 
 static SequenceExpr *sequence(Parser *parser, TokenType terminator)
 {
-    SequenceExpr *expr = (SequenceExpr *)expr_alloc(parser->ast_arena, EXPR_SEQUENCE, parser->source_line);
+    SequenceExpr *expr =
+	(SequenceExpr *)expr_alloc(parser->ast_arena, EXPR_SEQUENCE, parser->source_line);
     arena_ll_init(parser->ast_arena, &expr->seq);
     do {
 	if (match(parser, terminator))
@@ -488,7 +489,8 @@ static Expr *logical_or(Parser *parser)
 
     while (match(parser, t_or)) {
 	Expr *right = logical_and(parser);
-	BinaryExpr *expr_bin = (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY, parser->source_line);
+	BinaryExpr *expr_bin =
+	    (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY, parser->source_line);
 	expr_bin->left = expr;
 	expr_bin->operator_ = t_or;
 	expr_bin->right = right;
@@ -504,7 +506,8 @@ static Expr *logical_and(Parser *parser)
 
     while (match(parser, t_and)) {
 	Expr *right = equality(parser);
-	BinaryExpr *expr_bin = (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY, parser->source_line);
+	BinaryExpr *expr_bin =
+	    (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY, parser->source_line);
 	expr_bin->left = expr;
 	expr_bin->operator_ = t_and;
 	expr_bin->right = right;
@@ -522,7 +525,8 @@ static Expr *equality(Parser *parser)
 	Token *operator_ = previous(parser);
 	Expr *right = factor(parser);
 
-	BinaryExpr *bin_expr = (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY, parser->source_line);
+	BinaryExpr *bin_expr =
+	    (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY, parser->source_line);
 	bin_expr->left = expr;
 	bin_expr->operator_ = operator_->type;
 	bin_expr->right = right;
@@ -540,7 +544,8 @@ static Expr *comparison(Parser *parser)
 	Token *operator_ = previous(parser);
 	Expr *right = factor(parser);
 
-	BinaryExpr *bin_expr = (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY, parser->source_line);
+	BinaryExpr *bin_expr =
+	    (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY, parser->source_line);
 	bin_expr->left = expr;
 	bin_expr->operator_ = operator_->type;
 	bin_expr->right = right;
@@ -558,7 +563,8 @@ static Expr *term(Parser *parser)
 	Token *operator_ = previous(parser);
 	Expr *right = factor(parser);
 
-	BinaryExpr *bin_expr = (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY, parser->source_line);
+	BinaryExpr *bin_expr =
+	    (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY, parser->source_line);
 	bin_expr->left = expr;
 	bin_expr->operator_ = operator_->type;
 	bin_expr->right = right;
@@ -575,7 +581,8 @@ static Expr *factor(Parser *parser)
 	Token *operator_ = previous(parser);
 	Expr *right = exponentiation(parser);
 
-	BinaryExpr *bin_expr = (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY, parser->source_line);
+	BinaryExpr *bin_expr =
+	    (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY, parser->source_line);
 	bin_expr->left = expr;
 	bin_expr->operator_ = operator_->type;
 	bin_expr->right = right;
@@ -590,7 +597,8 @@ static Expr *exponentiation(Parser *parser)
 
     while (match(parser, t_star_star)) {
 	Expr *right = unary(parser);
-	BinaryExpr *bin_expr = (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY, parser->source_line);
+	BinaryExpr *bin_expr =
+	    (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY, parser->source_line);
 	bin_expr->left = expr;
 	bin_expr->operator_ = t_star_star;
 	bin_expr->right = right;
@@ -623,7 +631,8 @@ static Expr *single(Parser *parser)
 	}
     } else if (check(parser, t_dot_dot)) {
 	/* insert num literal '0' when we encounter a range initializer in this form : '..expr' */
-	LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL, parser->source_line);
+	LiteralExpr *expr =
+	    (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL, parser->source_line);
 	expr->value = (SlashValue){ .T = &num_type_info, .num = 0 };
 	left = (Expr *)expr;
     } else {
@@ -633,7 +642,8 @@ static Expr *single(Parser *parser)
 
     if (match(parser, t_in)) {
 	/* contains */
-	BinaryExpr *expr = (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY, parser->source_line);
+	BinaryExpr *expr =
+	    (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY, parser->source_line);
 	expr->left = left;
 	expr->operator_ = t_in;
 	expr->right = expression(parser);
@@ -642,7 +652,8 @@ static Expr *single(Parser *parser)
 
     if (match(parser, t_dot_dot)) {
 	/* range */
-	BinaryExpr *expr = (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY, parser->source_line);
+	BinaryExpr *expr =
+	    (BinaryExpr *)expr_alloc(parser->ast_arena, EXPR_BINARY, parser->source_line);
 	expr->left = left;
 	expr->operator_ = t_dot_dot;
 	expr->right = expression(parser);
@@ -699,7 +710,8 @@ static Expr *subshell(Parser *parser)
 	backup(parser);
 	consume(parser, t_dt_text_lit, "Expected command after subshell begin");
     }
-    SubshellExpr *expr = (SubshellExpr *)expr_alloc(parser->ast_arena, EXPR_SUBSHELL, parser->source_line);
+    SubshellExpr *expr =
+	(SubshellExpr *)expr_alloc(parser->ast_arena, EXPR_SUBSHELL, parser->source_line);
     expr->stmt = pipeline_stmt(parser);
     consume(parser, t_rparen, "Expected ')' after subshell");
     return (Expr *)expr;
@@ -726,7 +738,8 @@ static Expr *access(Parser *parser)
 	return primary(parser);
 
     Token *variable_name = previous(parser);
-    AccessExpr *expr = (AccessExpr *)expr_alloc(parser->ast_arena, EXPR_ACCESS, parser->source_line);
+    AccessExpr *expr =
+	(AccessExpr *)expr_alloc(parser->ast_arena, EXPR_ACCESS, parser->source_line);
     expr->var_name = variable_name->lexeme;
     return (Expr *)expr;
 }
@@ -754,7 +767,8 @@ static Expr *primary(Parser *parser)
     Token *token = previous(parser);
     /* text_lit */
     if (token->type == t_dt_text_lit) {
-	LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL, parser->source_line);
+	LiteralExpr *expr =
+	    (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL, parser->source_line);
 	expr->value = (SlashValue){ .T = &text_lit_type_info, .text_lit = token->lexeme };
 	return (Expr *)expr;
     }
@@ -768,7 +782,8 @@ static Expr *primary(Parser *parser)
 static Expr *bool_lit(Parser *parser)
 {
     Token *token = previous(parser);
-    LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL, parser->source_line);
+    LiteralExpr *expr =
+	(LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL, parser->source_line);
     expr->value =
 	(SlashValue){ .T = &bool_type_info, .boolean = token->type == t_true ? true : false };
     return (Expr *)expr;
@@ -777,7 +792,8 @@ static Expr *bool_lit(Parser *parser)
 static Expr *number(Parser *parser)
 {
     Token *token = previous(parser);
-    LiteralExpr *expr = (LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL, parser->source_line);
+    LiteralExpr *expr =
+	(LiteralExpr *)expr_alloc(parser->ast_arena, EXPR_LITERAL, parser->source_line);
     expr->value = (SlashValue){ .T = &num_type_info, .num = str_view_to_double(token->lexeme) };
     return (Expr *)expr;
 }
@@ -832,7 +848,8 @@ static Expr *grouping(Parser *parser)
 	arena_ll_prepend(&seq_expr->seq, expr);
 	return (Expr *)seq_expr;
     }
-    GroupingExpr *grouping = (GroupingExpr *)expr_alloc(parser->ast_arena, EXPR_GROUPING, parser->source_line);
+    GroupingExpr *grouping =
+	(GroupingExpr *)expr_alloc(parser->ast_arena, EXPR_GROUPING, parser->source_line);
     grouping->expr = expr;
     consume(parser, t_rparen, "Expected ')' after grouping expression");
     return (Expr *)grouping;
@@ -840,7 +857,8 @@ static Expr *grouping(Parser *parser)
 
 static Expr *func_def(Parser *parser)
 {
-    FunctionExpr *expr = (FunctionExpr *)expr_alloc(parser->ast_arena, EXPR_FUNCTION, parser->source_line);
+    FunctionExpr *expr =
+	(FunctionExpr *)expr_alloc(parser->ast_arena, EXPR_FUNCTION, parser->source_line);
     if (check(parser, t_ident))
 	expr->params = arguments(parser);
     else

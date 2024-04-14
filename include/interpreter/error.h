@@ -42,17 +42,29 @@ void report_parse_err(Parser *parser, char *msg);
 	REPORT_IMPL(__VA_ARGS__);                                                               \
 	REPORT_IMPL("\n");                                                                      \
 	longjmp(runtime_error_jmp, RUNTIME_ERROR);                                              \
-        REPORT_IMPL("%d\n", (interpreter)->source_line);\
+	REPORT_IMPL("%d\n", (interpreter)->source_line);                                        \
     } while (0);
 #else
-#define REPORT_RUNTIME_ERROR(...)                                                   \
+#define REPORT_RUNTIME_ERROR(...)                                              \
+    do {                                                                       \
+	REPORT_IMPL("%s[Slash Runtime Error at line %d]:%s ", ANSI_BOLD_START, \
+		    (interpreter)->source_line, ANSI_BOLD_END);                \
+	REPORT_IMPL(__VA_ARGS__);                                              \
+	REPORT_IMPL("\n");                                                     \
+	longjmp(runtime_error_jmp, RUNTIME_ERROR);                             \
+    } while (0)
+#endif /* DEBUG */
+
+/*
+ * Same as REPORT_RUNTIME_ERROR, but no interpreter access
+ * NOTE: This is a botch.
+ */
+#define REPORT_RUNTIME_ERROR_OPAQUE(...)                                            \
     do {                                                                            \
 	REPORT_IMPL("%s[Slash Runtime Error]:%s ", ANSI_BOLD_START, ANSI_BOLD_END); \
 	REPORT_IMPL(__VA_ARGS__);                                                   \
 	REPORT_IMPL("\n");                                                          \
-        REPORT_IMPL("%d\n", (interpreter)->source_line);\
 	longjmp(runtime_error_jmp, RUNTIME_ERROR);                                  \
-    } while (0);
-#endif /* DEBUG */
+    } while (0)
 
 #endif /* ERROR_H */
