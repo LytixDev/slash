@@ -49,4 +49,11 @@ StrView str_view_arena_copy(Arena *arena, StrView to_copy);
     memcpy(buf, (__str_view).view, (__str_view).size); \
     buf[(__str_view).size] = 0;
 
+// TODO: strlen is stupid here
+#define TO_STR_VIEW(__str)                       \
+    (StrView)                                    \
+    {                                            \
+	.view = (__str), .size = strlen((__str)) \
+    }
+
 #endif /* STR_VIEW_H */

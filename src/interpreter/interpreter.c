@@ -30,6 +30,7 @@
 #include "interpreter/lexer.h"
 #include "interpreter/scope.h"
 #include "interpreter/value/cast.h"
+#include "interpreter/value/std_lib.h"
 /// #include "interpreter/value/method.h"
 #include "interpreter/value/slash_list.h"
 #include "interpreter/value/slash_map.h"
@@ -493,9 +494,13 @@ static SlashValue eval_call(Interpreter *interpreter, CallExpr *expr)
     }
 
     SlashValue return_value = NoneSingleton;
-    ExecResult result = exec_block_body(interpreter, function.body);
-    if (result.type == RT_RETURN && result.return_expr != NULL)
-	return_value = eval(interpreter, result.return_expr);
+    if (function.is_lib_function) {
+	return_value = function.lib_func(interpreter);
+    } else {
+	ExecResult result = exec_block_body(interpreter, function.body);
+	if (result.type == RT_RETURN && result.return_expr != NULL)
+	    return_value = eval(interpreter, result.return_expr);
+    }
     interpreter->scope = function_scope->enclosing;
     scope_destroy(function_scope);
     return return_value;
@@ -1087,6 +1092,10 @@ void interpreter_init(Interpreter *interpreter, int argc, char **argv)
 
     scope_init_globals(&interpreter->globals, &interpreter->arena, argc, argv);
     interpreter->scope = &interpreter->globals;
+
+    /* Standard Library */
+    SlashValue v = lib_typeof(interpreter);
+    var_define(interpreter->scope, &TO_STR_VIEW("typeof"), &v);
 
     gc_ctx_init(&interpreter->gc);
 
