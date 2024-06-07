@@ -78,7 +78,7 @@ static ArenaLL arguments(Parser *parser);
 
 static void handle_parse_err(Parser *parser, char *msg, ParseErrorType pet);
 
-static ParseError *new_parse_error(Arena *arena, char *msg, Token *failed, ParseErrorType pet)
+static ParseError *parse_error_new(Arena *arena, char *msg, Token *failed, ParseErrorType pet)
 {
     ParseError *error = m_arena_alloc_struct(arena, ParseError);
     error->err_type = pet;
@@ -220,7 +220,7 @@ static void handle_parse_err(Parser *parser, char *msg, ParseErrorType pet)
     if ((failed->type == t_eof || failed->type == t_newline) && parser->token_pos != 0)
 	failed = arraylist_get(parser->tokens, parser->token_pos - 1);
 
-    ParseError *error = new_parse_error(parser->ast_arena, msg, failed, pet);
+    ParseError *error = parse_error_new(parser->ast_arena, msg, failed, pet);
     if (parser->perr_head == NULL)
 	parser->perr_head = error;
     else

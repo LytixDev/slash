@@ -437,7 +437,7 @@ void list_print(Interpreter *interpreter, SlashValue self)
 	assert(item.T->print != NULL);
 	item.T->print(interpreter, item);
 	if (i != underlying->len - 1)
-	    printf(", ");
+	    SLASH_PRINT(&interpreter->stream_ctx, ", ");
     }
     SLASH_PRINT(&interpreter->stream_ctx, "]");
 }
