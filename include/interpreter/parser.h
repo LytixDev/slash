@@ -25,8 +25,13 @@
 
 
 /* types */
+/*
+ * NOTE: I have not categorized the other errors as we never use that information.
+ * TODO: One possible optimization is to store the error msg for each error type in a static table
+ */
 typedef enum {
     PET_EXPECTED_RBRACE,
+    PET_CUSTOME,
 } ParseErrorType;
 
 typedef struct parse_error_t ParseError;

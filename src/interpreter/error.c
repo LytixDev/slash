@@ -130,13 +130,14 @@ void report_parse_err(ParseError *error, char *full_input)
     REPORT_IMPL("%s[line %zu]%s: Error during parsing: %s\n", ANSI_BOLD_START,
 		error->failed->line + 1, ANSI_BOLD_END, error->msg);
 
-    char *line = offending_line(full_input, error->failed->line);
+    Token *failed = error->failed;
+    char *line = offending_line(full_input, failed->line);
     if (line == NULL) {
 	REPORT_IMPL("Internal error: could not find line where parse error occured");
 	return;
     }
 
-    ErrBuf bf = offending_line_from_offset(line, error->failed->start);
-    err_buf_print(bf, error->failed->end - error->failed->start);
+    ErrBuf bf = offending_line_from_offset(line, failed->start);
+    err_buf_print(bf, error->failed->end - failed->start);
     free(bf.alloced_buffer);
 }
