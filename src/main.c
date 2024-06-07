@@ -74,6 +74,7 @@ void interactive(int argc, char **argv)
 	}
 
 continue_repl:
+	// TODO: these should maybe be reset (e.i. set size to 0), not freed
 	arraylist_free(&lex_result.tokens);
 	arraylist_free(&parse_result.stmts);
 	m_arena_clear(&ast_arena);
