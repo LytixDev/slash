@@ -42,28 +42,46 @@ void interactive(int argc, char **argv)
     ast_arena_init(&ast_arena);
     Prompt prompt;
     prompt_init(&prompt, "-> ");
+    bool inside_block = false;
 
-    while (prompt_run(&prompt)) {
+    while (true) {
+	prompt_run(&prompt, inside_block);
+
 	Lexer lex_result = lex(&ast_arena, prompt.buf, prompt.buf_len);
 	if (lex_result.had_error) {
-	    m_arena_clear(&ast_arena);
 	    arraylist_free(&lex_result.tokens);
+	    m_arena_clear(&ast_arena);
 	    continue;
 	}
 
-	StmtsOrErr stmts = parse(&ast_arena, &lex_result.tokens, prompt.buf);
-	if (stmts.had_error) {
-	    m_arena_clear(&ast_arena);
+	ParseResult parse_result = parse(&ast_arena, &lex_result.tokens, prompt.buf);
+	if (parse_result.n_errors == 0) {
+	    interpreter_run(&interpreter, &parse_result.stmts);
+	} else if ((parse_result.n_errors == 1 || inside_block) &&
+		   parse_result.perr_tail->err_type == PET_EXPECTED_RBRACE) {
+            /* */
+	    prompt_set_ps1(&prompt, ".. ");
+	    inside_block = true;
+	    prompt.buf[--prompt.buf_len] = 0; /* Pop EOF. We are continuing. */
+
 	    arraylist_free(&lex_result.tokens);
-	    arraylist_free(&stmts.stmts);
+	    arraylist_free(&parse_result.stmts);
+	    m_arena_clear(&ast_arena);
+
 	    continue;
+	} else {
+	    report_all_parse_errors(parse_result.perr_head, prompt.buf);
 	}
 
-	interpreter_run(&interpreter, &stmts.stmts);
+	if (inside_block) {
+	    prompt_set_ps1(&prompt, "-> ");
+	    inside_block = false;
+	}
 
-	m_arena_clear(&ast_arena);
+	// TODO: these should maybe be reset (e.i. set size to 0), not freed
 	arraylist_free(&lex_result.tokens);
-	arraylist_free(&stmts.stmts);
+	arraylist_free(&parse_result.stmts);
+	m_arena_clear(&ast_arena);
     }
 
     ast_arena_release(&ast_arena);
@@ -150,8 +168,9 @@ int main(int argc, char **argv)
 #endif /* DEBUG_PERF */
 
     /* parse */
-    StmtsOrErr stmts = parse(&ast_arena, &lex_result.tokens, input);
-    if (stmts.had_error) {
+    ParseResult parse_result = parse(&ast_arena, &lex_result.tokens, input);
+    if (parse_result.n_errors != 0) {
+	report_all_parse_errors(parse_result.perr_head, input);
 	exit_code = 1;
 	goto defer_stms;
     }
@@ -161,7 +180,7 @@ int main(int argc, char **argv)
     parse_elapsed = (double)(end_time - start_time) / CLOCKS_PER_SEC;
 #endif /* DEBUG_PERF */
 #ifdef DEBUG
-    ast_print(&stmts.stmts);
+    ast_print(&parse_result.stmts);
 #endif /* DEBUG */
 
 #ifdef DEBUG
@@ -172,7 +191,7 @@ int main(int argc, char **argv)
 #endif /* DEBUG_PERF */
 
     /* interpret */
-    exit_code = interpret(&stmts.stmts, argc - 1, argv + 1);
+    exit_code = interpret(&parse_result.stmts, argc - 1, argv + 1);
 
 #ifdef DEBUG_PERF
     end_time = clock();
@@ -187,7 +206,7 @@ int main(int argc, char **argv)
 
     /* clean up */
 defer_stms:
-    arraylist_free(&stmts.stmts);
+    arraylist_free(&parse_result.stmts);
 defer_tokens:
     ast_arena_release(&ast_arena);
     arraylist_free(&lex_result.tokens);

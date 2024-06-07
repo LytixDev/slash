@@ -19,31 +19,47 @@
 
 #include <stdbool.h>
 
+#include "interpreter/lexer.h"
 #include "nicc/nicc.h"
 #include "sac/sac.h"
 
 
 /* types */
+typedef enum {
+    PET_EXPECTED_RBRACE,
+} ParseErrorType;
+
+typedef struct parse_error_t ParseError;
+struct parse_error_t {
+    ParseErrorType err_type;
+    char *msg;
+    Token *failed; // the token that caused the error
+    ParseError *next;
+};
+
 typedef struct {
     Arena *ast_arena; // memory arena to put where all AST nodes live on
     ArrayList *tokens; // stream of tokens from the lexer
     size_t token_pos; // index of current token being processed
     char *input; // handle to the source code
-    bool had_error;
-    size_t n_errors;
     int source_line;
+    size_t n_errors;
+    ParseError *perr_head; // linked list of parse errors
+    ParseError *perr_tail; // final parse error node
 } Parser;
 
 typedef struct {
-    bool had_error;
+    size_t n_errors;
+    ParseError *perr_head;
+    ParseError *perr_tail;
     ArrayList stmts;
-} StmtsOrErr;
+} ParseResult;
 
 /*
  * Parses a list of tokens into a list of statements: Arraylist<Stmt>
  * The Stmt objects in the list are the first nodes in an AST.
  */
-StmtsOrErr parse(Arena *ast_arena, ArrayList *tokens, char *input);
+ParseResult parse(Arena *ast_arena, ArrayList *tokens, char *input);
 
 
 #endif /* PARSER_H */

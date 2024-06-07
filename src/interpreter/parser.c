@@ -17,6 +17,7 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "interpreter/ast.h"
 #include "interpreter/error.h"
@@ -76,6 +77,20 @@ static Expr *func_def(Parser *parser);
 static ArenaLL arguments(Parser *parser);
 
 static void handle_parse_err(Parser *parser, char *msg);
+
+static ParseError *new_parse_error(Arena *arena, char *msg, Token *failed)
+{
+    ParseError *error = m_arena_alloc_struct(arena, ParseError);
+    error->err_type = PET_EXPECTED_RBRACE;
+    size_t msg_len = strlen(msg); // TODO: could we avoid strlen somehow?
+    char *msg_arena = m_arena_alloc(arena, msg_len + 1);
+    memcpy(msg_arena, msg, msg_len + 1);
+    error->msg = msg_arena;
+    error->failed = failed;
+    error->next = NULL;
+
+    return error;
+}
 
 /* util/helper functions */
 static Token *peek(Parser *parser)
@@ -196,13 +211,24 @@ static bool match_either(Parser *parser, unsigned int n, ...)
 static void handle_parse_err(Parser *parser, char *msg)
 {
     parser->n_errors++;
+    Token *failed = arraylist_get(parser->tokens, parser->token_pos);
+    ParseError *error = new_parse_error(parser->ast_arena, msg, failed);
+    if (parser->perr_head == NULL) {
+	parser->perr_head = error;
+	parser->perr_tail = error;
+    } else {
+	parser->perr_tail->next = error;
+	parser->perr_tail = error;
+    }
+
+    // report_parse_err(parser, msg);
+
     if (parser->n_errors >= MAX_PARSE_ERRORS) {
-	report_parse_err(parser, msg);
 	REPORT_IMPL("TOO MANY PARSE ERRORS. Quitting now ...\n");
 	TODO_LOG("Gracfully quit after deciding to stop parsing.");
 	exit(1);
     }
-    report_parse_err(parser, msg);
+
     advance(parser);
 }
 
@@ -884,26 +910,32 @@ static ArenaLL arguments(Parser *parser)
 }
 
 
-StmtsOrErr parse(Arena *ast_arena, ArrayList *tokens, char *input)
+ParseResult parse(Arena *ast_arena, ArrayList *tokens, char *input)
 {
     Parser parser = { .ast_arena = ast_arena,
 		      .tokens = tokens,
 		      .token_pos = 0,
 		      .input = input,
-		      .had_error = false,
-		      .n_errors = 0 };
+		      .n_errors = 0,
+		      .perr_head = NULL,
+		      .perr_tail = NULL };
     ArrayList statements;
     arraylist_init(&statements, sizeof(Stmt *));
 
     /* edge case: empty source file */
     ignore(&parser, t_newline);
     if (check(&parser, t_eof))
-	return (StmtsOrErr){ .had_error = parser.had_error, .stmts = statements };
+	return (ParseResult){ .n_errors = parser.n_errors,
+			      .perr_head = parser.perr_head,
+			      .stmts = statements };
 
     while (!check(&parser, t_eof)) {
 	Stmt *stmt = declaration(&parser);
 	arraylist_append(&statements, &stmt);
     }
 
-    return (StmtsOrErr){ .had_error = parser.had_error, .stmts = statements };
+    return (ParseResult){ .n_errors = parser.n_errors,
+			  .perr_head = parser.perr_head,
+			  .perr_tail = parser.perr_tail,
+			  .stmts = statements };
 }

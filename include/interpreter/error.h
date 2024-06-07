@@ -32,7 +32,8 @@ extern jmp_buf runtime_error_jmp;
 
 
 void report_lex_err(Lexer *lexer, bool print_offending, char *msg);
-void report_parse_err(Parser *parser, char *msg);
+void report_all_parse_errors(ParseError *head, char *full_input);
+void report_parse_err(ParseError *error, char *full_input);
 
 #ifdef DEBUG
 #define REPORT_RUNTIME_ERROR(...)                                                               \
