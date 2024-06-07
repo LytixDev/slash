@@ -119,20 +119,24 @@ void report_lex_err(Lexer *lexer, bool print_offending, char *msg)
     free(bf.alloced_buffer);
 }
 
-void report_parse_err(Parser *parser, char *msg)
+void report_all_parse_errors(ParseError *head, char *full_input)
 {
-    parser->had_error = true;
-    Token *failed = arraylist_get(parser->tokens, parser->token_pos);
-    REPORT_IMPL("%s[line %zu]%s: Error during parsing: %s\n", ANSI_BOLD_START, failed->line + 1,
-		ANSI_BOLD_END, msg);
+    for (ParseError *error = head; error != NULL; error = error->next)
+	report_parse_err(error, full_input);
+}
 
-    char *line = offending_line(parser->input, failed->line);
+void report_parse_err(ParseError *error, char *full_input)
+{
+    REPORT_IMPL("%s[line %zu]%s: Error during parsing: %s\n", ANSI_BOLD_START,
+		error->failed->line + 1, ANSI_BOLD_END, error->msg);
+
+    char *line = offending_line(full_input, error->failed->line);
     if (line == NULL) {
 	REPORT_IMPL("Internal error: could not find line where parse error occured");
 	return;
     }
 
-    ErrBuf bf = offending_line_from_offset(line, failed->start);
-    err_buf_print(bf, failed->end - failed->start);
+    ErrBuf bf = offending_line_from_offset(line, error->failed->start);
+    err_buf_print(bf, error->failed->end - error->failed->start);
     free(bf.alloced_buffer);
 }
