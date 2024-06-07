@@ -32,10 +32,16 @@ typedef struct {
 
 typedef struct slash_block_stmt_t BlockStmt; // Forward decl.
 
+typedef SlashValue (*StdLibFunction)(Interpreter *interpreter);
+
 /* The Function type */
 typedef struct {
     ArenaLL params;
-    BlockStmt *body;
+    bool is_lib_function; // NOTE: need to set this to false
+    union {
+	BlockStmt *body;
+	StdLibFunction lib_func;
+    };
 } SlashFunction;
 
 
