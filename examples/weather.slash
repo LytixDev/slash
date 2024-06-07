@@ -1,0 +1,55 @@
+#!/usr/local/bin/slash
+# Originally by Eilert W. H., modified by Nicolai Brand (lytix.dev) 2024
+
+# Please modify the user agent :-)
+var USER_AGENT = "User-Agent: NicolaiLaptopWeatherScript github.com/lytixdev"
+var CACHE_FILE = "/tmp/nicolai-weather-script"
+
+var fetch_yr = func {
+    var location = (curl -s ipinfo.io/loc)
+    var lon = (echo $location | cut -d"," -f2)
+    var lat = (echo $location | cut -d"," -f1)
+
+    var url = "https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=" + $lat + "&lon=" + $lon
+
+    var weather_json = (curl -s -H $USER_AGENT $url)
+    echo $weather_json > $CACHE_FILE
+    return $weather_json
+}
+
+# Returns how many hours since a file was modified. Returns -1 if file does not exits
+var hours_since_modified = func file {
+    test -e $CACHE_FILE
+    $? && return -1
+
+    var current_time = (date +%s) as num
+    var modification_time = (stat -c %Y $file) as num
+    var delta = ($current_time - $modification_time) / 3600
+    return $delta
+}
+
+var forecast = func {
+    var weather_json = ""
+    var since = $hours_since_modified($CACHE_FILE)
+    # Update weather report every 15 minutes
+    if $since == -1 or $since > 0.25 {
+        $weather_json = $fetch_yr()
+    } else {
+        $weather_json = (cat $CACHE_FILE)
+    }
+
+    # Parse current conditions. This is in JSON.
+    var temp = (echo $weather_json | jq ".properties.timeseries[0].data.instant.details.air_temperature")
+    var symbol= (echo $weather_json | jq -r ".properties.timeseries[0].data.next_1_hours.summary.symbol_code")
+
+    var emoji = "🌡️"
+    $symbol == "clearsky_day" && $emoji = "☀️"
+    $symbol == "cloudy" && $emoji = "☁"
+    $symbol in ["lightsnow", "snow", "sleet"] && $emoji = "🌨"
+    $symbol in ["lightrain", "rain"] && $emoji = "🌧"
+
+    return ($emoji, $temp)
+}
+
+var emoji, temp = $forecast()
+printf "%s %s°C\n" $emoji $temp
