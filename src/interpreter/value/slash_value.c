@@ -758,6 +758,17 @@ void none_print(Interpreter *interpreter, SlashValue self)
     SLASH_PRINT(&interpreter->stream_ctx, "none");
 }
 
+SlashValue none_to_str(Interpreter *interpreter, SlashValue self)
+{
+    (void)interpreter;
+    (void)self;
+    assert(IS_NONE(self));
+
+    SlashObj *str = gc_new_T(interpreter, &str_type_info);
+    slash_str_init_from_slice(interpreter, (SlashStr *)str, "none", 4);
+    return AS_VALUE(str);
+}
+
 bool none_truthy(SlashValue self)
 {
     (void)self;
@@ -976,7 +987,7 @@ SlashTypeInfo none_type_info = { .name = "none",
 				 .unary_minus = NULL,
 				 .unary_not = NULL,
 				 .print = none_print,
-				 .to_str = NULL,
+				 .to_str = none_to_str,
 				 .item_get = NULL,
 				 .item_assign = NULL,
 				 .item_in = NULL,
