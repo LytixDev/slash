@@ -42,25 +42,46 @@ void interactive(int argc, char **argv)
     ast_arena_init(&ast_arena);
     Prompt prompt;
     prompt_init(&prompt, "-> ");
+    bool inside_block = false;
 
-    while (prompt_run(&prompt)) {
-	m_arena_clear(&ast_arena);
+    while (true) {
+	prompt_run(&prompt, inside_block);
 
 	Lexer lex_result = lex(&ast_arena, prompt.buf, prompt.buf_len);
 	if (lex_result.had_error) {
 	    arraylist_free(&lex_result.tokens);
+	    m_arena_clear(&ast_arena);
 	    continue;
 	}
 
 	ParseResult parse_result = parse(&ast_arena, &lex_result.tokens, prompt.buf);
-	if (parse_result.n_errors == 0)
+	if (parse_result.n_errors == 0) {
 	    interpreter_run(&interpreter, &parse_result.stmts);
-	else
+	} else if ((parse_result.n_errors == 1 || inside_block) &&
+		   parse_result.perr_tail->err_type == PET_EXPECTED_RBRACE) {
+            /* */
+	    prompt_set_ps1(&prompt, ".. ");
+	    inside_block = true;
+	    prompt.buf[--prompt.buf_len] = 0; /* Pop EOF. We are continuing. */
+
+	    arraylist_free(&lex_result.tokens);
+	    arraylist_free(&parse_result.stmts);
+	    m_arena_clear(&ast_arena);
+
+	    continue;
+	} else {
 	    report_all_parse_errors(parse_result.perr_head, prompt.buf);
+	}
+
+	if (inside_block) {
+	    prompt_set_ps1(&prompt, "-> ");
+	    inside_block = false;
+	}
 
 	// TODO: these should maybe be reset (e.i. set size to 0), not freed
 	arraylist_free(&lex_result.tokens);
 	arraylist_free(&parse_result.stmts);
+	m_arena_clear(&ast_arena);
     }
 
     ast_arena_release(&ast_arena);

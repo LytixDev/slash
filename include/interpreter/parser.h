@@ -25,8 +25,13 @@
 
 
 /* types */
+typedef enum {
+    PET_EXPECTED_RBRACE,
+} ParseErrorType;
+
 typedef struct parse_error_t ParseError;
 struct parse_error_t {
+    ParseErrorType err_type;
     char *msg;
     Token *failed; // the token that caused the error
     ParseError *next;
@@ -46,6 +51,7 @@ typedef struct {
 typedef struct {
     size_t n_errors;
     ParseError *perr_head;
+    ParseError *perr_tail;
     ArrayList stmts;
 } ParseResult;
 

@@ -81,6 +81,7 @@ static void handle_parse_err(Parser *parser, char *msg);
 static ParseError *new_parse_error(Arena *arena, char *msg, Token *failed)
 {
     ParseError *error = m_arena_alloc_struct(arena, ParseError);
+    error->err_type = PET_EXPECTED_RBRACE;
     size_t msg_len = strlen(msg); // TODO: could we avoid strlen somehow?
     char *msg_arena = m_arena_alloc(arena, msg_len + 1);
     memcpy(msg_arena, msg, msg_len + 1);
@@ -935,5 +936,6 @@ ParseResult parse(Arena *ast_arena, ArrayList *tokens, char *input)
 
     return (ParseResult){ .n_errors = parser.n_errors,
 			  .perr_head = parser.perr_head,
+			  .perr_tail = parser.perr_tail,
 			  .stmts = statements };
 }

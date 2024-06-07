@@ -24,10 +24,11 @@
 
 
 typedef struct {
-    char *buf;
+    char *buf; // prompt buffer
     size_t buf_len;
     size_t buf_cap;
-    size_t cursor_pos;
+    size_t cursor_pos_in_line; // cursor position in the current line
+    size_t prev_line_end; // where the previous line ended
     char ps1[256];
     struct termios termios_og;
     struct termios termios_new;
@@ -39,8 +40,8 @@ void prompt_free(Prompt *prompt);
 /*
  * Returns true if interpreter shall continue else false
  */
-bool prompt_run(Prompt *prompt);
-void prompt_reset(Prompt *prompt);
+void prompt_run(Prompt *prompt, bool reset);
+void prompt_set_ps1(Prompt *prompt, char *ps1);
 
 
 #endif /* PROMPT_H */

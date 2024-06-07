@@ -53,7 +53,7 @@ int builtin_read(Interpreter *interpreter, ArenaLL *ast_nodes)
 
     Prompt prompt;
     prompt_init(&prompt, ">>>");
-    prompt_run(&prompt);
+    prompt_run(&prompt, false);
     StrView input = (StrView){ .view = prompt.buf, .size = prompt.buf_len - 2 };
 
     SlashObj *str = gc_new_T(interpreter, &str_type_info);
