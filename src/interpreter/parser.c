@@ -76,12 +76,12 @@ static Expr *grouping(Parser *parser);
 static Expr *func_def(Parser *parser);
 static ArenaLL arguments(Parser *parser);
 
-static void handle_parse_err(Parser *parser, char *msg);
+static void handle_parse_err(Parser *parser, char *msg, ParseErrorType pet);
 
-static ParseError *new_parse_error(Arena *arena, char *msg, Token *failed)
+static ParseError *new_parse_error(Arena *arena, char *msg, Token *failed, ParseErrorType pet)
 {
     ParseError *error = m_arena_alloc_struct(arena, ParseError);
-    error->err_type = PET_EXPECTED_RBRACE;
+    error->err_type = pet;
     size_t msg_len = strlen(msg); // TODO: could we avoid strlen somehow?
     char *msg_arena = m_arena_alloc(arena, msg_len + 1);
     memcpy(msg_arena, msg, msg_len + 1);
@@ -121,7 +121,7 @@ static Token *advance(Parser *parser)
 static void backup(Parser *parser)
 {
     if (parser->token_pos == 0)
-	handle_parse_err(parser, "Internal error: attempted to backup() at pos = 0");
+	handle_parse_err(parser, "Internal error: attempted to backup() at pos = 0", PET_CUSTOME);
     parser->token_pos--;
 }
 
@@ -163,7 +163,7 @@ static bool check_either(Parser *parser, int step, unsigned int n, ...)
 static Token *consume(Parser *parser, TokenType expected, char *err_msg)
 {
     if (!check_single(parser, expected, 0)) {
-	handle_parse_err(parser, err_msg);
+	handle_parse_err(parser, err_msg, expected == t_rbrace ? PET_EXPECTED_RBRACE : PET_CUSTOME);
 	/* we need to "unconsume" the token before we later advance again */
 	backup(parser);
     }
@@ -208,20 +208,24 @@ static bool match_either(Parser *parser, unsigned int n, ...)
 #define match(parser, ...) match_either(parser, VA_NUMBER_OF_ARGS(__VA_ARGS__), __VA_ARGS__)
 
 
-static void handle_parse_err(Parser *parser, char *msg)
+static void handle_parse_err(Parser *parser, char *msg, ParseErrorType pet)
 {
     parser->n_errors++;
     Token *failed = arraylist_get(parser->tokens, parser->token_pos);
-    ParseError *error = new_parse_error(parser->ast_arena, msg, failed);
-    if (parser->perr_head == NULL) {
-	parser->perr_head = error;
-	parser->perr_tail = error;
-    } else {
-	parser->perr_tail->next = error;
-	parser->perr_tail = error;
-    }
+    /*
+     * Edge case where we failed on a newline or the eof.
+     * This ensures the error reporting system is not tripped up because the character
+     * is not found on the expected line.
+     */
+    if ((failed->type == t_eof || failed->type == t_newline) && parser->token_pos != 0)
+	failed = arraylist_get(parser->tokens, parser->token_pos - 1);
 
-    // report_parse_err(parser, msg);
+    ParseError *error = new_parse_error(parser->ast_arena, msg, failed, pet);
+    if (parser->perr_head == NULL)
+	parser->perr_head = error;
+    else
+	parser->perr_tail->next = error;
+    parser->perr_tail = error;
 
     if (parser->n_errors >= MAX_PARSE_ERRORS) {
 	REPORT_IMPL("TOO MANY PARSE ERRORS. Quitting now ...\n");
@@ -690,7 +694,7 @@ static Expr *single(Parser *parser)
 	CastExpr *expr = (CastExpr *)expr_alloc(parser->ast_arena, EXPR_CAST, parser->source_line);
 	expr->expr = left;
 	if (!match(parser, t_ident)) {
-	    handle_parse_err(parser, "Expected identifier after cast");
+	    handle_parse_err(parser, "Expected identifier after cast", PET_CUSTOME);
 	    /* move past token and continue as normal */
 	    parser->token_pos++;
 	    return NULL;
@@ -786,7 +790,7 @@ static Expr *primary(Parser *parser)
 	return func_def(parser);
 
     if (!match(parser, t_dt_str, t_dt_text_lit)) {
-	handle_parse_err(parser, "Not a valid primary type");
+	handle_parse_err(parser, "Not a valid primary type", PET_CUSTOME);
 	return NULL;
     }
 

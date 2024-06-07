@@ -59,16 +59,11 @@ void interactive(int argc, char **argv)
 	    interpreter_run(&interpreter, &parse_result.stmts);
 	} else if ((parse_result.n_errors == 1 || inside_block) &&
 		   parse_result.perr_tail->err_type == PET_EXPECTED_RBRACE) {
-            /* */
+	    /* Change the PS1 to signify we are inside a block */
 	    prompt_set_ps1(&prompt, ".. ");
 	    inside_block = true;
 	    prompt.buf[--prompt.buf_len] = 0; /* Pop EOF. We are continuing. */
-
-	    arraylist_free(&lex_result.tokens);
-	    arraylist_free(&parse_result.stmts);
-	    m_arena_clear(&ast_arena);
-
-	    continue;
+	    goto continue_repl;
 	} else {
 	    report_all_parse_errors(parse_result.perr_head, prompt.buf);
 	}
@@ -78,6 +73,7 @@ void interactive(int argc, char **argv)
 	    inside_block = false;
 	}
 
+continue_repl:
 	// TODO: these should maybe be reset (e.i. set size to 0), not freed
 	arraylist_free(&lex_result.tokens);
 	arraylist_free(&parse_result.stmts);
@@ -88,7 +84,6 @@ void interactive(int argc, char **argv)
     interpreter_free(&interpreter);
     prompt_free(&prompt);
 }
-
 
 int main(int argc, char **argv)
 {

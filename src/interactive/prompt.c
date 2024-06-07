@@ -176,10 +176,10 @@ void prompt_run(Prompt *prompt, bool continuation)
 	    handle_arrow(prompt);
 	    break;
 
-        case KEY_TAB:
-            for (size_t i = 0; i < 4; i++)
-                prompt_buf_insert_at_cursor(prompt, ' ');
-            break;
+	case KEY_TAB:
+	    for (size_t i = 0; i < 4; i++)
+		prompt_buf_insert_at_cursor(prompt, ' ');
+	    break;
 
 	default:
 	    if (PROMPT_ABS_POS(prompt) == prompt->buf_len)
