@@ -834,11 +834,10 @@ static Expr *list(Parser *parser)
     ListExpr *expr = (ListExpr *)expr_alloc(parser->ast_arena, EXPR_LIST, parser->source_line);
 
     /* if next is not ']', parse list initializer */
-    if (!match(parser, t_rbracket)) {
+    if (!match(parser, t_rbracket))
 	expr->exprs = sequence(parser, t_rbracket);
-    } else {
+    else
 	expr->exprs = NULL;
-    }
 
     return (Expr *)expr;
 }
@@ -858,11 +857,13 @@ static Expr *map(Parser *parser)
     do {
 	KeyValuePair *pair = m_arena_alloc_struct(parser->ast_arena, KeyValuePair);
 	pair->key = expression(parser);
-	consume(parser, t_colon, "Expected colon ':' to denote value for key in map expression");
+	consume(parser, t_colon, "Expected ':' to denote value for key in map expression");
 	pair->value = expression(parser);
 	arena_ll_append(expr->key_value_pairs, pair);
+	ignore(parser, t_newline);
 	if (!match(parser, t_comma))
 	    break;
+	ignore(parser, t_newline);
     } while (!check(parser, t_rbracket));
 
     consume(parser, t_rbracket, "Expected ']' to terminate map");
