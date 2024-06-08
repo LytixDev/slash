@@ -78,7 +78,7 @@ static ArenaLL arguments(Parser *parser);
 
 static void handle_parse_err(Parser *parser, char *msg, ParseErrorType pet);
 
-static ParseError *new_parse_error(Arena *arena, char *msg, Token *failed, ParseErrorType pet)
+static ParseError *parse_error_new(Arena *arena, char *msg, Token *failed, ParseErrorType pet)
 {
     ParseError *error = m_arena_alloc_struct(arena, ParseError);
     error->err_type = pet;
@@ -220,7 +220,7 @@ static void handle_parse_err(Parser *parser, char *msg, ParseErrorType pet)
     if ((failed->type == t_eof || failed->type == t_newline) && parser->token_pos != 0)
 	failed = arraylist_get(parser->tokens, parser->token_pos - 1);
 
-    ParseError *error = new_parse_error(parser->ast_arena, msg, failed, pet);
+    ParseError *error = parse_error_new(parser->ast_arena, msg, failed, pet);
     if (parser->perr_head == NULL)
 	parser->perr_head = error;
     else
@@ -834,11 +834,10 @@ static Expr *list(Parser *parser)
     ListExpr *expr = (ListExpr *)expr_alloc(parser->ast_arena, EXPR_LIST, parser->source_line);
 
     /* if next is not ']', parse list initializer */
-    if (!match(parser, t_rbracket)) {
+    if (!match(parser, t_rbracket))
 	expr->exprs = sequence(parser, t_rbracket);
-    } else {
+    else
 	expr->exprs = NULL;
-    }
 
     return (Expr *)expr;
 }
@@ -858,11 +857,13 @@ static Expr *map(Parser *parser)
     do {
 	KeyValuePair *pair = m_arena_alloc_struct(parser->ast_arena, KeyValuePair);
 	pair->key = expression(parser);
-	consume(parser, t_colon, "Expected colon ':' to denote value for key in map expression");
+	consume(parser, t_colon, "Expected ':' to denote value for key in map expression");
 	pair->value = expression(parser);
 	arena_ll_append(expr->key_value_pairs, pair);
+	ignore(parser, t_newline);
 	if (!match(parser, t_comma))
 	    break;
+	ignore(parser, t_newline);
     } while (!check(parser, t_rbracket));
 
     consume(parser, t_rbracket, "Expected ']' to terminate map");
