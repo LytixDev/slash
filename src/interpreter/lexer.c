@@ -389,7 +389,7 @@ StateFn lex_shell_arg_list(Lexer *lexer)
      * Lexing rules for shell arg list:
      *  whitespace, tab           -> backup, emit, advance, ignore and continue
      *  $                         -> backup, emit, advance and lex access
-     *  "                         -> backup, emit, advance and lex string
+     *  ", '                      -> backup, emit, advance and lex string
      *  (                         -> backup, emit, advance, lex any until rparen and continue
      *  )                         -> backup, emit, advance, stop and return lex rparen
      *  \n, }, ;, |, >, <, &, EOF -> backup, emit, and stop
@@ -412,6 +412,7 @@ StateFn lex_shell_arg_list(Lexer *lexer)
 	    lex_access(lexer);
 	    break;
 	case '"':
+	case '\'':
 	    shell_arg_emit(lexer);
 	    lex_string(lexer);
 	    break;
