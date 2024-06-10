@@ -234,11 +234,16 @@ Stmt *stmt_copy(Arena *arena, Stmt *to_copy)
     }
     case STMT_CMD: {
 	((CmdStmt *)copy)->cmd_name = str_view_arena_copy(arena, ((CmdStmt *)to_copy)->cmd_name);
-	((CmdStmt *)copy)->arg_exprs = arena_ll_alloc(arena);
-	LLItem *item;
-	ARENA_LL_FOR_EACH(((CmdStmt *)to_copy)->arg_exprs, item)
-	{
-	    arena_ll_append(((CmdStmt *)copy)->arg_exprs, expr_copy(arena, item->value));
+
+	if (((CmdStmt *)to_copy)->arg_exprs == NULL) {
+	    ((CmdStmt *)copy)->arg_exprs = NULL;
+	} else {
+	    ((CmdStmt *)copy)->arg_exprs = arena_ll_alloc(arena);
+	    LLItem *item;
+	    ARENA_LL_FOR_EACH(((CmdStmt *)to_copy)->arg_exprs, item)
+	    {
+		arena_ll_append(((CmdStmt *)copy)->arg_exprs, expr_copy(arena, item->value));
+	    }
 	}
 	break;
     }

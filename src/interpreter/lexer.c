@@ -269,9 +269,9 @@ StateFn lex_any(Lexer *lexer)
 	case '\\':
 	    emit(lexer, t_backslash);
 	    break;
-	case '\'':
-	    emit(lexer, t_qoute);
-	    break;
+	// case '\'':
+	//     emit(lexer, t_qoute);
+	//     break;
 
 	/* one or two character tokens */
 	case '=':
@@ -342,6 +342,7 @@ StateFn lex_any(Lexer *lexer)
 	    return STATE_FN(lex_access);
 
 	case '"':
+	case '\'':
 	    return STATE_FN(lex_string);
 
 	case '#':
@@ -388,7 +389,7 @@ StateFn lex_shell_arg_list(Lexer *lexer)
      * Lexing rules for shell arg list:
      *  whitespace, tab           -> backup, emit, advance, ignore and continue
      *  $                         -> backup, emit, advance and lex access
-     *  "                         -> backup, emit, advance and lex string
+     *  ", '                      -> backup, emit, advance and lex string
      *  (                         -> backup, emit, advance, lex any until rparen and continue
      *  )                         -> backup, emit, advance, stop and return lex rparen
      *  \n, }, ;, |, >, <, &, EOF -> backup, emit, and stop
@@ -411,6 +412,7 @@ StateFn lex_shell_arg_list(Lexer *lexer)
 	    lex_access(lexer);
 	    break;
 	case '"':
+	case '\'':
 	    shell_arg_emit(lexer);
 	    lex_string(lexer);
 	    break;
@@ -524,6 +526,9 @@ StateFn lex_string(Lexer *lexer)
 {
     /* ignore starting qoute */
     ignore(lexer);
+
+    /* find which string type this is (' or ") */
+    char str_type = peek_ahead(lexer, -1);
     size_t str_start = lexer->pos_in_line;
     size_t str_end;
 
@@ -531,7 +536,7 @@ StateFn lex_string(Lexer *lexer)
     str_builder_init(&sb, lexer->arena);
     char c;
 continue_str_lexing:
-    while ((c = next(lexer)) != '"') {
+    while ((c = next(lexer)) != str_type) {
 	switch (c) {
 	case EOF:
 	case '\n':
@@ -539,14 +544,22 @@ continue_str_lexing:
 	    report_lex_err(lexer, true, "Unterminated string literal");
 	    return STATE_FN(lex_any);
 	case '\\': {
-	    char next_char = next(lexer);
+	    /* For single qouted strings we do escaping */
+	    if (str_type == '\'') {
+		str_builder_append_char(&sb, '\\');
+		break;
+	    }
 
+	    char next_char = next(lexer);
 	    switch (next_char) {
 	    case '"':
 		str_builder_append_char(&sb, next_char);
 		break;
 	    case 'n':
 		str_builder_append_char(&sb, '\n');
+		break;
+	    case '\\':
+		str_builder_append_char(&sb, '\\');
 		break;
 	    default:
 		report_lex_err(lexer, true, "Unknown escape sequence");
@@ -588,9 +601,9 @@ continue_str_lexing:
 	accept_run(lexer, " \t\v");
 	lexer->start = lexer->pos;
 
-	if (!match(lexer, '"')) {
+	if (!match(lexer, str_type)) {
 	    lexer->pos++; // Gives an underline where the double qoute should be in the error msg
-	    report_lex_err(lexer, true, "Expected double qoute to continue multiline string");
+	    report_lex_err(lexer, true, "Expected another string after '\'.");
 	    ignore(lexer);
 	    return STATE_FN(lex_any);
 	}
