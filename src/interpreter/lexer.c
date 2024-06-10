@@ -558,6 +558,9 @@ continue_str_lexing:
 	    case 'n':
 		str_builder_append_char(&sb, '\n');
 		break;
+	    case '\\':
+		str_builder_append_char(&sb, '\\');
+		break;
 	    default:
 		report_lex_err(lexer, true, "Unknown escape sequence");
 		/* Error occured. Continue parsing after string is terminated. */

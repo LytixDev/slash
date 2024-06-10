@@ -7,24 +7,7 @@
     # $a[0] = "H"
     # assert $a[0] == "H"
     # item in
-    # assert ("Hello" in $a) and ("World!" in $a)
 }
-
-# test every method
-# {
-#     var a = "a,b,c"
-#     var res = $a.split(",")
-#     assert $res.len() == 3
-#     assert $res[0] == "a" and $res[1] == "b" and $res[2] == "c"
-# 
-#     $a = "a!!b!!c!!"
-#     $res = $a.split("!!")
-#     assert $res.len() == 3
-#     assert $res[0] == "a" and $res[1] == "b" and $res[2] == "c"
-# }
-
-assert "hello"\
-       "world" == "helloworld"
 
 # string comparison
 assert "hello" == "hello"
@@ -40,3 +23,12 @@ assert "something is true"
 assert "Hello" in "Hello World"
 assert not ("Foo" in "Bar")
 assert "" in "something"
+
+# multiline string 
+assert "hello"\
+       "world" == "helloworld"
+
+# escape sequences
+assert '\n' != "\n" # "\n" becomes newline
+assert '\n' == ("\\" + "n") # does not become newline
+assert '\' == "\\"
