@@ -670,8 +670,6 @@ SlashValue str_to_str(Interpreter *interpreter, SlashValue self)
     return self;
 }
 
-
-// SlashValue range_item_get(Interpreter *interpreter, SlashValue self, SlashValue other)
 SlashValue str_item_get(Interpreter *interpreter, SlashValue self, SlashValue other)
 {
     assert(IS_STR(self));
@@ -703,6 +701,27 @@ SlashValue str_item_get(Interpreter *interpreter, SlashValue self, SlashValue ot
     slash_str_init_from_slice(interpreter, new, str->str + start, end - start);
     gc_barrier_end(&interpreter->gc);
     return AS_VALUE(new);
+}
+
+void str_item_assign(Interpreter *interpreter, SlashValue self, SlashValue index, SlashValue other)
+{
+    assert(IS_STR(self));
+    assert(IS_STR(other));
+    assert(IS_NUM(index)); // TODO: implement for range
+    if (!NUM_IS_INT(index))
+	REPORT_RUNTIME_ERROR("Str index can not be a floating point number: '%f'", index.num);
+
+    SlashStr *str = AS_STR(self);
+    /* Ensure the index is valid */
+    int idx = (int)index.num;
+    if (idx < 0 || (size_t)idx >= str->len)
+	REPORT_RUNTIME_ERROR("Str index '%d' out of range for str with len '%zu'", idx, str->len);
+
+    SlashStr *str_other = AS_STR(other);
+    if (str_other->len != 1)
+	REPORT_RUNTIME_ERROR("Can only assign a string of length one, not length.");
+
+    str->str[idx] = str_other->str[0];
 }
 
 bool str_item_in(SlashValue self, SlashValue other)
@@ -968,7 +987,7 @@ SlashTypeInfo str_type_info = { .name = "str",
 				.print = str_print,
 				.to_str = str_to_str,
 				.item_get = str_item_get,
-				.item_assign = NULL,
+				.item_assign = str_item_assign,
 				.item_in = str_item_in,
 				.truthy = str_truthy,
 				.eq = str_eq,
