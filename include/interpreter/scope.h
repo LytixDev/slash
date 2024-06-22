@@ -26,15 +26,15 @@ typedef struct slash_value_t SlashValue; // Forward declaration of SlashValue
 
 typedef struct scope_t Scope;
 struct scope_t {
-	Scope *enclosing; // if NULL then there is no enclosing scope and is the global scope
-	size_t depth; // the amount of enclosing scopes
-	ArenaTmp arena_tmp; // arena to put any temporary data on
-	HashMap values; // key: StrView, value: SlashValue (actual objects, not pointers)
+    Scope *enclosing; // if NULL then there is no enclosing scope and is the global scope
+    size_t depth; // the amount of enclosing scopes
+    ArenaTmp arena_tmp; // arena to put any temporary data on
+    HashMap values; // key: StrView, value: SlashValue (actual objects, not pointers)
 };
 
 typedef struct {
-	Scope *scope;
-	SlashValue *value;
+    Scope *scope;
+    SlashValue *value;
 } ScopeAndValue;
 
 

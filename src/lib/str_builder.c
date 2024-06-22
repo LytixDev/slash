@@ -24,43 +24,43 @@
 
 void str_builder_init(StrBuilder *sb, Arena *arena)
 {
-	sb->arena = arena;
-	sb->buffer = (char *)(arena->memory + arena->offset);
-	sb->len = 0;
-	sb->cap = 32;
-	m_arena_alloc(sb->arena, sb->cap);
+    sb->arena = arena;
+    sb->buffer = (char *)(arena->memory + arena->offset);
+    sb->len = 0;
+    sb->cap = 32;
+    m_arena_alloc(sb->arena, sb->cap);
 }
 
 void str_builder_append(StrBuilder *sb, char *cstr, size_t len)
 {
-	while (sb->len + len >= sb->cap) {
-		m_arena_alloc(sb->arena, sb->cap);
-		sb->cap += sb->cap;
-	}
-	memcpy(sb->buffer + sb->len, cstr, len);
-	sb->len += len;
+    while (sb->len + len >= sb->cap) {
+        m_arena_alloc(sb->arena, sb->cap);
+        sb->cap += sb->cap;
+    }
+    memcpy(sb->buffer + sb->len, cstr, len);
+    sb->len += len;
 }
 
 void str_builder_append_char(StrBuilder *sb, char c)
 {
-	if (sb->len >= sb->cap) {
-		m_arena_alloc(sb->arena, sb->cap);
-		sb->cap += sb->cap;
-	}
-	sb->buffer[sb->len] = c;
-	sb->len++;
+    if (sb->len >= sb->cap) {
+        m_arena_alloc(sb->arena, sb->cap);
+        sb->cap += sb->cap;
+    }
+    sb->buffer[sb->len] = c;
+    sb->len++;
 }
 
 char str_builder_peek(StrBuilder *sb)
 {
-	if (sb->len == 0)
-		return EOF;
-	return sb->buffer[sb->len - 1];
+    if (sb->len == 0)
+        return EOF;
+    return sb->buffer[sb->len - 1];
 }
 
 StrView str_builder_complete(StrBuilder *sb)
 {
-	str_builder_append_char(sb, '\0');
-	sb->len--; // Do not count null terminator as a part of the str len
-	return (StrView){ .view = sb->buffer, .size = sb->len };
+    str_builder_append_char(sb, '\0');
+    sb->len--; // Do not count null terminator as a part of the str len
+    return (StrView){ .view = sb->buffer, .size = sb->len };
 }

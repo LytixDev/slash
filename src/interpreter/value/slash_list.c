@@ -30,84 +30,84 @@
  */
 static void ensure_capacity(Interpreter *interpreter, SlashList *list)
 {
-	if (list->len >= list->cap) {
-		size_t old_size = sizeof(SlashValue) * list->cap;
-		list->cap = SLASH_LIST_GROW_CAPACITY(list->cap);
-		size_t new_size = sizeof(SlashValue) * list->cap;
-		list->items = gc_realloc(interpreter, list->items, old_size, new_size);
-	}
+    if (list->len >= list->cap) {
+        size_t old_size = sizeof(SlashValue) * list->cap;
+        list->cap = SLASH_LIST_GROW_CAPACITY(list->cap);
+        size_t new_size = sizeof(SlashValue) * list->cap;
+        list->items = gc_realloc(interpreter, list->items, old_size, new_size);
+    }
 }
 
 void slash_list_impl_init(Interpreter *interpreter, SlashList *list)
 {
 #ifdef SLASH_LIST_STARTING_CAP
-	list->cap = SLASH_LIST_STARTING_CAP;
+    list->cap = SLASH_LIST_STARTING_CAP;
 #elif
-	list->cap = 8;
+    list->cap = 8;
 #endif
-	list->len = 0;
-	list->items = gc_alloc(interpreter, sizeof(SlashValue) * list->cap);
+    list->len = 0;
+    list->items = gc_alloc(interpreter, sizeof(SlashValue) * list->cap);
 }
 
 void slash_list_impl_free(Interpreter *interpreter, SlashList *list)
 {
-	gc_free(interpreter, list->items, sizeof(SlashValue) * list->cap);
+    gc_free(interpreter, list->items, sizeof(SlashValue) * list->cap);
 }
 
 bool slash_list_impl_set(Interpreter *interpreter, SlashList *list, SlashValue val, size_t idx)
 {
-	/* Not possible to set a value at a position greater than the current len */
-	if (idx > list->len)
-		return false;
+    /* Not possible to set a value at a position greater than the current len */
+    if (idx > list->len)
+        return false;
 
-	ensure_capacity(interpreter, list);
-	list->items[idx] = val;
-	/* Only increase the length when we do not overwrite an existing item */
-	if (idx == list->len)
-		list->len++;
-	return true;
+    ensure_capacity(interpreter, list);
+    list->items[idx] = val;
+    /* Only increase the length when we do not overwrite an existing item */
+    if (idx == list->len)
+        list->len++;
+    return true;
 }
 
 bool slash_list_impl_append(Interpreter *interpreter, SlashList *list, SlashValue val)
 {
-	return slash_list_impl_set(interpreter, list, val, list->len);
+    return slash_list_impl_set(interpreter, list, val, list->len);
 }
 
 SlashValue slash_list_impl_get(SlashList *list, size_t idx)
 {
-	/* This should be checked and reported as a runtime error before this function is called */
-	assert(idx < list->len);
-	return list->items[idx];
+    /* This should be checked and reported as a runtime error before this function is called */
+    assert(idx < list->len);
+    return list->items[idx];
 }
 
 size_t slash_list_impl_index_of(SlashList *list, SlashValue val)
 {
-	for (size_t i = 0; i < list->len; i++) {
-		SlashValue other = list->items[i];
-		if (TYPE_EQ(val, other) && val.T->eq(val, other))
-			return slash_list_impl_rm(list, i);
-	}
-	return SIZE_MAX;
+    for (size_t i = 0; i < list->len; i++) {
+        SlashValue other = list->items[i];
+        if (TYPE_EQ(val, other) && val.T->eq(val, other))
+            return slash_list_impl_rm(list, i);
+    }
+    return SIZE_MAX;
 }
 
 bool slash_list_impl_rm(SlashList *list, size_t idx)
 {
-	if (idx > list->len)
-		return false;
+    if (idx > list->len)
+        return false;
 
-	/* Shift all items to the right of the removed item by one */
-	for (size_t i = idx + 1; i < list->len; i++)
-		list->items[i - 1] = list->items[i];
+    /* Shift all items to the right of the removed item by one */
+    for (size_t i = idx + 1; i < list->len; i++)
+        list->items[i - 1] = list->items[i];
 
-	list->len--;
-	return true;
+    list->len--;
+    return true;
 }
 
 bool slash_list_impl_rmv(SlashList *list, SlashValue val)
 {
-	/* Find index of value */
-	size_t idx = slash_list_impl_index_of(list, val);
-	if (idx == SIZE_MAX)
-		return false;
-	return slash_list_impl_rm(list, idx);
+    /* Find index of value */
+    size_t idx = slash_list_impl_index_of(list, val);
+    if (idx == SIZE_MAX)
+        return false;
+    return slash_list_impl_rm(list, idx);
 }

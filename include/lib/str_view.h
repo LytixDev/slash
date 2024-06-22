@@ -29,8 +29,8 @@
  * the char *view is a view into some memory and will most likely not be null terminated,
  */
 typedef struct {
-	char *view; // pointer into some memory in an arena
-	size_t size;
+    char *view; // pointer into some memory in an arena
+    size_t size;
 } StrView;
 
 
@@ -45,8 +45,8 @@ StrView str_view_arena_copy(Arena *arena, StrView to_copy);
 
 
 #define str_view_to_buf_cstr(__str_view)               \
-	char buf[(__str_view).size + 1];                   \
-	memcpy(buf, (__str_view).view, (__str_view).size); \
-	buf[(__str_view).size] = 0;
+    char buf[(__str_view).size + 1];                   \
+    memcpy(buf, (__str_view).view, (__str_view).size); \
+    buf[(__str_view).size] = 0;
 
 #endif /* STR_VIEW_H */

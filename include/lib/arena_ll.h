@@ -26,15 +26,15 @@
 
 typedef struct arena_ll_item_t LLItem;
 struct arena_ll_item_t {
-	void *value; // a view into some memory in the arena
-	LLItem *next;
+    void *value; // a view into some memory in the arena
+    LLItem *next;
 };
 
 typedef struct {
-	Arena *arena;
-	LLItem *head; // always keep a pointer to the head for convenience
-	LLItem *tail;
-	size_t size; // for convenience
+    Arena *arena;
+    LLItem *head; // always keep a pointer to the head for convenience
+    LLItem *tail;
+    size_t size; // for convenience
 } ArenaLL;
 
 

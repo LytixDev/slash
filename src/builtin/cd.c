@@ -27,18 +27,18 @@
 
 int builtin_cd(Interpreter *interpreter, ArenaLL *ast_nodes)
 {
-	if (ast_nodes == NULL) {
-		SLASH_PRINT_ERR(&interpreter->stream_ctx, "cd: no argument received\n");
-		return 1;
-	}
+    if (ast_nodes == NULL) {
+        SLASH_PRINT_ERR(&interpreter->stream_ctx, "cd: no argument received\n");
+        return 1;
+    }
 
-	size_t argc = ast_nodes->size;
-	SlashValue argv[argc];
-	ast_ll_to_argv(interpreter, ast_nodes, argv);
+    size_t argc = ast_nodes->size;
+    SlashValue argv[argc];
+    ast_ll_to_argv(interpreter, ast_nodes, argv);
 
-	SlashValue param = argv[0];
-	VERIFY_TRAIT_IMPL(to_str, param, ".: could not take to_str of type '%s'", param.T->name);
-	TraitToStr to_str = param.T->to_str;
-	SlashStr *param_str = AS_STR(to_str(interpreter, param));
-	return chdir(param_str->str);
+    SlashValue param = argv[0];
+    VERIFY_TRAIT_IMPL(to_str, param, ".: could not take to_str of type '%s'", param.T->name);
+    TraitToStr to_str = param.T->to_str;
+    SlashStr *param_str = AS_STR(to_str(interpreter, param));
+    return chdir(param_str->str);
 }

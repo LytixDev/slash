@@ -52,21 +52,21 @@
 
 
 typedef struct {
-	SlashValue key;
-	SlashValue value;
-	uint8_t hash_extra; // used for faster comparison
-	bool is_occupied;
+    SlashValue key;
+    SlashValue value;
+    uint8_t hash_extra; // used for faster comparison
+    bool is_occupied;
 } SlashMapEntry;
 
 typedef struct {
-	SlashMapEntry entries[SLASH_MAP_BUCKET_SIZE];
+    SlashMapEntry entries[SLASH_MAP_BUCKET_SIZE];
 } SlashMapBucket;
 
 typedef struct {
-	SlashObj obj;
-	SlashMapBucket *buckets;
-	size_t total_buckets_log2;
-	size_t len; // total items stored in the hashmap
+    SlashObj obj;
+    SlashMapBucket *buckets;
+    size_t total_buckets_log2;
+    size_t len; // total items stored in the hashmap
 } SlashMap;
 
 /* Functions */

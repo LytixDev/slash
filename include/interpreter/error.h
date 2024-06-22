@@ -37,23 +37,23 @@ void report_parse_err(ParseError *error, char *full_input);
 
 #ifdef DEBUG
 #define REPORT_RUNTIME_ERROR(...)                                                               \
-	do {                                                                                        \
-		REPORT_IMPL("%s[Slash Runtime Error @ %s:%d]:%s ", ANSI_BOLD_START, __FILE__, __LINE__, \
-					ANSI_BOLD_END);                                                             \
-		REPORT_IMPL(__VA_ARGS__);                                                               \
-		REPORT_IMPL("\n");                                                                      \
-		longjmp(runtime_error_jmp, RUNTIME_ERROR);                                              \
-		REPORT_IMPL("%d\n", (interpreter)->source_line);                                        \
-	} while (0);
+    do {                                                                                        \
+        REPORT_IMPL("%s[Slash Runtime Error @ %s:%d]:%s ", ANSI_BOLD_START, __FILE__, __LINE__, \
+                    ANSI_BOLD_END);                                                             \
+        REPORT_IMPL(__VA_ARGS__);                                                               \
+        REPORT_IMPL("\n");                                                                      \
+        longjmp(runtime_error_jmp, RUNTIME_ERROR);                                              \
+        REPORT_IMPL("%d\n", (interpreter)->source_line);                                        \
+    } while (0);
 #else
 #define REPORT_RUNTIME_ERROR(...)                                              \
-	do {                                                                       \
-		REPORT_IMPL("%s[Slash Runtime Error at line %d]:%s ", ANSI_BOLD_START, \
-					(interpreter)->source_line, ANSI_BOLD_END);                \
-		REPORT_IMPL(__VA_ARGS__);                                              \
-		REPORT_IMPL("\n");                                                     \
-		longjmp(runtime_error_jmp, RUNTIME_ERROR);                             \
-	} while (0)
+    do {                                                                       \
+        REPORT_IMPL("%s[Slash Runtime Error at line %d]:%s ", ANSI_BOLD_START, \
+                    (interpreter)->source_line, ANSI_BOLD_END);                \
+        REPORT_IMPL(__VA_ARGS__);                                              \
+        REPORT_IMPL("\n");                                                     \
+        longjmp(runtime_error_jmp, RUNTIME_ERROR);                             \
+    } while (0)
 #endif /* DEBUG */
 
 /*
@@ -61,11 +61,11 @@ void report_parse_err(ParseError *error, char *full_input);
  * NOTE: This is a botch.
  */
 #define REPORT_RUNTIME_ERROR_OPAQUE(...)                                            \
-	do {                                                                            \
-		REPORT_IMPL("%s[Slash Runtime Error]:%s ", ANSI_BOLD_START, ANSI_BOLD_END); \
-		REPORT_IMPL(__VA_ARGS__);                                                   \
-		REPORT_IMPL("\n");                                                          \
-		longjmp(runtime_error_jmp, RUNTIME_ERROR);                                  \
-	} while (0)
+    do {                                                                            \
+        REPORT_IMPL("%s[Slash Runtime Error]:%s ", ANSI_BOLD_START, ANSI_BOLD_END); \
+        REPORT_IMPL(__VA_ARGS__);                                                   \
+        REPORT_IMPL("\n");                                                          \
+        longjmp(runtime_error_jmp, RUNTIME_ERROR);                                  \
+    } while (0)
 
 #endif /* ERROR_H */

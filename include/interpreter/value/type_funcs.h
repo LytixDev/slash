@@ -21,10 +21,10 @@
 
 
 #define VERIFY_TRAIT_IMPL(trait_func_name, value, ...) \
-	do {                                               \
-		if ((value).T->trait_func_name == NULL)        \
-			REPORT_RUNTIME_ERROR_OPAQUE(__VA_ARGS__);  \
-	} while (0);
+    do {                                               \
+        if ((value).T->trait_func_name == NULL)        \
+            REPORT_RUNTIME_ERROR_OPAQUE(__VA_ARGS__);  \
+    } while (0);
 
 
 typedef struct slash_type_info_t SlashTypeInfo; // Forward decl
@@ -49,7 +49,7 @@ typedef void (*TraitPrint)(Interpreter *interpreter, SlashValue self);
 typedef SlashValue (*TraitToStr)(Interpreter *interpreter, SlashValue self);
 typedef SlashValue (*TraitItemGet)(Interpreter *interpreter, SlashValue self, SlashValue other);
 typedef void (*TraitItemAssign)(Interpreter *interpreter, SlashValue self, SlashValue index,
-								SlashValue other);
+                                SlashValue other);
 /* Equality and hashing traits */
 typedef bool (*TraitItemIn)(SlashValue self, SlashValue other);
 typedef bool (*TraitTruthy)(SlashValue self);

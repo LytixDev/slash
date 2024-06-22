@@ -25,19 +25,19 @@
 
 int builtin_exit(Interpreter *interpreter, ArenaLL *ast_nodes)
 {
-	if (ast_nodes == NULL)
-		exit(0);
+    if (ast_nodes == NULL)
+        exit(0);
 
-	size_t argc = ast_nodes->size;
-	SlashValue argv[argc];
-	ast_ll_to_argv(interpreter, ast_nodes, argv);
-	SlashValue arg = argv[0];
-	if (IS_NUM(arg))
-		exit(arg.num);
+    size_t argc = ast_nodes->size;
+    SlashValue argv[argc];
+    ast_ll_to_argv(interpreter, ast_nodes, argv);
+    SlashValue arg = argv[0];
+    if (IS_NUM(arg))
+        exit(arg.num);
 
-	if (IS_TEXT_LIT(arg)) {
-		int exit_code = str_view_to_int(arg.text_lit);
-		exit(exit_code);
-	}
-	exit(2);
+    if (IS_TEXT_LIT(arg)) {
+        int exit_code = str_view_to_int(arg.text_lit);
+        exit(exit_code);
+    }
+    exit(2);
 }

@@ -24,14 +24,14 @@
 
 
 typedef struct {
-	char *buf; // prompt buffer
-	size_t buf_len;
-	size_t buf_cap;
-	size_t cursor_pos_in_line; // cursor position in the current line
-	size_t prev_line_end; // where the previous line ended
-	char ps1[256];
-	struct termios termios_og;
-	struct termios termios_new;
+    char *buf; // prompt buffer
+    size_t buf_len;
+    size_t buf_cap;
+    size_t cursor_pos_in_line; // cursor position in the current line
+    size_t prev_line_end; // where the previous line ended
+    char ps1[256];
+    struct termios termios_og;
+    struct termios termios_new;
 } Prompt;
 
 

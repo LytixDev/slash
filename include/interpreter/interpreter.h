@@ -34,44 +34,44 @@ typedef struct expr_t Expr; // forward decl
 
 
 typedef enum {
-	RT_NORMAL,
-	RT_RETURN,
-	RT_BREAK,
-	RT_CONTINUE,
+    RT_NORMAL,
+    RT_RETURN,
+    RT_BREAK,
+    RT_CONTINUE,
 } ExecResultType;
 
 typedef struct {
-	ExecResultType type;
-	Expr *return_expr;
+    ExecResultType type;
+    Expr *return_expr;
 } ExecResult;
 
 #define EXEC_NORMAL                            \
-	(ExecResult)                               \
-	{                                          \
-		.type = RT_NORMAL, .return_expr = NULL \
-	}
+    (ExecResult)                               \
+    {                                          \
+        .type = RT_NORMAL, .return_expr = NULL \
+    }
 
 #define SLASH_PRINT(__stream_ctx, ...) dprintf((__stream_ctx)->out_fd, __VA_ARGS__)
 #define SLASH_PRINT_ERR(__stream_ctx, ...) dprintf((__stream_ctx)->err_fd, __VA_ARGS__)
 
 
 typedef struct {
-	int in_fd; // defaults to fileno(STDIN)
-	int out_fd; // defaults to fileno(STDOUT)
-	int err_fd; // defaults to fileno(STDERR)
-	ArrayList active_fds; // list/stack of open file descriptors that need to be closed on fork()
+    int in_fd; // defaults to fileno(STDIN)
+    int out_fd; // defaults to fileno(STDOUT)
+    int err_fd; // defaults to fileno(STDERR)
+    ArrayList active_fds; // list/stack of open file descriptors that need to be closed on fork()
 } StreamCtx;
 
 typedef struct interpreter_t {
-	Arena arena;
-	Scope globals;
-	Scope *scope;
-	GC gc;
-	StreamCtx stream_ctx;
-	HashMap type_register;
-	int prev_exit_code;
-	ExecResult exec_res_ctx;
-	int source_line; // file number we are currently interpreting
+    Arena arena;
+    Scope globals;
+    Scope *scope;
+    GC gc;
+    StreamCtx stream_ctx;
+    HashMap type_register;
+    int prev_exit_code;
+    ExecResult exec_res_ctx;
+    int source_line; // file number we are currently interpreting
 } Interpreter;
 
 

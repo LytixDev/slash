@@ -30,34 +30,34 @@
  * TODO: One possible optimization is to store the error msg for each error type in a static table
  */
 typedef enum {
-	PET_EXPECTED_RBRACE,
-	PET_CUSTOME,
+    PET_EXPECTED_RBRACE,
+    PET_CUSTOME,
 } ParseErrorType;
 
 typedef struct parse_error_t ParseError;
 struct parse_error_t {
-	ParseErrorType err_type;
-	char *msg;
-	Token *failed; // the token that caused the error
-	ParseError *next;
+    ParseErrorType err_type;
+    char *msg;
+    Token *failed; // the token that caused the error
+    ParseError *next;
 };
 
 typedef struct {
-	Arena *ast_arena; // memory arena to put where all AST nodes live on
-	ArrayList *tokens; // stream of tokens from the lexer
-	size_t token_pos; // index of current token being processed
-	char *input; // handle to the source code
-	int source_line;
-	size_t n_errors;
-	ParseError *perr_head; // linked list of parse errors
-	ParseError *perr_tail; // final parse error node
+    Arena *ast_arena; // memory arena to put where all AST nodes live on
+    ArrayList *tokens; // stream of tokens from the lexer
+    size_t token_pos; // index of current token being processed
+    char *input; // handle to the source code
+    int source_line;
+    size_t n_errors;
+    ParseError *perr_head; // linked list of parse errors
+    ParseError *perr_tail; // final parse error node
 } Parser;
 
 typedef struct {
-	size_t n_errors;
-	ParseError *perr_head;
-	ParseError *perr_tail;
-	ArrayList stmts;
+    size_t n_errors;
+    ParseError *perr_head;
+    ParseError *perr_tail;
+    ArrayList stmts;
 } ParseResult;
 
 /*

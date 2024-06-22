@@ -23,10 +23,10 @@
 
 
 #define STATE_FN(___state_fn) \
-	(StateFn)                 \
-	{                         \
-		.fn = ___state_fn     \
-	}
+    (StateFn)                 \
+    {                         \
+        .fn = ___state_fn     \
+    }
 
 /*
  * X macro for the token types.
@@ -36,117 +36,117 @@
  * hmm, is this too much voodoo?
  */
 #define KEYWORD_TOKENS \
-	X(var)             \
-	X(return)          \
-	X(if)              \
-	X(elif)            \
-	X(else)            \
-	X(loop)            \
-	X(in)              \
-	X(true)            \
-	X(false)           \
-	X(as)              \
-	X(and)             \
-	X(or)              \
-	X(not )            \
-	X(assert)          \
-	X(break)           \
-	X(continue)        \
-	X(func)
+    X(var)             \
+    X(return)          \
+    X(if)              \
+    X(elif)            \
+    X(else)            \
+    X(loop)            \
+    X(in)              \
+    X(true)            \
+    X(false)           \
+    X(as)              \
+    X(and)             \
+    X(or)              \
+    X(not )            \
+    X(assert)          \
+    X(break)           \
+    X(continue)        \
+    X(func)
 #define SINGLE_CHAR_TOKENS \
-	X(lparen)              \
-	X(rparen)              \
-	X(lbrace)              \
-	X(rbrace)              \
-	X(lbracket)            \
-	X(rbracket)            \
-	X(backslash)           \
-	X(comma)               \
-	X(colon)               \
-	X(semicolon)           \
-	X(qoute)
+    X(lparen)              \
+    X(rparen)              \
+    X(lbrace)              \
+    X(rbrace)              \
+    X(lbracket)            \
+    X(rbracket)            \
+    X(backslash)           \
+    X(comma)               \
+    X(colon)               \
+    X(semicolon)           \
+    X(qoute)
 #define ONE_OR_TWO_CHAR_TOKENS \
-	X(anp)                     \
-	X(anp_anp)                 \
-	X(equal)                   \
-	X(equal_equal)             \
-	X(pipe)                    \
-	X(pipe_pipe)               \
-	X(bang)                    \
-	X(bang_equal)              \
-	X(greater)                 \
-	X(greater_equal)           \
-	X(greater_greater)         \
-	X(less)                    \
-	X(less_equal)              \
-	X(dot)                     \
-	X(dot_dot)                 \
-	X(plus)                    \
-	X(plus_equal)              \
-	X(minus)                   \
-	X(minus_equal)             \
-	X(at)                      \
-	X(at_lbracket)             \
-	X(slash)                   \
-	X(slash_slash)             \
-	X(slash_equal)             \
-	X(slash_slash_equal)       \
-	X(star)                    \
-	X(star_star)               \
-	X(star_equal)              \
-	X(star_star_equal)         \
-	X(percent)                 \
-	X(percent_equal)
+    X(anp)                     \
+    X(anp_anp)                 \
+    X(equal)                   \
+    X(equal_equal)             \
+    X(pipe)                    \
+    X(pipe_pipe)               \
+    X(bang)                    \
+    X(bang_equal)              \
+    X(greater)                 \
+    X(greater_equal)           \
+    X(greater_greater)         \
+    X(less)                    \
+    X(less_equal)              \
+    X(dot)                     \
+    X(dot_dot)                 \
+    X(plus)                    \
+    X(plus_equal)              \
+    X(minus)                   \
+    X(minus_equal)             \
+    X(at)                      \
+    X(at_lbracket)             \
+    X(slash)                   \
+    X(slash_slash)             \
+    X(slash_equal)             \
+    X(slash_slash_equal)       \
+    X(star)                    \
+    X(star_star)               \
+    X(star_equal)              \
+    X(star_star_equal)         \
+    X(percent)                 \
+    X(percent_equal)
 #define DATA_TYPE_TOKENS \
-	X(dt_str)            \
-	X(dt_num) X(dt_range) X(dt_bool) X(dt_text_lit) X(dt_list) X(dt_tuple) X(dt_map) X(dt_none)
+    X(dt_str)            \
+    X(dt_num) X(dt_range) X(dt_bool) X(dt_text_lit) X(dt_list) X(dt_tuple) X(dt_map) X(dt_none)
 #define REST_TOKENS \
-	X(access)       \
-	X(ident)        \
-	X(newline)      \
-	X(eof)          \
-	X(error)
+    X(access)       \
+    X(ident)        \
+    X(newline)      \
+    X(eof)          \
+    X(error)
 
 #define SLASH_ALL_TOKENS   \
-	KEYWORD_TOKENS         \
-	SINGLE_CHAR_TOKENS     \
-	ONE_OR_TWO_CHAR_TOKENS \
-	DATA_TYPE_TOKENS       \
-	REST_TOKENS
+    KEYWORD_TOKENS         \
+    SINGLE_CHAR_TOKENS     \
+    ONE_OR_TWO_CHAR_TOKENS \
+    DATA_TYPE_TOKENS       \
+    REST_TOKENS
 
 #define X(token) t_##token,
 typedef enum {
-	SLASH_ALL_TOKENS t_enum_count,
+    SLASH_ALL_TOKENS t_enum_count,
 } TokenType;
 #undef X
 
 extern char *token_type_str_map[t_enum_count];
 
 typedef struct {
-	TokenType type;
-	StrView lexeme;
-	size_t line;
-	size_t start; // position in line of first char of lexeme
-	size_t end; // position in line of final char of lexeme
+    TokenType type;
+    StrView lexeme;
+    size_t line;
+    size_t start; // position in line of first char of lexeme
+    size_t end; // position in line of final char of lexeme
 } Token;
 
 typedef struct {
-	bool had_error;
-	char *input; // the input string being scanned.
-	size_t input_size; // size of input in bytes.
-	size_t start; // start position of this token.
-	size_t pos; // current position in the input.
+    bool had_error;
+    char *input; // the input string being scanned.
+    size_t input_size; // size of input in bytes.
+    size_t start; // start position of this token.
+    size_t pos; // current position in the input.
 
-	size_t line_count; // what line in the input we are on.
-	size_t pos_in_line;
+    size_t line_count; // what line in the input we are on.
+    size_t pos_in_line;
 
-	ArrayList tokens;
-	HashMap keywords;
-	Arena *arena;
+    ArrayList tokens;
+    HashMap keywords;
+    Arena *arena;
 } Lexer;
 
 typedef struct func_wrap {
-	struct func_wrap (*fn)(Lexer *);
+    struct func_wrap (*fn)(Lexer *);
 } StateFn;
 
 
