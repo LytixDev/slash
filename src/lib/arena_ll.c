@@ -23,50 +23,50 @@
 
 void arena_ll_init(Arena *arena, ArenaLL *ll)
 {
-    assert(arena != NULL && ll != NULL);
-    ll->arena = arena;
-    ll->head = NULL;
-    ll->tail = NULL;
-    ll->size = 0;
+	assert(arena != NULL && ll != NULL);
+	ll->arena = arena;
+	ll->head = NULL;
+	ll->tail = NULL;
+	ll->size = 0;
 }
 
 ArenaLL *arena_ll_alloc(Arena *arena)
 {
-    assert(arena != NULL);
+	assert(arena != NULL);
 
-    ArenaLL *ll = m_arena_alloc_struct(arena, ArenaLL);
-    arena_ll_init(arena, ll);
-    return ll;
+	ArenaLL *ll = m_arena_alloc_struct(arena, ArenaLL);
+	arena_ll_init(arena, ll);
+	return ll;
 }
 
 void arena_ll_prepend(ArenaLL *ll, void *p)
 {
-    ll->size++;
-    LLItem *item = m_arena_alloc_struct(ll->arena, LLItem);
-    item->value = p;
-    item->next = ll->head;
+	ll->size++;
+	LLItem *item = m_arena_alloc_struct(ll->arena, LLItem);
+	item->value = p;
+	item->next = ll->head;
 
-    ll->head = item;
-    if (ll->tail == NULL)
-        ll->tail = ll->head;
+	ll->head = item;
+	if (ll->tail == NULL)
+		ll->tail = ll->head;
 }
 
 void arena_ll_append(ArenaLL *ll, void *p)
 {
-    ll->size++;
-    LLItem *item = m_arena_alloc_struct(ll->arena, LLItem);
-    item->value = p;
-    item->next = NULL;
+	ll->size++;
+	LLItem *item = m_arena_alloc_struct(ll->arena, LLItem);
+	item->value = p;
+	item->next = NULL;
 
-    /* base case */
-    if (ll->head == NULL) {
-        ll->head = item;
-        ll->tail = ll->head;
-        return;
-    }
+	/* base case */
+	if (ll->head == NULL) {
+		ll->head = item;
+		ll->tail = ll->head;
+		return;
+	}
 
-    assert(ll->tail != NULL);
-    LLItem *tail = ll->tail;
-    tail->next = item;
-    ll->tail = item;
+	assert(ll->tail != NULL);
+	LLItem *tail = ll->tail;
+	tail->next = item;
+	ll->tail = item;
 }

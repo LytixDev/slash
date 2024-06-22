@@ -33,10 +33,10 @@
 #define SLASH_LIST_GROW_CAPACITY(capacity) ((capacity) < 8 ? 8 : (capacity) * 2)
 
 typedef struct slash_list_impl_t {
-    SlashObj obj;
-    SlashValue *items;
-    size_t len;
-    size_t cap;
+	SlashObj obj;
+	SlashValue *items;
+	size_t len;
+	size_t cap;
 } SlashList;
 
 

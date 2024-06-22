@@ -29,40 +29,40 @@
 
 int builtin_time(Interpreter *interpreter, ArenaLL *ast_nodes)
 {
-    if (ast_nodes == NULL) {
-        SLASH_PRINT_ERR(&interpreter->stream_ctx, "time: no argument received");
-        return 1;
-    }
-    /* Build CmdStmt */
-    Expr *first = (Expr *)ast_nodes->head->value;
-    assert(first->type == EXPR_LITERAL);
-    SlashValue cmd_name = ((LiteralExpr *)first)->value;
-    assert(IS_TEXT_LIT(cmd_name));
+	if (ast_nodes == NULL) {
+		SLASH_PRINT_ERR(&interpreter->stream_ctx, "time: no argument received");
+		return 1;
+	}
+	/* Build CmdStmt */
+	Expr *first = (Expr *)ast_nodes->head->value;
+	assert(first->type == EXPR_LITERAL);
+	SlashValue cmd_name = ((LiteralExpr *)first)->value;
+	assert(IS_TEXT_LIT(cmd_name));
 
-    ast_nodes->size--;
-    if (ast_nodes->size == 0)
-        ast_nodes = NULL;
-    else
-        ast_nodes->head = ast_nodes->head->next;
+	ast_nodes->size--;
+	if (ast_nodes->size == 0)
+		ast_nodes = NULL;
+	else
+		ast_nodes->head = ast_nodes->head->next;
 
-    struct timeval t0, t1;
-    gettimeofday(&t0, 0);
-    struct rusage start_usage;
-    getrusage(RUSAGE_SELF, &start_usage);
+	struct timeval t0, t1;
+	gettimeofday(&t0, 0);
+	struct rusage start_usage;
+	getrusage(RUSAGE_SELF, &start_usage);
 
-    CmdStmt cmd = { .type = STMT_CMD, .cmd_name = cmd_name.text_lit, .arg_exprs = ast_nodes };
-    exec_cmd(interpreter, &cmd);
+	CmdStmt cmd = { .type = STMT_CMD, .cmd_name = cmd_name.text_lit, .arg_exprs = ast_nodes };
+	exec_cmd(interpreter, &cmd);
 
-    gettimeofday(&t1, 0);
-    struct rusage end_usage;
-    getrusage(RUSAGE_CHILDREN, &end_usage);
+	gettimeofday(&t1, 0);
+	struct rusage end_usage;
+	getrusage(RUSAGE_CHILDREN, &end_usage);
 
-    double real_time = (t1.tv_sec - t0.tv_sec) + (t1.tv_usec - t0.tv_usec) / 1000000.0;
-    double user_time = (double)(end_usage.ru_utime.tv_sec + end_usage.ru_utime.tv_usec / 1000000.0);
-    double sys_time = (double)(end_usage.ru_stime.tv_sec + end_usage.ru_stime.tv_usec / 1000000.0);
-    printf("\nreal\t%.3f\n", real_time);
-    printf("user\t%.3f\n", user_time);
-    printf("sys\t%.3f\n", sys_time);
+	double real_time = (t1.tv_sec - t0.tv_sec) + (t1.tv_usec - t0.tv_usec) / 1000000.0;
+	double user_time = (double)(end_usage.ru_utime.tv_sec + end_usage.ru_utime.tv_usec / 1000000.0);
+	double sys_time = (double)(end_usage.ru_stime.tv_sec + end_usage.ru_stime.tv_usec / 1000000.0);
+	printf("\nreal\t%.3f\n", real_time);
+	printf("user\t%.3f\n", user_time);
+	printf("sys\t%.3f\n", sys_time);
 
-    return interpreter->prev_exit_code;
+	return interpreter->prev_exit_code;
 }

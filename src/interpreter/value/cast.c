@@ -26,26 +26,26 @@
 
 SlashValue dynamic_cast(Interpreter *interpreter, SlashValue value, StrView type_name)
 {
-    (void)interpreter;
-    SlashTypeInfo *new_T = hashmap_get(&interpreter->type_register, type_name.view, type_name.size);
-    /* Casting to the same type as value already is does nothing */
-    if (new_T == value.T)
-        return value;
+	(void)interpreter;
+	SlashTypeInfo *new_T = hashmap_get(&interpreter->type_register, type_name.view, type_name.size);
+	/* Casting to the same type as value already is does nothing */
+	if (new_T == value.T)
+		return value;
 
-    if (new_T == &str_type_info) {
-        VERIFY_TRAIT_IMPL(
-            to_str, value,
-            "Could not cast to 'str' because type '%s' does not implement the to_str trait",
-            value.T->name);
-        return value.T->to_str(interpreter, value);
-    }
-    if (new_T == &num_type_info) {
-        if (value.T != &str_type_info)
-            REPORT_RUNTIME_ERROR("Cast from '%s' to num is not supported ... yet! Please help :-)",
-                                 value.T->name);
-        return (SlashValue){ .T = &num_type_info, .num = strtod(AS_STR(value)->str, NULL) };
-    }
+	if (new_T == &str_type_info) {
+		VERIFY_TRAIT_IMPL(
+			to_str, value,
+			"Could not cast to 'str' because type '%s' does not implement the to_str trait",
+			value.T->name);
+		return value.T->to_str(interpreter, value);
+	}
+	if (new_T == &num_type_info) {
+		if (value.T != &str_type_info)
+			REPORT_RUNTIME_ERROR("Cast from '%s' to num is not supported ... yet! Please help :-)",
+								 value.T->name);
+		return (SlashValue){ .T = &num_type_info, .num = strtod(AS_STR(value)->str, NULL) };
+	}
 
-    REPORT_RUNTIME_ERROR("Cast not supported ... yet! Please help :-)");
-    return (SlashValue){ 0 };
+	REPORT_RUNTIME_ERROR("Cast not supported ... yet! Please help :-)");
+	return (SlashValue){ 0 };
 }

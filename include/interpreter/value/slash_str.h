@@ -26,9 +26,9 @@
 
 
 typedef struct {
-    SlashObj obj;
-    char *str; // Null terminated
-    size_t len; // Length of string: does not includes null terminator. So "hi" has length 2
+	SlashObj obj;
+	char *str; // Null terminated
+	size_t len; // Length of string: does not includes null terminator. So "hi" has length 2
 } SlashStr;
 
 
@@ -38,4 +38,4 @@ void slash_str_init_from_slice(Interpreter *interpreter, SlashStr *str, char *cs
 void slash_str_init_from_concat(Interpreter *interpreter, SlashStr *str, SlashStr *a, SlashStr *b);
 void slash_str_init_from_alloced_cstr(SlashStr *str, char *cstr);
 SlashList *slash_str_split(Interpreter *interpreter, SlashStr *str, char *separator,
-                           bool split_any);
+						   bool split_any);
