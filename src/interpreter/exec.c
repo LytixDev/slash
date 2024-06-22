@@ -31,38 +31,38 @@ extern char **environ;
 
 static void close_active_fds(ArrayList *active_fds)
 {
-    for (size_t i = 0; i < active_fds->size; i++) {
-	int *fd = arraylist_get(active_fds, i);
-	close(*fd);
-    }
+	for (size_t i = 0; i < active_fds->size; i++) {
+		int *fd = arraylist_get(active_fds, i);
+		close(*fd);
+	}
 }
 
 int exec_program(StreamCtx *stream_ctx, char **argv)
 {
 #ifdef EXEC_DEBUG
-    char **argv_cpy = argv;
-    for (char *argv_cur = *argv_cpy; argv_cur != NULL;) {
-	printf("'%s'\n", argv_cur);
-	argv_cpy++;
-	argv_cur = *argv_cpy;
-    }
+	char **argv_cpy = argv;
+	for (char *argv_cur = *argv_cpy; argv_cur != NULL;) {
+		printf("'%s'\n", argv_cur);
+		argv_cpy++;
+		argv_cur = *argv_cpy;
+	}
 #endif /* EXEC_DEBUG */
 
-    int status;
-    pid_t new_pid = fork();
-    if (new_pid == 0) {
-	if (stream_ctx->in_fd != STDIN_FILENO) {
-	    dup2(stream_ctx->in_fd, STDIN_FILENO);
-	}
-	if (stream_ctx->out_fd != STDOUT_FILENO) {
-	    dup2(stream_ctx->out_fd, STDOUT_FILENO);
+	int status;
+	pid_t new_pid = fork();
+	if (new_pid == 0) {
+		if (stream_ctx->in_fd != STDIN_FILENO) {
+			dup2(stream_ctx->in_fd, STDIN_FILENO);
+		}
+		if (stream_ctx->out_fd != STDOUT_FILENO) {
+			dup2(stream_ctx->out_fd, STDOUT_FILENO);
+		}
+
+		close_active_fds(&stream_ctx->active_fds);
+		execve(argv[0], argv, environ);
 	}
 
 	close_active_fds(&stream_ctx->active_fds);
-	execve(argv[0], argv, environ);
-    }
-
-    close_active_fds(&stream_ctx->active_fds);
-    waitpid(new_pid, &status, 0);
-    return WEXITSTATUS(status);
+	waitpid(new_pid, &status, 0);
+	return WEXITSTATUS(status);
 }
