@@ -26,14 +26,14 @@ typedef struct slash_value_t SlashValue; // Forward decl
 typedef struct interpreter_t Interpreter; // Forward decl
 
 typedef struct {
-    LinkedList gc_objs; // objects managed by the GC
-    ArrayList gray_stack;
-    size_t bytes_managing;
-    size_t next_run; // how many bytes allocated until we run the GC again
+	LinkedList gc_objs; // objects managed by the GC
+	ArrayList gray_stack;
+	size_t bytes_managing;
+	size_t next_run; // how many bytes allocated until we run the GC again
 
-    ArrayList shadow_stack; // list of objects that are always always marked during gc run.
-    unsigned int barrier; // value > 0 means we are in a GC barrier. Value signifies barrier depth.
-    size_t shadow_stack_len_pre_barrier; // elements in shadow_stack before barrier
+	ArrayList shadow_stack; // list of objects that are always always marked during gc run.
+	unsigned int barrier; // value > 0 means we are in a GC barrier. Value signifies barrier depth.
+	size_t shadow_stack_len_pre_barrier; // elements in shadow_stack before barrier
 } GC;
 
 

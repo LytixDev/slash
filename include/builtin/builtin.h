@@ -25,22 +25,22 @@
 typedef int (*BuiltinFunc)(Interpreter *interpreter, ArenaLL *ast_nodes);
 
 typedef struct {
-    char *name;
-    BuiltinFunc func;
+	char *name;
+	BuiltinFunc func;
 } Builtin;
 
 typedef enum {
-    WHICH_BUILTIN,
-    WHICH_EXTERN,
-    WHICH_NOT_FOUND,
+	WHICH_BUILTIN,
+	WHICH_EXTERN,
+	WHICH_NOT_FOUND,
 } WhichResultType;
 
 typedef struct {
-    WhichResultType type;
-    union {
-	char path[PROGRAM_PATH_MAX_LEN];
-	BuiltinFunc builtin;
-    };
+	WhichResultType type;
+	union {
+		char path[PROGRAM_PATH_MAX_LEN];
+		BuiltinFunc builtin;
+	};
 } WhichResult;
 
 

@@ -1,0 +1,29 @@
+# GC stress test
+
+# bunch of allocations
+loop i in ..100_000 {
+    var alloced_str = "some_str_" + ($i as str)
+}
+
+var fib_iterative = func n {
+    var a = 0
+    var b = 1
+    loop _ in 1..$n+1 {
+        var c = $a + $b
+        $a, $b = $b, $c
+    }
+    return $a
+}
+
+var fib_recursive = func n {
+    $n <= 1 && return $n
+    return $fib_recursive($n - 1) + $fib_recursive($n - 2)
+}
+
+$fib_iterative(15)
+# multiple function calls
+$fib_recursive(15)
+
+# pipeline
+var n = (ls | wc -l) as num
+var np2 = $n + 2

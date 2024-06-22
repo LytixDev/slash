@@ -1,0 +1,15 @@
+var out = (xrandr | grep -A 15 "eDP1" | tail -n +2)
+var resolutions = []
+
+var old_ifs = $IFS
+$IFS = "\n"
+
+loop line in $out {
+    if $line[0] != " " {
+        "break"
+        break
+    }
+    echo $line
+}
+
+$IFS = $old_ifs

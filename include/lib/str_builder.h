@@ -27,10 +27,10 @@
  * String builder that uses an arena for its backing memory.
  */
 typedef struct {
-    char *buffer;
-    size_t len; // bytes in use
-    size_t cap; // bytes allocated
-    Arena *arena;
+	char *buffer;
+	size_t len; // bytes in use
+	size_t cap; // bytes allocated
+	Arena *arena;
 } StrBuilder;
 
 

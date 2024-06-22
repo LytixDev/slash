@@ -29,37 +29,37 @@
 
 int builtin_read(Interpreter *interpreter, ArenaLL *ast_nodes)
 {
-    /* Usage: takes one argument, variable. */
-    if (ast_nodes == NULL) {
-	SLASH_PRINT_ERR(&interpreter->stream_ctx, "read: no argument received\n");
-	return 1;
-    }
-    if (ast_nodes->size > 1) {
-	SLASH_PRINT_ERR(&interpreter->stream_ctx,
-			"read: too many arguments received, expected one\n");
-	return 1;
-    }
+	/* Usage: takes one argument, variable. */
+	if (ast_nodes == NULL) {
+		SLASH_PRINT_ERR(&interpreter->stream_ctx, "read: no argument received\n");
+		return 1;
+	}
+	if (ast_nodes->size > 1) {
+		SLASH_PRINT_ERR(&interpreter->stream_ctx,
+						"read: too many arguments received, expected one\n");
+		return 1;
+	}
 
-    size_t argc = ast_nodes->size;
-    SlashValue argv[argc];
-    ast_ll_to_argv(interpreter, ast_nodes, argv);
+	size_t argc = ast_nodes->size;
+	SlashValue argv[argc];
+	ast_ll_to_argv(interpreter, ast_nodes, argv);
 
-    SlashValue arg = argv[0];
-    if (!IS_TEXT_LIT(arg)) {
-	SLASH_PRINT_ERR(&interpreter->stream_ctx, "read: expected argument to be text, not '%s'\n",
-			arg.T->name);
-	return 1;
-    }
+	SlashValue arg = argv[0];
+	if (!IS_TEXT_LIT(arg)) {
+		SLASH_PRINT_ERR(&interpreter->stream_ctx, "read: expected argument to be text, not '%s'\n",
+						arg.T->name);
+		return 1;
+	}
 
-    Prompt prompt;
-    prompt_init(&prompt, ">>>");
-    prompt_run(&prompt, false);
-    StrView input = (StrView){ .view = prompt.buf, .size = prompt.buf_len - 2 };
+	Prompt prompt;
+	prompt_init(&prompt, ">>>");
+	prompt_run(&prompt, false);
+	StrView input = (StrView){ .view = prompt.buf, .size = prompt.buf_len - 2 };
 
-    SlashObj *str = gc_new_T(interpreter, &str_type_info);
-    slash_str_init_from_view(interpreter, (SlashStr *)str, &input);
-    var_define(interpreter->scope, &arg.text_lit, &AS_VALUE(str));
+	SlashObj *str = gc_new_T(interpreter, &str_type_info);
+	slash_str_init_from_view(interpreter, (SlashStr *)str, &input);
+	var_define(interpreter->scope, &arg.text_lit, &AS_VALUE(str));
 
-    prompt_free(&prompt);
-    return 0;
+	prompt_free(&prompt);
+	return 0;
 }
