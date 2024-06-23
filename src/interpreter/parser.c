@@ -296,6 +296,7 @@ static Stmt *and_or(Parser *parser)
 		BinaryStmt *stmt = (BinaryStmt *)stmt_alloc(parser->ast_arena, STMT_BINARY);
 		stmt->left = left;
 		stmt->operator_ = previous(parser)->type;
+		ignore(parser, t_newline);
 		stmt->right_stmt = statement(parser);
 		left = (Stmt *)stmt;
 	}
