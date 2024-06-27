@@ -8,11 +8,11 @@ make clean && make asan -j8
 loop file in $tests {
     if (./slash-asan $file) as bool {
         $successes += 1
-        echo $file "passed"
+        printf '%s \033[0;32mPASSED\033[0m\n' $file
     } else {
-        echo $file "FAILED!"
+        printf '%s \033[0;31mFAILED\033[0m\n' $file
     }
 }
 
 echo "---"
-echo $successes "out of" $tests_count "passed"
+echo $successes "/" $tests_count "passed"
