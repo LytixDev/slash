@@ -389,7 +389,9 @@ static Stmt *pipeline_stmt(Parser *parser)
 	if (!match(parser, t_pipe))
 		return left;
 
-	consume(parser, t_dt_text_lit, "Expected shell command after pipe symbol");
+    if (!match(parser, t_dot)) {
+        consume(parser, t_dt_text_lit, "Expected shell command after pipe symbol");
+    }
 	PipelineStmt *stmt = (PipelineStmt *)stmt_alloc(parser->ast_arena, STMT_PIPELINE);
 	stmt->left = (CmdStmt *)left;
 	stmt->right = pipeline_stmt(parser);

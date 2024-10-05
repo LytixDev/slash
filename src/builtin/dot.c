@@ -48,7 +48,9 @@ int builtin_dot(Interpreter *interpreter, ArenaLL *ast_nodes)
 	strncpy(program_name + 1, cmd_name.text_lit.view, cmd_name.text_lit.size);
 	program_name[cmd_name.text_lit.size + 1] = 0;
 
+#ifdef DEBUG
 	TODO_LOG("dot builtin: Check if specified file exists and is executable");
+#endif
 
 	ArenaLL ast_nodes_cpy = { .size = ast_nodes->size - 1 };
 	if (ast_nodes_cpy.size == 0) {
